@@ -1,0 +1,12 @@
+# Переменная для указания файла настроек django
+# Находятся в backend/config/settings/
+# По умолчанию стоит prod Скрипт для запуска dev сервера переопределяет!!!!! Настройка нужна в основном для docker
+DJANGO_SETTINGS_MODULE=config.settings.prod
+SECRET_KEY='super-secret-key'
+
+# PostgreSQL
+POSTGRES_DB=database
+POSTGRES_USER=admin
+POSTGRES_PASSWORD=admin
+POSTGRES_HOST=localhost 
+POSTGRES_PORT=5432
