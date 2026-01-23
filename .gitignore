@@ -9,6 +9,7 @@ Thumbs.db
 # Backend (Python / Django)
 # ----------------------------
 backend/venv/
+backend/config/static/
 backend/*.pyc
 backend/*.pyo
 backend/*.pyd
