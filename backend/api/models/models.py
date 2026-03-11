@@ -159,6 +159,16 @@ class Constraint(models.Model):
     name = models.TextField()
     weight = models.IntegerField()   
 
+# Определяет сколько часов дисциплины нужно провести для группы опредленным типом ( типо 22 ИСбо-1 матан парктика столько то часов)
+class AcademicLoad(models.Model):
+    study_group = models.ForeignKey(StudyGroup, on_delete=models.CASCADE, related_name="loads")
+    discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE)
+    lesson_type = models.ForeignKey(LessonType, on_delete=models.CASCADE)
+    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
+    hours_per_week = models.PositiveIntegerField(default=1)
+
+    def __str__(self):
+        return f"{self.study_group} - {self.discipline} ({self.lesson_type})"
 
 # Заявки:
 
