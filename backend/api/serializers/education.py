@@ -24,6 +24,14 @@ class StudyGroupSerializer(serializers.ModelSerializer):
     class Meta:
         model = StudyGroup
         fields = '__all__'
+class AcademicLoadSerializer(serializers.ModelSerializer):
+    discipline_name = serializers.ReadOnlyField(source='discipline.name')
+    teacher_name = serializers.ReadOnlyField(source='teacher.name')
+    group_name = serializers.ReadOnlyField(source='study_group.name')
+
+    class Meta:
+        model = AcademicLoad
+        fields = '__all__'
 
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:

@@ -11,6 +11,11 @@ class EquipmentSerializer(serializers.ModelSerializer):
         model = Equipment
         fields = '__all__'
 
+class BuildingTravelTimeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BuildingTravelTime
+        fields = '__all__'
+
 class ClassroomSerializer(serializers.ModelSerializer):
     building_details = BuildingSerializer(source='building', read_only=True)
 
