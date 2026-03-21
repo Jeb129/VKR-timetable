@@ -4,7 +4,7 @@ from django.db import models
 # Create your models here.
 
 class CustomUser(AbstractUser):
-    username = models.CharField(max_length=150, blank=True, null=True)
+    username = models.CharField(max_length=150, blank=True, null=True, unique=False)
     # переопределяем email → делаем уникальным
     email = models.EmailField(unique=True)
 
