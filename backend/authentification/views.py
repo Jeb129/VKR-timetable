@@ -3,15 +3,12 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from authentification.serializers import RegisterSerializer
+from authentification.services.user import register_user
 
 
 class RegisterView(APIView):
     def post(self, request):
-        serializer = RegisterSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-
-        user = serializer.save()
+        user = register_user(request.data)
 
         # формируем токены
         refresh = RefreshToken.for_user(user)
