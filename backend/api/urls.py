@@ -10,7 +10,6 @@
 # router.register(r'lessons', LessonViewSet)
 # router.register(r'bookings', BookingViewSet)
 
-# urlpatterns = [
-#     path('', HealthCheckView.as_view()),
-# ]
-urlpatterns = []
+urlpatterns = [ 
+    
+    ]
