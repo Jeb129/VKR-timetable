@@ -36,7 +36,6 @@ privateApi.interceptors.response.use(
       _retry?: boolean
       // При добавлении флага он по умолчанию становится undefined
     }
-    console.debug("privateApi Ошибка\n", error.message)
 
     // если ошибка 401 и это не повторный запрос
     if (error.response?.status === 401 && originalRequest._retry === undefined) {
@@ -49,8 +48,8 @@ privateApi.interceptors.response.use(
           throw error
         }
         const response = await publicApi.post<AuthResponse>(
-          "/auth/refresh",
-          { refresh_token: refreshToken }
+          "/auth/refresh/",
+          { refresh: refreshToken }
         )
         const tokens = response.data
 
