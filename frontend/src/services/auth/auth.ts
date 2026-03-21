@@ -2,13 +2,13 @@ import { publicApi, privateApi } from "@/services/axios";
 import { clearTokens, getRefreshToken, setTokens } from "./tokens";
 import type { RegisterRequest, LoginRequest, AuthResponse, User } from "@/types/user";
 
-const login = async (data: LoginRequest): Promise<User | undefined> => {
+const login = async (data: LoginRequest): Promise<User | null> => {
   const response = await publicApi.post<AuthResponse>("/auth/login", data)
   setTokens(
     response.data.access,
     response.data.refresh
   )
-  return response.data?.user
+  return response.data?.user ?? null
 }
 
 const register = async (data: RegisterRequest): Promise<User> => {
