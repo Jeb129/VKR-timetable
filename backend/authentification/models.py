@@ -1,0 +1,20 @@
+from django.contrib.auth.models import AbstractUser
+from django.db import models
+
+# Create your models here.
+
+class CustomUser(AbstractUser):
+    username = models.CharField(max_length=150, blank=True, null=True)
+    # переопределяем email → делаем уникальным
+    email = models.EmailField(unique=True)
+
+    # Django будет использовать email как логин
+    USERNAME_FIELD = "email"
+    internal_user =  models.BooleanField(default=False,  null=False, blank=True)
+
+    # Поля, которые будут спрашивать при создании суперпользователя
+    # username остается, но он не используется как логин
+    REQUIRED_FIELDS = ["username"]
+
+    def __str__(self):
+        return self.email
