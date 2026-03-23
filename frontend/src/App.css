@@ -3,27 +3,39 @@
    ======================= */
 :root {
     --bg-primary: #ffffff;
-    --bg-secondary: #b8b8b8;
+    --bg-secondary: #706ca8;
     --bg-hover: #222222;
     --border-subtle: #2a2a2a;
 
+    --text-color: #000000;
+    --text-color-pr: #ffffff;
+    --text-color-sc: #0d00ff;
+
     --color-white: #ffffff;
-    --color-text: #000000;
     --color-gray: #9a9a9a;
 
-    --color-primary: #26b561;
-    --color-secondary: #88970f;
+    --color-primary: #0d00ff;
+    --color-secondary: #358198;
     --color-warning: #b96f07;
     --color-danger: #cc3f42;
     --color-accent: #b5267a;
 }
 
-/* =======================
-   Базовые стили
-   ======================= */
+html {
+    /* Размер текста в базе. В дальнейшем можно использовать параметр 1 rem чтобы привязать к нему */
+    font-size: 12px; 
+}
+h1 {
+    margin:0;
+    font-size: 2rem; /*24px*/
+}
+h2 {
+    margin:0;
+    font-size: 1.5rem; /*18px*/
+}
 body {
     background: var(--bg-primary);
-    color: var(--color-text);
+    color: var(--text-color);
     font-family: 'Inter', 'Roboto', sans-serif;
 }
 
@@ -46,32 +58,30 @@ a:hover {
    ======================= */
 button {
     cursor: pointer;
-    font-size: 14px;
+    font-size: 1.2rem;
     font-weight: 500;
     transition: all 0.15s ease;
 }
 
 .primary-btn {
-    padding: 5px;
-    border-radius: 6px;
+    padding: 0.5rem;
+    border-radius: 0.8rem;
     border: none;
     background: var(--color-primary);
     color: var(--color-white);
 }
-
 .primary-btn:hover {
     filter: brightness(1.1);
     transform: translateY(-1px);
 }
 
 .danger-btn {
-    padding: 5px;
-    border-radius: 6px;
+    padding: 0.5rem;
+    border-radius: 0.8rem;
     border: none;
     background: var(--color-danger);
     color: var(--color-white);
 }
-
 .danger-btn:hover {
     filter: brightness(1.1);
     transform: translateY(-1px);
@@ -102,26 +112,24 @@ button {
     display: flex;
     flex-direction: column;
     max-height: 100%;
-    gap: 10px;
-    padding: 5px;
+    min-height: 0;
+    gap: 1rem;
+    padding: 0.5rem;
     overflow-y: auto;
     overflow-x: hidden;
-    padding-right: 6px; /* чтобы скролл не перекрывал контент */
+    padding-right: 0.8rem; /* чтобы скролл не перекрывал контент */
 }
-
 /* Стилизация скроллбара (для WebKit) */
 .scroll-list::-webkit-scrollbar {
-    width: 6px;
+    width: 0.8rem;
 }
-
 .scroll-list::-webkit-scrollbar-track {
     background: var(--bg-secondary);
-    border-radius: 3px;
+    border-radius: 0.2rem;
 }
-
 .scroll-list::-webkit-scrollbar-thumb {
     background-color: var(--color-primary);
-    border-radius: 3px;
+    border-radius: 0.2rem;
 }
 
 /* Для Firefox */
@@ -135,12 +143,11 @@ button {
    Поля ввода
    ======================= */
 input, textarea, select {
-    padding: 10px;
-    border-radius: 6px;
+    padding: 1rem;
+    border-radius: 0.8rem;
     border: none;
-    background: var(--bg-primary);
-    color: var(--color-white);
-    font-size: 14px;
+    background: var(--bg-secondary);
+    color: var(--text-color-pr);
     transition: background 0.15s ease;
 }
 
@@ -156,7 +163,6 @@ input:focus, textarea:focus, select:focus {
     display: flex;
     flex-direction: row;
 }
-
 .flex-col {
     display: flex;
     flex-direction: column;
@@ -183,6 +189,7 @@ input:focus, textarea:focus, select:focus {
 
 
 .flex-grow { flex-grow: 1;}
+
 .f-1 {
     flex: 1;
 }
@@ -194,58 +201,44 @@ input:focus, textarea:focus, select:focus {
 }
 
 .error {
-    padding: 2px 5px ;
+    padding: 0.2rem 0.5rem ;
     color: var(--color-danger);
-    border-radius: 6px;
-    border: 2px solid var(--color-danger);
+    border-radius: 0.8rem;
+    border: 0.2rem solid var(--color-danger);
     text-align: center;
     background-color: transparent;
 
     cursor: pointer;
 }
 .border {
-        border: 1px solid var(--color-gray);
+        border: 0.1rem solid var(--color-gray);
 }
 
 .max-height {height: 100%;}
 .max-width {width: 100%;}
-/* Утилиты для отступов */
-.mt-10 { margin-top: 10px; }
-.mb-10 { margin-bottom: 10px; }
-.ml-10 { margin-left: 10px; }
-.mr-10 { margin-right: 10px; }
-.m-10 { margin: 10px; }
-.gap-10 { gap: 10px; }
-.gap-20 { gap: 20px; }
+
+.mt-1 { margin-top: 1rem; }
+.mb-1 { margin-bottom: 1rem; }
+.ml-1 { margin-left: 1rem; }
+.mr-1 { margin-right: 1rem; }
+.m-1 { margin: 1rem;; }
+.gap-1 { gap: 1rem; }
+.gap-2 { gap: 2rem; }
 
 /* =======================
    Анимации и переходы
    ======================= */
 
 /* Плавное появление (fade in) */
-.fade-in {
-    animation: fadeIn 0.25s ease-out forwards;
-}
-
+.fade-in { animation: fadeIn 0.25s ease-out forwards; }
 /* Плавное исчезновение (fade out) */
-.fade-out {
-    animation: fadeOut 0.25s ease-in forwards;
-}
-
+.fade-out { animation: fadeOut 0.25s ease-in forwards; }
 /* Лёгкое выдвижение вверх при появлении */
-.slide-up {
-    animation: slideUp 0.25s ease-out forwards;
-}
-
+.slide-up { animation: slideUp 0.25s ease-out forwards; }
 /* Лёгкое выдвижение вниз при исчезновении */
-.slide-down {
-    animation: slideDown 0.25s ease-in forwards;
-}
-
+.slide-down { animation: slideDown 0.25s ease-in forwards; }
 /* Переход для всех элементов при hover или state change */
-.transition-all {
-    transition: all 0.15s ease;
-}
+.transition-all { transition: all 0.15s ease; }
 
 /* =======================
    Keyframes
@@ -263,7 +256,7 @@ input:focus, textarea:focus, select:focus {
 @keyframes slideUp {
     from {
         opacity: 0;
-        transform: translateY(8px);
+        transform: translateY(1rem);
     }
     to {
         opacity: 1;
@@ -278,7 +271,7 @@ input:focus, textarea:focus, select:focus {
     }
     to {
         opacity: 0;
-        transform: translateY(8px);
+        transform: translateY(1rem);
     }
 }
 
@@ -288,7 +281,7 @@ input:focus, textarea:focus, select:focus {
 }
 
 .hover-lift:hover {
-    transform: translateY(-2px);
+    transform: translateY(-0.2rem);
     box-shadow: 0 4px 12px rgba(0,0,0,0.3);
 }
 
@@ -297,14 +290,12 @@ input:focus, textarea:focus, select:focus {
 }
 
 .hover-opacity:hover {
-    opacity: 0.7;
+    opacity: 0.5;
 }
-
 /* Лёгкая подсветка при фокусе для input / textarea / select */
 .focus-glow {
     transition: box-shadow 0.15s ease, background 0.15s ease;
 }
-
 .focus-glow:focus {
-    box-shadow: 0 0 6px var(--color-primary);
+    box-shadow: 0 0 0.8rem var(--color-primary);
 }
