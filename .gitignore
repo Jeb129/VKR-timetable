@@ -8,6 +8,7 @@ Thumbs.db
 # ----------------------------
 # Backend (Python / Django)
 # ----------------------------
+
 backend/venv/
 backend/config/static/
 backend/*.pyc
@@ -46,6 +47,7 @@ MANIFEST
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+dev.py
 
 # ----------------------------
 # Frontend (Node / Vite / React)

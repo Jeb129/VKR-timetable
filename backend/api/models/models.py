@@ -26,6 +26,8 @@ class Classroom(models.Model):
     num = models.CharField(max_length=20)
     name = models.CharField(max_length=100, blank=True)
     capacity = models.PositiveIntegerField()
+    eios_id = models.IntegerField(null=True, blank=True, unique=True, help_text="ID аудитории в системе EIOS")
+    equipment = models.ManyToManyField('Equipment', blank=True, related_name="classrooms")
 
     def __str__(self):
         return f"{self.building.name} - {self.name or self.num}"
