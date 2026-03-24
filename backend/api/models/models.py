@@ -151,7 +151,8 @@ class BuildingPriority(models.Model):
     weight = models.IntegerField()
     
 class Constraint(models.Model):
-    name = models.TextField()
+    name = models.TextField(unique=True)
+    description = models.TextField(max_length=255)
     weight = models.IntegerField()   
 
 # ---  ЗАЯВКИ (REQUESTS) ---

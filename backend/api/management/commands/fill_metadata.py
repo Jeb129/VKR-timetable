@@ -24,14 +24,21 @@ class Command(BaseCommand):
                         time_start=start,
                         time_end=end
                     )
-        
-        # Заполняем базовые веса для ограничений (Constraints)
+
         constraints = [
-            ("window_gap", 100),       # Окно у студентов
-            ("building_change", 500),  # Смена корпуса между парами
-            ("teacher_overload", 50),  # Слишком много пар у препода подряд
+            ("Пересечение по преподавателю", 500, "teacher_no_overlap"),
+            ("Пересечение по группе", 500, "group_no_overlap"),
+            ("Пересечение по аудиториям", 500, "no_room_overlap"),
+            ("Аудитория вмещает всех студентов", 500, "room_has_enough_seats"),
+            ("Аудитория соответствует оборудованию", 400, "room_meets_equipment_requirements"),
+            ("Предпочтения преподавателя по аудитории", 300, "matches_teacher_room_preference"),
+            ("Предпочтения преподавателя по времени", 200, "matches_teacher_time_preference"),
+            ("Переход между корпусами", 500, "building_change"),
+            ("Окно у студентов", 100, "students_gap"),
+            ("Окно у преподавателя", 50, "teacher_gap"), # Тоже важно, оказывается, но парвда окно у препода побольше
+            ("Перегрузка преподователя",50,"teacher_overload")
         ]
-        for name, weight in constraints:
-            Constraint.objects.get_or_create(name=name, weight=weight)
+        for description, weight, name in constraints:
+            Constraint.objects.get_or_create(name=name, weight=weight, description=description)
 
         self.stdout.write(self.style.SUCCESS('Сетка времени и базовые веса созданы!'))
