@@ -2,7 +2,6 @@ import { useState } from "react"
 import { Navigate, useNavigate } from "react-router-dom"
 import type { LoginRequest } from "@/types/user"
 import { useAuth } from "@/context/AuthContext"
-import "./Auth.css"; 
 
 const LoginPage = () => {
   const { isAuthenticated, isLoading, login } = useAuth()
@@ -12,7 +11,7 @@ const LoginPage = () => {
     return <Navigate to="/profile" replace />
   }
 
-  const [error, setError] = useState<string | null>(null)
+  const [loginError, setLoginError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
 
@@ -29,7 +28,7 @@ const LoginPage = () => {
 
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    setError(null)
+    setLoginError(null)
 
     try {
       setLoading(true)
@@ -41,7 +40,7 @@ const LoginPage = () => {
         navigate("/profile")
       }
     } catch (err: any) {
-      setError(err?.response?.data?.detail ?? "Вход не выполнен")
+      setLoginError(err?.response?.data?.detail ?? "Вход не выполнен")
     } finally {
       setLoading(false)
     }
@@ -49,19 +48,19 @@ const LoginPage = () => {
 
   return (
     <div className="flex-row justify-center flex-grow">
-      <div className="flex-col justify-center gap-10">
-        <div className="flex-col slide-up" style={{width: 400}}>
+      <div className="flex-col justify-center gap-2">
+        <div className="flex-col slide-up gap-1 card max-width">
           <div className="justify-center">
-            <h2>Вход</h2>
+            <h1 className="primary-text">Вход</h1>
           </div>
           <form
-            className="flex-col gap-20"
+            className="flex-col gap-1"
             onSubmit={handleSubmit}
           >
             <div className="flex-col">
               <label>Email</label>
               <input
-                className="focus-glow"
+                className="focus-glow border"
                 name="email"
                 type="email"
                 value={form.email}
@@ -72,28 +71,27 @@ const LoginPage = () => {
 
             <div className="flex-col">
               <label>Пароль</label>
-              <div className="flex-row gap-10">
+              <div className="flex-row gap-1">
                 <input
-                  className="focus-glow flex-grow"
+                  className="focus-glow flex-grow border"
                   name="password"
                   type={showPassword ? "text" : "password"}
                   value={form.password}
                   onChange={handleChange}
                   required
-                  style={{ paddingRight: 40 }}
                 />
                 <div
                   className="primary-btn"
                   onClick={() => setShowPassword((prev) => !prev)}>
-                  {showPassword ? "🔓" : "🔒"}
+                  <span>{showPassword ? "🔓" : "🔒"}</span>
                 </div>
               </div>
             </div>
 
-            {error && (
+            {loginError && (
               <div className="error"
-                onClick={() => setError(null)}
-              >{error}</div>
+                onClick={() => setLoginError(null)}
+              >{loginError}</div>
             )}
 
             <button
@@ -107,12 +105,12 @@ const LoginPage = () => {
         </div>
         { redirectPath ? (<></>) : (
           <>
-          <div className="flex-col card fade-in">
+          <div className="flex-col fade-in card max-width">
             <div className="justify-center">
             <h3>Нет аккаунта?</h3>
           </div>
           <button
-            className="primary-btn flex-grow hover-lift transition-all"
+            className="transition-all secondary-btn"
             onClick={() => navigate("/register")}
           >
             Регистрация

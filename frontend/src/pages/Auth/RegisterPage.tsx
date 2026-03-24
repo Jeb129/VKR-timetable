@@ -1,7 +1,6 @@
 import { useState } from "react"
 import { Navigate, useNavigate } from "react-router-dom"
 import type { RegisterRequest } from "../../types/user"
-import "./Auth.css"; 
 import { useAuth } from "@/context/AuthContext"
 
 const RegisterPage = () => {
@@ -58,16 +57,16 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
   }
   return (
     <div className="flex-row justify-center flex-grow">
-      <div className="flex-col justify-center gap-10">
-        <div className="flex-col card slide-up" style={{width: 400}} >
+      <div className="flex-col justify-center gap-2">
+        <div className="flex-col card slide-up">
           <div className="justify-center">
-            <h2>Регистрация</h2>
+            <h1 className="primary-text">Регистрация</h1>
           </div>
-          <form className="flex-col gap-20" onSubmit={handleSubmit}>
+          <form className="flex-col gap-1" onSubmit={handleSubmit}>
             <div className="flex-col">
               <label>Имя</label>
               <input
-                className="focus-glow"
+                className="focus-glow border"
                 name="username"
                 value={form.username}
                 onChange={handleChange}
@@ -77,7 +76,7 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             <div className="flex-col">
               <label>Email</label>
               <input
-                className="focus-glow"
+                className="focus-glow border"
                 name="email"
                 type="email"
                 value={form.email}
@@ -89,7 +88,7 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             <div className="flex-col">
               <label>Пароль</label>
               <input
-                className="focus-glow"
+                className="focus-glow border"
                 name="password"
                 value={form.password}
                 onChange={handleChange}
@@ -100,7 +99,7 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
             <div className="flex-col">
               <label>Повтор пароля</label>
               <input
-                className="focus-glow"
+                className="focus-glow border"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -128,7 +127,7 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
               <h3>Есть аккаунт?</h3>
             </div>
             <button
-              className="primary-btn flex-grow"
+              className="secondary-btn flex-grow hover-lift"
               onClick={() => navigate("/login")}
             >
               Войти
