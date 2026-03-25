@@ -1,69 +1,69 @@
 import requests
+import logging
 from django.core.management.base import BaseCommand
 from icalendar import Calendar
-from datetime import datetime
-from api.models.models import (
-    Classroom, Lesson, ScheduleScenario, Discipline, 
-    LessonType, Timeslot, Teacher, StudyGroup
-)
+from api.models.models import *
+
+logger = logging.getLogger(__name__)
 
 class Command(BaseCommand):
-    help = 'Синхронизирует расписание из EIOS в базу данных'
+    help = 'Универсальный импорт расписания из EIOS'
 
     def handle(self, *args, **options):
-        # 1. Получаем/создаем сценарий импорта
-        scenario, _ = ScheduleScenario.objects.get_or_create(
-            name="EIOS Import",
-            defaults={'is_active': True}
-        )
-
-        # Очищаем старые данные этого сценария
+        # 1. Получаем активный сценарий импорта
+        scenario, _ = ScheduleScenario.objects.get_or_create(name="EIOS Import")
         Lesson.objects.filter(scenario=scenario).delete()
 
-        # 2. Ищем аудитории с заполненным eios_id
-        classrooms = Classroom.objects.exclude(eios_id__isnull=True)
+        rooms = Classroom.objects.exclude(eios_id__isnull=True)
         
-        for room in classrooms:
-            self.stdout.write(f"Обработка аудитории: {room.num} (EIOS ID: {room.eios_id})")
+        for room in rooms:
             url = f"https://eios.kosgos.ru/api/Rasp?idAudLine={room.eios_id}&iCal=true"
-            
             try:
-                response = requests.get(url, timeout=15)
-                if not response.content: continue
+                res = requests.get(url, timeout=10)
+                if not res.content: continue
                 
-                cal = Calendar.from_ical(response.content)
-                for component in cal.walk('VEVENT'):
-                    summary = str(component.get('summary'))
-                    dtstart = component.get('dtstart').dt
+                cal = Calendar.from_ical(res.content)
+                for event in cal.walk('VEVENT'):
+                    summary = str(event.get('summary')) # "лек Высшая математика, Иванов И.И., ПИН-23"
+                    dtstart = event.get('dtstart').dt
                     
-                    # Парсинг строки "лаб Базы данных, п/г 1, Иванов И.И."
-                    # Логика: Тип - до первого пробела, Дисциплина - до запятой
+                    # Парсинг строки
                     parts = summary.split(' ', 1)
-                    type_name = parts[0] if len(parts) > 1 else "Занятие"
-                    rest = parts[1] if len(parts) > 1 else summary
-                    discipline_name = rest.split(',')[0]
+                    type_name = parts[0]
+                    content = parts[1] if len(parts) > 1 else ""
+                    
+                    # Извлекаем дисциплину (до первой запятой)
+                    disc_name = content.split(',')[0].strip()
+                    
+                    # Пытаемся найти метаданные. Если нет - логгируем ошибку
+                    try:
+                        discipline = Discipline.objects.get(name=disc_name)
+                        l_type = LessonType.objects.get(name__icontains=type_name)
+                        
+                        # Ищем таймслот
+                        start_t = dtstart.time()
+                        slot = Timeslot.objects.filter(
+                            day=dtstart.weekday() + 1,
+                            time_start__hour=start_t.hour,
+                            time_start__minute=start_t.minute
+                        ).first()
 
-                    discipline, _ = Discipline.objects.get_or_create(name=discipline_name)
-                    l_type, _ = LessonType.objects.get_or_create(name=type_name)
+                        if not slot:
+                            logger.error(f"Таймслот не найден: {dtstart}")
+                            continue
 
-                    # Поиск таймслота (Пн=0 в ical, Пн=1 в твоей модели)
-                    start_time = dtstart.time()
-                    timeslot = Timeslot.objects.filter(
-                        day=dtstart.weekday() + 1,
-                        time_start__hour=start_time.hour,
-                        time_start__minute=start_time.minute
-                    ).first()
-
-                    if timeslot:
-                        lesson = Lesson.objects.create(
+                        # Создаем занятие (только расписание)
+                        Lesson.objects.create(
                             scenario=scenario,
                             discipline=discipline,
                             lesson_type=l_type,
-                            timeslot=timeslot,
+                            timeslot=slot,
                             classroom=room
                         )
-                        # Если в строке есть фамилия, можно попробовать найти Teacher
-                        self.stdout.write(self.style.SUCCESS(f"  + {discipline_name}"))
-            
+
+                    except (Discipline.DoesNotExist, LessonType.DoesNotExist) as e:
+                        # Логгируем, но не падаем. Это и есть "выбрасываем ошибку в логи"
+                        logger.warning(f"Пропущено занятие '{disc_name}': данных нет в справочниках БД")
+                        
             except Exception as e:
-                self.stdout.write(self.style.ERROR(f"Ошибка {room.num}: {e}"))
+                logger.error(f"Критическая ошибка при синхронизации {room.num}: {e}")

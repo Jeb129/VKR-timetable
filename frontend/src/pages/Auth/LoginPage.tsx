@@ -2,7 +2,6 @@ import { useState } from "react"
 import { Navigate, useNavigate } from "react-router-dom"
 import type { LoginRequest } from "@/types/user"
 import { useAuth } from "@/context/AuthContext"
-import "./Auth.css"; 
 
 const LoginPage = () => {
   const { isAuthenticated, isLoading, login } = useAuth()
