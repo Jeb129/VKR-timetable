@@ -1,6 +1,6 @@
 from rest_framework import serializers
 from ..models.models import (
-    Institute, StudyProgram, StudyGroup, Discipline, 
+    AcademicLoad, Institute, StudyProgram, StudyGroup, Discipline, 
     LessonType, Teacher, Timeslot, Lesson
 )
 
