@@ -121,3 +121,38 @@ def teacher_no_overlap(lesson: Lesson, weight):
             "conflicts": conflict_entries
         }
     )
+
+@constraint("group_no_overlap")
+def group_no_overlap(lesson: Lesson, weight):
+    groups_ids = lesson.study_groups.values_list("id", flat=True)
+    slot = lesson.timeslot
+
+    conflicts = (
+        Lesson.objects
+        .filter(timeslot=slot)
+        .filter(groups__id__in=groups_ids)
+        .exclude(id=lesson.id) # type: ignore
+        .distinct()
+    )
+
+    # нет конфликтов → возвращаем "пустую" ошибку
+    if not conflicts.exists():
+        return ConstraintError(name="group_no_overlap")
+
+    conflict_entries = []
+    for conf in conflicts:
+        common_groups = list(conf.study_groups.filter(id__in=groups_ids))
+
+        conflict_entries.append({
+            "lesson": conf,
+            "groups": common_groups,
+        })
+
+    return ConstraintError(
+        name="group_no_overlap",
+        penalty=weight,
+        message="Группы заняты в это время",
+        data={
+            "conflicts": conflict_entries
+        }
+    )
