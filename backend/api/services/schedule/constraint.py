@@ -33,7 +33,7 @@ class ConstraintError ():
     name: str
     penalty: int = 0
     message: str = "OK"
-    data: dict = {} # ПО идее сюда можно запихнуть что угодно, например занятия, с которыми возникает ошибка
+    data: Any = None# ПО идее сюда можно запихнуть что угодно, например занятия, с которыми возникает ошибка
 
 class ConstraintManager():
     '''Сессия проверки расписания Проверяет ограничения из бд и проверяет есть ли его реализация'''
@@ -178,5 +178,32 @@ def room_no_overlap(lesson: Lesson, weight):
         message="Аудитория занята в это время",
         data={
             "conflicts": conflicts
+        }
+    )
+
+@constraint("room_has_enough_seats")
+def room_has_enough_seats(lesson:Lesson, weight):
+    classroom = lesson.classroom
+    if not classroom:
+        return ConstraintError( name="classroom_capacity" )
+    
+    capacity = classroom.capacity
+    groups = lesson.study_groups.all()
+    total_students = sum(g.students_count for g in groups)
+
+    if total_students <= total_students:
+        return ConstraintError( name="classroom_capacity" )
+    
+    overflow = total_students - capacity
+
+    return ConstraintError(
+        name="classroom_capacity",
+        penalty=weight * overflow,
+        message=f"Аудиторияя {classroom} не может вместить {total_students} чел. (вместимость аудитории {capacity} чел.)",
+        data={
+            "classroom": classroom,
+            "capacity": capacity,
+            "total_students": total_students,
+            "overflow": overflow,
         }
     )
