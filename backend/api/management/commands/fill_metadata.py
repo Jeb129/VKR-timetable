@@ -28,7 +28,7 @@ class Command(BaseCommand):
         constraints = [
             ("Пересечение по преподавателю", 500, "teacher_no_overlap"),
             ("Пересечение по группе", 500, "group_no_overlap"),
-            ("Пересечение по аудиториям", 500, "no_room_overlap"),
+            ("Пересечение по аудиториям", 500, "room_no_overlap"),
             ("Аудитория вмещает всех студентов", 500, "room_has_enough_seats"),
             ("Аудитория соответствует оборудованию", 400, "room_meets_equipment_requirements"),
             ("Предпочтения преподавателя по аудитории", 300, "matches_teacher_room_preference"),

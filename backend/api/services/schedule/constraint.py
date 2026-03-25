@@ -18,7 +18,7 @@ def constraint(name):
 # constraints = [
 #     ("Пересечение по преподавателю", 500, "teacher_no_overlap"),
 #     ("Пересечение по группе", 500, "group_no_overlap"),
-#     ("Пересечение по аудиториям", 500, "no_room_overlap"),
+#     ("Пересечение по аудиториям", 500, "room_no_overlap"),
 #     ("Аудитория вмещает всех студентов", 500, "room_has_enough_seats"),
 #     ("Аудитория соответствует оборудованию", 400, "room_meets_equipment_requirements"),
 #     ("Предпочтения преподавателя по аудитории", 300, "matches_teacher_room_preference"),
@@ -154,5 +154,29 @@ def group_no_overlap(lesson: Lesson, weight):
         message="Группы заняты в это время",
         data={
             "conflicts": conflict_entries
+        }
+    )
+
+@constraint("room_no_overlap")
+def room_no_overlap(lesson: Lesson, weight):
+    room_id = lesson.classroom.id # type: ignore
+    slot = lesson.timeslot
+
+    conflicts = (
+        Lesson.objects
+        .filter(timeslot=slot)
+        .filter(classroom__id=room_id)
+        .exclude(id=lesson.id) # type: ignore
+        .distinct()
+    )
+    if not conflicts.exists():
+        return ConstraintError(name="room_no_overlap")
+    
+    return ConstraintError(
+        name="room_no_overlap",
+        penalty=weight,
+        message="Аудитория занята в это время",
+        data={
+            "conflicts": conflicts
         }
     )
