@@ -30,9 +30,9 @@ def constraint(name):
 # ]
 @dataclass
 class ConstraintError ():
-    penalty: int
-    message: str
     name: str
+    penalty: int = 0
+    message: str = "OK"
     data: dict = {} # ПО идее сюда можно запихнуть что угодно, например занятия, с которыми возникает ошибка
 
 class ConstraintManager():
@@ -89,20 +89,35 @@ def teacher_no_overlap(lesson: Lesson, weight):
         Lesson.objects
         .filter(timeslot=slot)
         .filter(teachers__id__in=teacher_ids)
-        .exclude(id=lesson.id)
+        .exclude(id=lesson.id) # type: ignore
         .distinct()
     )
 
     # нет конфликтов → возвращаем "пустую" ошибку
     if not conflicts.exists():
-        return ConstraintError(
-            name="teacher_no_overlap",
-            penalty=0,
-            message="OK",
-            data=None
-        )
+        return ConstraintError(name="teacher_no_overlap")
 
-    penalty = 0
-    for l in conflicts:
-        for t in l.teachers:
-            pass
+    conflict_entries = []
+    penalties = []
+
+    for conf in conflicts:
+        common_teachers = list(conf.teachers.filter(id__in=teacher_ids))
+        max_teacher_weight = max(t.weight for t in common_teachers)
+
+        penalties.append(weight * max_teacher_weight)
+
+        conflict_entries.append({
+            "lesson": conf,
+            "teachers": common_teachers,
+        })
+
+    final_penalty = max(penalties)
+
+    return ConstraintError(
+        name="teacher_no_overlap",
+        penalty=final_penalty,
+        message="Преподаватель занят в это время",
+        data={
+            "conflicts": conflict_entries
+        }
+    )
