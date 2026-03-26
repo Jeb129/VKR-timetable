@@ -1,15 +1,13 @@
-# from django.urls import path, include
-# from rest_framework.routers import DefaultRouter
-# from .views import HealthCheckView
+# backend/api/urls.py
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import LessonViewSet, ClassroomViewSet # Проверьте названия ваших вьюсетов
 
-# router = DefaultRouter()
-# router.register(r'buildings', BuildingViewSet)
-# router.register(r'classrooms', ClassroomViewSet)
-# router.register(r'teachers', TeacherViewSet)
-# router.register(r'groups', StudyGroupViewSet)
-# router.register(r'lessons', LessonViewSet)
-# router.register(r'bookings', BookingViewSet)
+router = DefaultRouter()
+# Регистрируем пути:
+router.register(r'lessons', LessonViewSet, basename='lesson')
+router.register(r'classrooms', ClassroomViewSet, basename='classroom')
 
-urlpatterns = [ 
-    
-    ]
+urlpatterns = [
+    path('', include(router.urls)),
+]
