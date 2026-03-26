@@ -1,7 +1,7 @@
 from rest_framework import serializers
 from ..models.models import (
     Institute, StudyProgram, StudyGroup, Discipline, 
-    LessonType, Teacher, Timeslot, Lesson
+    LessonType, Teacher, AcademicLoad, Timeslot, Lesson
 )
 
 class InstituteSerializer(serializers.ModelSerializer):

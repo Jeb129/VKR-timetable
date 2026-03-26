@@ -1,0 +1,123 @@
+/* Schedule.css */
+
+/* Верхняя панель навигации (как на портале) */
+.navbar {
+    background-color: var(--primary-color);
+    padding: 0 40px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+}
+
+.logo-white {
+    color: white;
+    font-size: 24px;
+    font-weight: 800;
+    font-family: 'Montserrat', sans-serif;
+}
+
+/* Контейнер фильтров */
+.filters-container {
+    background: white;
+    margin: 20px;
+    padding: 20px;
+    border-radius: var(--radius-20);
+    border: 1px solid var(--border-color);
+    display: flex;
+    gap: 30px;
+    align-items: flex-end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+}
+
+/* Оформление карточки занятия */
+.lesson-row-container {
+    display: flex;
+    margin: 0 20px 15px 20px;
+    transition: var(--transition);
+}
+
+.lesson-row-container:hover {
+    transform: translateX(5px);
+}
+
+.time-side {
+    background-color: var(--primary-color);
+    color: white;
+    width: 110px;
+    min-width: 110px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    border-radius: 20px 0 0 20px;
+    font-weight: 700;
+    font-size: 18px;
+}
+
+.time-line {
+    width: 40px;
+    height: 2px;
+    background: rgba(255,255,255,0.3);
+    margin: 8px 0;
+}
+
+.info-side {
+    background: white;
+    flex-grow: 1;
+    border: 2px solid var(--primary-color);
+    border-left: none;
+    border-radius: 0 20px 20px 0;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Бейдж номера пары */
+.order-badge {
+    background: #f0f2f5;
+    color: var(--text-muted);
+    padding: 4px 12px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.subject-name {
+    font-size: 1.1rem;
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
+.details-text {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin-top: 5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+/* Кнопка профиля */
+.nav-btn {
+    background: rgba(255,255,255,0.15);
+    color: white;
+    border: 1px solid rgba(255,255,255,0.3);
+    padding: 8px 20px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: var(--transition);
+}
+
+.nav-btn:hover {
+    background: white;
+    color: var(--primary-color);
+}

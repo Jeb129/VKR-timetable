@@ -15,6 +15,15 @@
   --radius-10: 10px;             /* Скругления кнопок/инпутов */
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
+html, body, #root {
+  width: 100%;
+  height: 100%;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  display: flex; /* Чтобы #root тоже вел себя как флекс-контейнер */
+  flex-direction: column;
+}
 
 /*  Сброс и база */
 * {
@@ -31,7 +40,7 @@ h1, h2, h3 {
 }
 
 /*  Утилиты позиционирования (то, что ты используешь в коде) */
-.flex-row { display: flex; flex-direction: row; }
+.flex-row { display: flex; flex-direction: row;  }
 .flex-col { display: flex; flex-direction: column; }
 .justify-center { justify-content: center; }
 .align-center { align-items: center; }
@@ -178,4 +187,34 @@ input {
   gap: 1px;
   background-color: var(--border-color);
   border: 1px solid var(--border-color);
+}
+.top-filters {
+    display: flex;
+    flex-direction: row;
+    gap: 20px;
+    width: 100%;
+    margin-bottom: 20px;
+}
+
+.schedule-page-wrapper {
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    min-height: 100vh;
+    background-color: var(--bg-light);
+}
+.filters-row {
+    display: flex;
+    flex-direction: row; /* Явно указываем строку */
+    gap: 20px;
+    width: 100%;
+    padding: 20px;
+    align-items: flex-end;
+}
+
+/* Каждый блок фильтра */
+.filter-item {
+    display: flex;
+    flex-direction: column;
+    flex: 1; /* Чтобы фильтры делили место поровну */
 }
