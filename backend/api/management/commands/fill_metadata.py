@@ -35,7 +35,7 @@ class Command(BaseCommand):
             ("Предпочтения преподавателя по времени", 200, "matches_teacher_time_preference"),
             ("Переход между корпусами", 500, "building_change"),
             ("Окно у студентов", 100, "students_gap"),
-            ("Окно у преподавателя", 50, "teacher_gap"), # Тоже важно, оказывается, но парвда окно у препода побольше
+            ("Окно у преподавателя", 50, "teachers_gap"), # Тоже важно, оказывается, но парвда окно у препода побольше
             ("Перегрузка преподователя",50,"teacher_overload")
         ]
         for description, weight, name in constraints:

@@ -1,6 +1,7 @@
 # тут храняться модели которые мы делаем
 
 from django.db import models
+from sqlalchemy import false
 from authentification.models import CustomUser
 from . import enums
 
@@ -119,6 +120,7 @@ class Timeslot(models.Model):
 
 class AcademicLoad(models.Model):
     """Объединенная модель нагрузки (задание для генератора)"""
+    semester = models.PositiveSmallIntegerField(null=False)
     discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE)
     lesson_type = models.ForeignKey(LessonType, on_delete=models.CASCADE)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name="loads")

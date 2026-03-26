@@ -14,7 +14,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
-from api.services.logs import setup_logging
+from config.logs import setup_logging
 
 
 load_dotenv()

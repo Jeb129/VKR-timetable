@@ -1,7 +1,8 @@
 import logging
 from logging.config import dictConfig
+from pathlib import Path
 
-LOG_DIR="./logs"
+LOG_DIR= Path(__file__).resolve().parent.parent
 
 CONFIG = {
     "version": 1,
