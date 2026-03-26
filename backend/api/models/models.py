@@ -1,6 +1,7 @@
 # тут храняться модели которые мы делаем
 
 from django.db import models
+from sqlalchemy import false
 from authentification.models import CustomUser
 from . import enums
 
@@ -8,6 +9,7 @@ from . import enums
 
 class Building(models.Model):
     name = models.CharField(max_length=50)
+    short_name = models.CharField(max_length=5)
     address = models.CharField(max_length=255)
     work_start_time = models.TimeField()
     work_end_time = models.TimeField()
@@ -30,7 +32,9 @@ class Classroom(models.Model):
     equipment = models.ManyToManyField('Equipment', blank=True, related_name="classrooms")
 
     def __str__(self):
-        return f"{self.building.name} - {self.name or self.num}"
+        if self.building is None:
+            return self.name
+        return f"{self.building.short_name} - {self.num}"
 
 class BuildingTravelTime(models.Model):
     from_building = models.ForeignKey(Building, on_delete=models.CASCADE, related_name="travel_from")
@@ -116,6 +120,7 @@ class Timeslot(models.Model):
 
 class AcademicLoad(models.Model):
     """Объединенная модель нагрузки (задание для генератора)"""
+    semester = models.PositiveSmallIntegerField(null=False)
     discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE)
     lesson_type = models.ForeignKey(LessonType, on_delete=models.CASCADE)
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name="loads")
@@ -151,7 +156,8 @@ class BuildingPriority(models.Model):
     weight = models.IntegerField()
     
 class Constraint(models.Model):
-    name = models.TextField()
+    name = models.TextField(unique=True)
+    description = models.TextField(max_length=255)
     weight = models.IntegerField()   
 
 # ---  ЗАЯВКИ (REQUESTS) ---
