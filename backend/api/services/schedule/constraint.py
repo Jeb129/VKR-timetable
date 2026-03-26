@@ -3,7 +3,7 @@ import logging
 from turtle import reset
 from typing import Any, List
 
-from api.models.models import Constraint, Lesson
+from api.models.models import AcademicLoad, Constraint, Lesson
 
 logger = logging.getLogger("constraints")
 
@@ -205,5 +205,67 @@ def room_has_enough_seats(lesson:Lesson, weight):
             "capacity": capacity,
             "total_students": total_students,
             "overflow": overflow,
+        }
+    )
+
+
+@constraint("room_meets_equipment_requirements")
+def room_meets_equipment_requirements(lesson: Lesson, *, weight) -> ConstraintError:
+    
+
+
+    # Аудитория занятия
+    classroom = lesson.classroom
+
+    if not classroom:
+        # Если аудитория отсутствует — нарушение по умолчанию,
+        # так как невозможно проверить соответствие
+        return ConstraintError(
+            name="room_meets_equipment_requirements",
+            penalty=weight,
+            message="У занятия не назначена аудитория",
+        )
+    
+    academic_load = (AcademicLoad.objects
+                    .filter(discipline__id=lesson.discipline.id)# type: ignore
+                    .filter(lesson_type=lesson.lesson_type)
+                ) 
+
+    # Требуемое оборудование
+    required = list(academic_load.required_equipment.all())
+
+    # Оборудование аудитории
+    provided = list(classroom.equipment.all())
+
+    # Множество id для быстрого сравнения
+    required_ids = {e.id for e in required}
+    provided_ids = {e.id for e in provided}
+
+    # Что отсутствует
+    missing_ids = required_ids - provided_ids
+
+    if not missing_ids:
+        return ConstraintError(
+            name="equipment_required",
+            penalty=0,
+            message="OK",
+            data=None,
+        )
+
+    missing = [e for e in required if e.id in missing_ids]
+
+    # Можно сделать штраф = weight * количество отсутствующего оборудования
+    penalty = weight * len(missing)
+
+    return ConstraintError(
+        name="equipment_required",
+        penalty=penalty,
+        message="В аудитории отсутствует необходимое оборудование",
+        data={
+            "lesson": lesson,
+            "classroom": classroom,
+            "required_equipment": required,
+            "provided_equipment": provided,
+            "missing_equipment": missing,
         }
     )
