@@ -1,1 +1,7 @@
-from .models import *
+# Можно ипортировать пакет а не клонкретный файл моделей
+from buildings import Building, BuildingTravelTime, Classroom, Equipment
+from constraints import AcademicLoad, BuildingPriority, EquipmentRequirement, Constraint
+from groups import Institute, StudyGroup,StudyProgram
+from models import Teacher
+from .requests import Request, ExcludedTimeslot, ClassroomPreference, ScheduleAdjustment, Booking
+from schedule import ScheduleScenario, Discipline, LessonType, Timeslot, Lesson
