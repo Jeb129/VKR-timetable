@@ -1,4 +1,3 @@
-
 from django.db import models
 
 from api.models.buildings import Classroom
@@ -11,7 +10,7 @@ class Semester(models.Model):
     date_start = models.DateField(null=False,unique=True)
     date_end = models.DateField(null=False,unique=True)
     
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
 
 class ScheduleScenario(models.Model):
@@ -22,7 +21,7 @@ class ScheduleScenario(models.Model):
     total_penalty = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
-    def __str__(self):
+    def __str__(self) -> str:
         return self.name
     
     class Meta:

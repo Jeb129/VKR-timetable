@@ -24,6 +24,7 @@ def get_semester_by_date(
     current_date: datetime = datetime.now(timezone.utc),
 ) -> Semester:
     """Ищем текущий семестр"""
+    Semester.objects.filter().first()
     return Semester.objects.filter(
         date_start__lte=current_date,
         date_end__gte=current_date,
@@ -129,3 +130,35 @@ def map_lessons(
                 )
 
     return mapped_events
+
+def map_bookings(*,date_from: datetime, date_to: datetime, classroom_id:int) -> List[MappedEvent]:
+    bookings = Booking.objects.filter(
+        status=enums.RequestStatus.VERIFIED,
+        classroom__id=classroom_id,
+        date_start__gte=date_from,
+        date_start__lte=date_to,
+    )
+    return [MappedEvent(
+        event=b,
+        type="booking",
+        date_start=b.date_start,
+        date_end=b.date_end
+    ) for b in bookings]
+
+def get_group_schedule(*,group_id:int,date_from: datetime, date_to: datetime) -> List[MappedEvent]:
+    lessons_qs = Lesson.objects.filter(
+        groups__id__in=group_id
+    )
+    return map_lessons(date_from=date_from, date_to=date_to,lessons=lessons_qs)
+
+def get_teacher_schedule(*,teacher_id:int,date_from: datetime, date_to: datetime) -> List[MappedEvent]:
+    lessons_qs = Lesson.objects.filter(
+        teachers__id__in=teacher_id
+    )
+    return map_lessons(date_from=date_from, date_to=date_to,lessons=lessons_qs)
+
+def get_classroom_schedule(*,classroom_id:int,date_from: datetime, date_to: datetime) -> List[MappedEvent]:
+    lessons_qs = Lesson.objects.filter(
+        classroom__id=classroom_id
+    )
+    return map_lessons(date_from=date_from, date_to=date_to,lessons=lessons_qs)

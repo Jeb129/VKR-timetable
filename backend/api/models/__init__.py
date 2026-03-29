@@ -1,4 +1,5 @@
-# Можно ипортировать пакет а не клонкретный файл моделей
+"""Пакет для импорта моделей"""
+
 from .buildings import Building, BuildingTravelTime, Classroom, Equipment
 from .constraints import (
     AcademicLoad,
