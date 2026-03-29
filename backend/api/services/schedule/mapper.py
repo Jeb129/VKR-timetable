@@ -1,6 +1,6 @@
 from collections import defaultdict
 from typing import Any, List
-from django.db.models import Q, BaseManager
+from django.db.models import Q
 
 from api.models import (
     Semester,
@@ -64,7 +64,7 @@ def get_dates_qs(date_from: datetime, date_to: datetime) -> tuple[defaultdict[An
 
 
 def map_lessons(
-    *, date_from: datetime, date_to: datetime, lessons: BaseManager[Lesson] = None
+    *, date_from: datetime, date_to: datetime, lessons= None
 ) -> List[MappedEvent]:
     #
     sem = get_semester_by_date(date_from)
@@ -77,7 +77,9 @@ def map_lessons(
 
     if not lessons:
         lessons = Lesson.objects
-    lessons = lessons.filter(scenario__id=scenario.id)
+    lessons = (lessons.filter(scenario__id=scenario.id)
+        .select_related("discipline", "lesson_type", "timeslot", "classroom")
+        .prefetch_related("teachers", "study_groups"))
 
     lesson_dates, ts_filter = get_dates_qs(date_from, date_to)
 

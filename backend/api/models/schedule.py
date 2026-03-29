@@ -16,7 +16,7 @@ class Semester(models.Model):
 class ScheduleScenario(models.Model):
     """Варианты расписания"""
     name = models.CharField(max_length=255)
-    Semester = models.ForeignKey(Semester,on_delete=models.SET_NULL) # Для ограничения. Возможно сюр, но пока так
+    semester = models.ForeignKey(Semester,on_delete=models.SET_NULL, null=True) # Для ограничения. Возможно сюр, но пока так
     is_active = models.BooleanField(default=False)
     total_penalty = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
