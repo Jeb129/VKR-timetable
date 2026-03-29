@@ -1,21 +1,12 @@
 # backend/api/views.py
 from typing import List
-
-from django.db.models.manager import BaseManager
 from rest_framework import viewsets, status
 from rest_framework.views import APIView, Response
 from rest_framework.generics import ListAPIView, GenericAPIView
 from datetime import datetime
 from api.models import Lesson, Classroom
-from api.serializers import LessonSerializer,ClassroomSerializer, MappedEventSerializer
+from api.serializers import ClassroomSerializer, MappedEventSerializer
 from api.services.schedule.mapper import MappedEvent, get_classroom_schedule, get_group_schedule, get_teacher_schedule
-
-
-class LessonViewSet(APIView):
-    # УДАЛИТЬ НАХУЙ ПРИ ПЕРВОЙ ВОЗМОЖНОСТИ
-    # Все представления для получения расписания переехали ниже
-    def get(self, request) -> Response:
-        return Response({"message":"Представления поменялись, раз наткнулся - переделывай"},status=status.HTTP_301_MOVED_PERMANENTLY)
 
 class ClassroomViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Classroom.objects.all().order_by("num")

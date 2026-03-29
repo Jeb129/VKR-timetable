@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models.models import (
+from api.models import (
     Institute, StudyProgram, StudyGroup, Discipline, 
     LessonType, Teacher, AcademicLoad, Timeslot, Lesson
 )
