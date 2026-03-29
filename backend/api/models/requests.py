@@ -8,6 +8,7 @@ from api.models.models import Teacher
 from api.models.schedule import Discipline, Lesson, LessonType, Timeslot
 from authentification.models import CustomUser
 
+
 class Request(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     description = models.TextField()
@@ -15,27 +16,29 @@ class Request(models.Model):
     status = models.IntegerField(
         choices=enums.RequestStatus.choices,
         default=enums.RequestStatus.ON_MODERATION,
-        db_index=True
+        db_index=True,
     )
     request_type = models.IntegerField(choices=enums.RequestType.choices, null=True)
+
 
 class ExcludedTimeslot(Request):
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
     timeslot = models.ForeignKey(Timeslot, on_delete=models.CASCADE)
-    
+
     def save(self, *args, **kwargs):
-        self.request_type = enums.RequestType.ExcludedTimeslot
+        self.request_type = enums.RequestType.EXCLUDED_TIMESLOT
         super().save(*args, **kwargs)
+
 
 class ClassroomPreference(Request):
     teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE)
     discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE)
     lesson_type = models.ForeignKey(LessonType, on_delete=models.CASCADE)
     classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE)
-    
     def save(self, *args, **kwargs):
-        self.request_type = enums.RequestType.ClassroomPreference
+        self.request_type = enums.RequestType.CLASSROOM_PREFERENCE
         super().save(*args, **kwargs)
+
 
 class Booking(Request):
     classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE)
@@ -43,14 +46,27 @@ class Booking(Request):
     date_end = models.DateTimeField()
 
     def save(self, *args, **kwargs):
-        self.request_type = enums.RequestType.Booking
+        self.request_type = enums.RequestType.BOOKING
         super().save(*args, **kwargs)
 
+
+# Корректировка расписания позволяет либо снять, либо переместить занятие в сетке
+# Заменяет timeslot в занятии на timeslot в записи
+# Для снятия нужно создаь запись с пустым timeslot
+# Перенос между днями создает 2 записи:
+# С пустым слотом, чтобы снять занятие с одного дня
+# С измененным, чтобы поставить в другой день\
+
+
 class ScheduleAdjustment(Request):
+    # Определяеем дату изменения
     date = models.DateField()
-    timeslot = models.ForeignKey(Timeslot, on_delete=models.CASCADE)
+    # Определяем изменяемое занятие
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE)
 
+    # Новое время занятия. Null если нужно снять занятие
+    timeslot = models.ForeignKey(Timeslot, on_delete=models.CASCADE)
+
     def save(self, *args, **kwargs):
-        self.request_type = enums.RequestType.ScheduleAdjustment
+        self.request_type = enums.RequestType.SCHEDULE_ADJUSTMENT
         super().save(*args, **kwargs)

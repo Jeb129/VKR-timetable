@@ -17,12 +17,23 @@ class Semester(models.Model):
 class ScheduleScenario(models.Model):
     """Варианты расписания"""
     name = models.CharField(max_length=255)
+    Semester = models.ForeignKey(Semester,on_delete=models.SET_NULL) # Для ограничения. Возможно сюр, но пока так
     is_active = models.BooleanField(default=False)
     total_penalty = models.IntegerField(default=0)
     created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return self.name
+    
+    class Meta:
+        constraints = [
+            # Одно активное расписание на семестр
+            models.UniqueConstraint(
+                fields=["semester"],
+                condition=models.Q(is_active=True),
+                name='unique_active_record'
+            )
+        ]
 
 class Discipline(models.Model):
     name = models.CharField(max_length=255)
