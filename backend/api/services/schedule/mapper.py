@@ -1,5 +1,5 @@
 from collections import defaultdict
-from typing import List
+from typing import Any, List
 from django.db.models import Q, BaseManager
 
 from api.models import (
@@ -36,7 +36,7 @@ def get_active_scenario(sem) -> ScheduleScenario:
     return ScheduleScenario.objects.filter(semester__id=sem.id, is_active=True).first()
 
 
-def get_dates_qs(date_from: datetime, date_to: datetime):
+def get_dates_qs(date_from: datetime, date_to: datetime) -> tuple[defaultdict[Any, List], Q]:
     # Собираем комбинации из таймслотов и да, попутно создаем фильтры для занятий
     lesson_dates = defaultdict(List)
     ts_filter = Q()

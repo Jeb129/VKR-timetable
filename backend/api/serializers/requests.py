@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models.models import (
+from api.models import (
     Request, ExcludedTimeslot, ClassroomPreference, 
     Booking, ScheduleAdjustment, Constraint
 )
@@ -10,7 +10,7 @@ class ConstraintSerializer(serializers.ModelSerializer):
         fields = '__all__'
 
 class RequestBaseSerializer(serializers.ModelSerializer):
-     status_display = serializers.CharField(source='get_status_display', read_only=True)
+    status_display = serializers.CharField(source='get_status_display', read_only=True)
     user_full_name = serializers.CharField(source='user.get_full_name', read_only=True)
 
     class Meta:
@@ -31,4 +31,5 @@ class ClassroomPreferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClassroomPreference
         fields = '__all__'
+
 
