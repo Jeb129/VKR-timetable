@@ -77,7 +77,9 @@ def map_lessons(
 
     if not lessons:
         lessons = Lesson.objects
-    lessons = lessons.filter(scenario__id=scenario.id)
+    lessons = (lessons.filter(scenario__id=scenario.id)
+        .select_related("discipline", "lesson_type", "timeslot", "classroom")
+        .prefetch_related("teachers", "study_groups"))
 
     lesson_dates, ts_filter = get_dates_qs(date_from, date_to)
 
