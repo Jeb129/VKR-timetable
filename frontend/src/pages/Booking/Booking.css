@@ -1,0 +1,26 @@
+/* Контейнер, в котором лежит календарь */
+.calendar-card-wrapper {
+    flex: 1; /* Растягиваться на все свободное место */
+    min-width: 0; /* ГИПЕР-ВАЖНО: позволяет внутренним элементам правильно считать ширину */
+    display: flex;
+    flex-direction: column;
+}
+
+/* Сам компонент календаря внутри карты */
+.fc {
+    width: 100% !important;
+    height: 100% !important;
+    font-family: 'Inter', sans-serif;
+}
+
+/* Стилизация внутренних элементов под КГУ */
+.fc-v-event {
+    background-color: var(--primary-color) !important;
+    border: none !important;
+    border-radius: 8px !important;
+    padding: 2px 5px !important;
+}
+
+.fc-timegrid-slot {
+    height: 30px !important; /* Увеличим высоту слотов для удобства */
+}

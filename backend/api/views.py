@@ -1,9 +1,13 @@
 # backend/api/views.py
 from rest_framework import viewsets
+from rest_framework.response import Response
 from datetime import datetime
-from .models.models import Lesson, Classroom
+from rest_framework.decorators import action
+from .models.models import Lesson, Classroom, Booking
+from django.utils.dateparse import parse_date
 from .serializers.education import LessonSerializer
 from .serializers.infrastructure import ClassroomSerializer
+from .serializers.requests import BookingSerializer
 
 class LessonViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Lesson.objects.all()
@@ -54,6 +58,86 @@ class LessonViewSet(viewsets.ReadOnlyModelViewSet):
         queryset = queryset.filter(scenario__is_active=True)
         
         return queryset.order_by('timeslot__order_number')
+    
+    @action(detail=False, methods=['get'])
+    def my(self, request):
+        """Возвращает уроки текущего авторизованного пользователя"""
+        user = request.user
+        queryset = Lesson.objects.filter(scenario__is_active=True)
+
+        # Если это преподаватель
+        if hasattr(user, 'teacher'):
+            queryset = queryset.filter(teachers=user.teacher)
+        # Если это студент (нужно будет связать User и StudyGroup позже)
+        # elif ... 
+
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+class BookingViewSet(viewsets.ModelViewSet):
+    queryset = Booking.objects.all()
+    serializer_class = BookingSerializer
+
+    @action(detail=False, methods=['get'])
+    def busy_slots(self, request):
+        room_id = request.query_params.get('classroom_id')
+        date_str = request.query_params.get('date')
+        
+        if not room_id or not date_str:
+            return Response([])
+
+        target_date = parse_date(date_str)
+        day_of_week = target_date.weekday() + 1
+        
+        # Считаем неделю года
+        week_num_year = target_date.isocalendar()[1]
+        # Чётность: 1 - нечетная (числитель), 2 - четная (знаменатель)
+        calc_week_num = 1 if week_num_year % 2 != 0 else 2
+        
+        print(f"\n=== [LOG] ПРОВЕРКА ЗАНЯТОСТИ ===")
+        print(f"Аудитория ID: {room_id}")
+        print(f"Дата: {date_str} (День недели: {day_of_week})")
+        print(f"Неделя года: {week_num_year} -> Очередь: {calc_week_num}")
+
+        # Ищем занятия
+        lessons = Lesson.objects.filter(
+            classroom_id=room_id,
+            timeslot__day=day_of_week,
+            timeslot__week_num=calc_week_num,
+            scenario__is_active=True
+        ).select_related('timeslot', 'discipline')
+
+        print(f"Найдено уроков в базе: {lessons.count()}")
+
+        busy = []
+        for l in lessons:
+            start = l.timeslot.time_start.strftime("%H:%M")
+            end = l.timeslot.time_end.strftime("%H:%M")
+            busy.append({
+                "start": start,
+                "end": end,
+                "title": l.discipline.name,
+                "type": "lesson"
+            })
+            print(f" -> Занято: {start} - {end} ({l.discipline.name})")
+
+        # Ищем брони
+        bookings = Booking.objects.filter(
+            classroom_id=room_id,
+            date_start__date=target_date,
+            status=1 # VERIFIED
+        )
+        print(f"Найдено одобренных броней: {bookings.count()}")
+        for b in bookings:
+            busy.append({
+                "start": b.date_start.strftime("%H:%M"),
+                "end": b.date_end.strftime("%H:%M"),
+                "title": "Забронировано",
+                "type": "booking"
+            })
+
+        print(f"=== [END LOG] ===\n")
+        return Response(busy)
 
 class ClassroomViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Classroom.objects.all().order_by('num')
