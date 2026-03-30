@@ -3,10 +3,14 @@ from typing import List
 from rest_framework import viewsets, status
 from rest_framework.views import APIView, Response
 from rest_framework.generics import ListAPIView, GenericAPIView
+from rest_framework.response import Response
 from datetime import datetime
-from api.models import Lesson, Classroom
+from rest_framework.decorators import action
+from api.models import Lesson, Classroom, Booking
+from django.utils.dateparse import parse_date
 from api.serializers import ClassroomSerializer, MappedEventSerializer
 from api.services.schedule.mapper import MappedEvent, get_classroom_schedule, get_group_schedule, get_teacher_schedule
+from .serializers.requests import BookingSerializer
 
 class ClassroomViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = Classroom.objects.all().order_by("num")

@@ -18,8 +18,10 @@ class BuildingTravelTimeSerializer(serializers.ModelSerializer):
 
 class ClassroomSerializer(serializers.ModelSerializer):
     building_details = BuildingSerializer(source='building', read_only=True)
+    work_start = serializers.TimeField(source='building.work_start_time', read_only=True)
+    work_end = serializers.TimeField(source='building.work_end_time', read_only=True)
 
     class Meta:
         model = Classroom
-        fields = ['id', 'building', 'building_details', 'num', 'name', 'capacity']
+        fields = ['id', 'building', 'building_details', 'num', 'name', 'work_start', 'work_end', 'capacity']
 
