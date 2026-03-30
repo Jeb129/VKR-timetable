@@ -6,7 +6,7 @@ from datetime import datetime
 from django.utils import timezone
 from django.core.management.base import BaseCommand
 from icalendar import Calendar
-from api.models.models import *
+from api.models import *
 
 logger = logging.getLogger(__name__)
 
