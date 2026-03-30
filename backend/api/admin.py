@@ -59,7 +59,7 @@ class TeacherAdmin(admin.ModelAdmin):
 
 @admin.register(AcademicLoad)
 class AcademicLoadAdmin(admin.ModelAdmin):
-    list_display = ("study_group", "discipline", "teacher", "hours_per_week")
+    list_display = ("study_group", "discipline", "teacher", "whole_hours")
     list_filter = ("study_group__stud_program__institute", "teacher")
     # Это сделает выбор группы и препода удобным (через поиск)
     autocomplete_fields = ["study_group", "teacher", "discipline"]
