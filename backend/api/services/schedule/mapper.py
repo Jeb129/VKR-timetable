@@ -1,6 +1,6 @@
 from collections import defaultdict
 from typing import Any, List
-from django.db.models import Q, BaseManager
+from django.db.models import Q #, BaseManager
 
 from api.models import (
     Semester,
@@ -66,7 +66,7 @@ def get_dates_qs(date_from: datetime, date_to: datetime) -> tuple[defaultdict[An
 
 
 def map_lessons(
-    *, date_from: datetime, date_to: datetime, lessons: BaseManager[Lesson]= None
+    *, date_from: datetime, date_to: datetime, lessons = None
 ) -> List[MappedEvent]:
     #
     sem = get_semester_by_date(date_from)

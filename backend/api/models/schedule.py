@@ -67,5 +67,5 @@ class Lesson(models.Model):
     classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE)
     teachers = models.ManyToManyField(Teacher)
 
-    Ограничение: В одном занятии нельзя объединять несколько
+    # Ограничение: В одном занятии нельзя объединять несколько
     study_groups = models.ManyToManyField(StudyGroup)
