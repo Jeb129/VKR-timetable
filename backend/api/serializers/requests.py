@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models.models import (
+from api.models import (
     Request, ExcludedTimeslot, ClassroomPreference, 
     Booking, ScheduleAdjustment, Constraint
 )
@@ -40,4 +40,5 @@ class ClassroomPreferenceSerializer(serializers.ModelSerializer):
     class Meta:
         model = ClassroomPreference
         fields = '__all__'
+
 

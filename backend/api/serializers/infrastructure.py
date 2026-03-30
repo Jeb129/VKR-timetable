@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from ..models.models import Building,BuildingTravelTime, Equipment, Classroom
+from api.models import Building,BuildingTravelTime, Equipment, Classroom
 
 class BuildingSerializer(serializers.ModelSerializer):
     class Meta:

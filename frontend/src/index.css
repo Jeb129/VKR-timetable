@@ -1,3 +1,5 @@
+/* Стили, отвечающие за разметку страниц */
+
 html, body {
   height: 100vh;
   margin: 0;
@@ -8,3 +10,48 @@ html, body {
   height: 100vh;
   display: flex;
 }
+
+/* Контейнеры */
+.flex-row {
+    display: flex;
+    flex-direction: row;
+}
+.flex-col {
+    display: flex;
+    flex-direction: column;
+}
+.flex-wrap {
+    display: flex;
+    flex-wrap: wrap;
+}
+.justify-center {
+    display: flex;
+    justify-content: center;
+}
+.align-center {
+    display: flex;
+    align-items: center;
+}
+.space-between {
+    display: flex;
+    justify-content: space-between;
+}
+
+/* Размеры */
+.flex-grow { flex-grow: 1;}
+
+.f-1 {flex: 1;}
+.f-2 {flex: 2;}
+.f-3 {flex: 3;}
+
+.max-height { height: 100%; }
+.max-width { width: 100%; }
+
+/* Отступы */
+.mt-1 { margin-top: 1rem; }
+.mb-1 { margin-bottom: 1rem; }
+.ml-1 { margin-left: 1rem; }
+.mr-1 { margin-right: 1rem; }
+.m-1 { margin: 1rem; }
+.gap-1 { gap: 0.5rem; }
+.gap-2 { gap: 1rem; }

@@ -17,20 +17,5 @@ const App = () =>
       <Route path="/profile" element={<UserProfilePage />} />
       <Route path="/Booking" element={<BookingPage/>}/>
     </Routes>
-    {/* <Routes>
-    <Route path='/' element={ <HomePage />}/>
-    <Route path="/register" element={<RegisterPage />} />
-    <Route path="/test" element={<TestPage />} />
-    <Route path="/login" element={<LoginPage />} />
-    <Route path='/profile' element= {
-      <ProtectedRoute>
-       <UserProfilePage  />
-      </ProtectedRoute>
-       } />
-    <Route path='/projects/:projectId' element={
-      <ProtectedRoute>
-        <ProjectPage />
-      </ProtectedRoute>}/>
-  </Routes> */}
   </>
 export default App
