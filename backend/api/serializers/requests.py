@@ -23,8 +23,7 @@ class BookingSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Booking
-        fields = ['id', 'user', 'user_name', 'classroom', 'classroom_num', 
-                  'date_start', 'date_end', 'description', 'status']
+        fields = ['id', 'classroom', 'date_start', 'date_end', 'description', 'status']
         read_only_fields = ['user', 'status']
 
     def create(self, validated_data):

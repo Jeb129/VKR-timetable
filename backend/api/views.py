@@ -6,6 +6,7 @@ from rest_framework.views import APIView, Response
 from rest_framework.generics import ListAPIView, GenericAPIView
 from rest_framework.response import Response
 from datetime import datetime
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import action
 from api.models import Lesson, Classroom, Booking
@@ -96,6 +97,7 @@ class TeacherScheduleView(ListAPIView):
 class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all()
     serializer_class = BookingSerializer
+    permission_class = [IsAuthenticated]
 
     @action(detail=False, methods=['get'])
     def busy_slots(self, request):

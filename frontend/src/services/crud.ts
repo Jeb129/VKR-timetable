@@ -14,6 +14,10 @@ const search = async (model: string, data: Record<string,any>) => {
     )
     return response.data
 }
+const create = async (model: string, data: Record<string, any>) => {
+    const response = await privateApi.post(`/api/${model}/`, data);
+    return response.data;
+};
 const list = async (model: string, params: Record<string, any> = {}) => {
     const response = await privateApi.get(`/api/${model}/`, { params });
     return response.data;
@@ -29,5 +33,6 @@ export const dbService = {
     update,
     get,
     list,
+    create,
     search
 }
