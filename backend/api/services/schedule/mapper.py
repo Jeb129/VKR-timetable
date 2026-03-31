@@ -1,5 +1,6 @@
 from collections import defaultdict
 from typing import Any, List
+from dataclasses import dataclass
 from django.db.models import Q
 
 from api.models import (
@@ -12,7 +13,7 @@ from api.models import (
 )
 from datetime import datetime, timedelta, timezone
 
-
+@dataclass
 class MappedEvent:
     event: Lesson | ScheduleAdjustment | Booking
     type: str
@@ -38,7 +39,7 @@ def get_active_scenario(sem) -> ScheduleScenario:
 
 def get_dates_qs(date_from: datetime, date_to: datetime) -> tuple[defaultdict[Any, List], Q]:
     # Собираем комбинации из таймслотов и да, попутно создаем фильтры для занятий
-    lesson_dates = defaultdict(List)
+    lesson_dates = defaultdict(list)
     ts_filter = Q()
 
     seen = set()
@@ -69,11 +70,11 @@ def map_lessons(
     #
     sem = get_semester_by_date(date_from)
     if not sem:
-        raise ValueError(detail="Не найден семестр для указанного промежутка дат")
+        raise ValueError("Не найден семестр для указанного промежутка дат")
 
     scenario = get_active_scenario(sem=sem)
     if not scenario:
-        raise ValueError(detail="Не найден активный сценарий в семестре")
+        raise ValueError("Не найден активный сценарий в семестре")
 
     if not lessons:
         lessons = Lesson.objects

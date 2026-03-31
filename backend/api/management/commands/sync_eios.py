@@ -6,7 +6,8 @@ from datetime import datetime
 from django.utils import timezone
 from django.core.management.base import BaseCommand
 from icalendar import Calendar
-from api.models import *
+from api.models.buildings import Classroom
+from api.models.schedule import ScheduleScenario, Lesson, Discipline, LessonType, Timeslot
 
 logger = logging.getLogger(__name__)
 

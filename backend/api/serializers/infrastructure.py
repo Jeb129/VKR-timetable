@@ -4,7 +4,7 @@ from api.models import Building,BuildingTravelTime, Equipment, Classroom
 class BuildingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Building
-        fields = '__all__'
+        fields = ['id', 'name', 'address', 'work_start_time', 'work_end_time']
 
 class EquipmentSerializer(serializers.ModelSerializer):
     class Meta:

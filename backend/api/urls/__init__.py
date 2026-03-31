@@ -10,5 +10,6 @@ router.register(r'bookings', BookingViewSet, basename='booking')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('', include('api.urls.infrastructure')), 
     path("schedule/",include("api.urls.schedule"))
 ]
