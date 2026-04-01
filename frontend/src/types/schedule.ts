@@ -13,3 +13,15 @@ export interface MappedEvent {
         user_name?: string;    // для броней
     };
 }
+export interface Lesson {
+    id: number;
+    discipline_name: string;
+    type_name: string;
+    classroom_name: string;
+    start: string;
+    end: string;
+    order: number;
+    day: number;
+    teacher_list: string[];
+    groups_list: string[];
+}

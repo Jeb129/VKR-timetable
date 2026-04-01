@@ -14,7 +14,6 @@ from api.models import (
 from datetime import datetime, timedelta, timezone
 
 @dataclass
-from api.models.constraints import AcademicLoad
 class MappedEvent:
     event: Lesson | ScheduleAdjustment | Booking
     type: str
