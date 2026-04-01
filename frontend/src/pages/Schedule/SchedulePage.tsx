@@ -1,78 +1,67 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import axios from "axios";
-import '@fullcalendar/core/main.css';
-import '@fullcalendar/daygrid/main.css';
-import '@fullcalendar/timegrid/main.css';
-import "./Schedule.css"; // Импорт новых стилей
-
-interface Lesson {
-    id: number;
-    discipline_name: string;
-    type_name: string;
-    classroom_name: string;
-    start: string;
-    end: string;
-    order: number;
-    day: number;
-    teachers_list: string[];
-    groups_list: string[];
-}
-
-interface Classroom {
-    id: number;
-    num: string;
-    building?: number;
-}
+import { dbService } from "@/services/crud"; 
+import type { MappedEvent } from "@/types/schedule";
+import type { Classroom } from "@/types/classroom"; 
+import "./Schedule.css";
 
 const SchedulePage = () => {
     const navigate = useNavigate();
     const [classrooms, setClassrooms] = useState<Classroom[]>([]);
     const [selectedRoom, setSelectedRoom] = useState<string | number>("");
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-    const [lessons, setLessons] = useState<Lesson[]>([]);
+    const [events, setEvents] = useState<MappedEvent[]>([]);
     const [loading, setLoading] = useState(false);
 
-    // 3. Загрузка списка аудиторий
+    // 1. Загрузка аудиторий через dbService
     useEffect(() => {
-        axios.get("http://localhost:8000/api/classrooms/")
-            .then(res => {
-                setClassrooms(res.data);
-                if (res.data.length > 0) setSelectedRoom(res.data[0].id);
+        console.log("Попытка загрузить аудитории..."); // ЛОГ 1
+        dbService.list("classrooms")
+            .then(data => {
+                console.log("Данные получены:", data); // ЛОГ 2
+                setClassrooms(data);
+                if (data.length > 0) setSelectedRoom(data[0].id);
             })
-            .catch(err => console.error("Ошибка загрузки аудиторий:", err));
+            .catch(err => {
+                console.error("КРИТИЧЕСКАЯ ОШИБКА CRUD:", err); // ЛОГ 3
+            });
     }, []);
 
-    // 4. Загрузка расписания
+    // 2. Загрузка расписания (MappedEvents)
     useEffect(() => {
-    if (selectedRoom) {
-        // ОБЯЗАТЕЛЬНО добавляем параметр &date=
-        axios.get(`http://localhost:8000/api/lessons/?classroom_id=${selectedRoom}&date=${selectedDate}`)
-            .then(res => setLessons(res.data))
-            .catch(err => console.error("Ошибка загрузки уроков:", err))
+        if (selectedRoom) {
+            setLoading(true);
+            dbService.list("schedule/classroom", { 
+                classroom_id: selectedRoom, 
+                date: selectedDate 
+            })
+            .then(data => setEvents(data))
+            .catch(err => console.error("Ошибка маппера:", err))
             .finally(() => setLoading(false));
-    }
-}, [selectedRoom, selectedDate]);
+        }
+    }, [selectedRoom, selectedDate]);
+
+    // Функция для красивого вывода времени из ISO строки
+    const formatTime = (isoString: string) => {
+        const date = new Date(isoString);
+        return date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+    };
 
     return (
         <div className="flex-col bg-main min-h-screen">
-            
-            {/* 1. ВЕРХНЯЯ ПАНЕЛЬ (NAVBAR) */}
             <nav className="navbar">
-                <div className="logo-white">КГУ</div>
+                <div className="logo-white" onClick={() => navigate("/schedule")}>КГУ</div>
                 <div className="flex-row gap-10">
                     <button className="nav-btn" onClick={() => navigate("/profile")}>Профиль</button>
-                    <button className="nav-btn" onClick={() => navigate("/login")}>Выйти</button>
+                    <button className="nav-btn" style={{backgroundColor: '#f5222d'}} onClick={() => navigate("/login")}>Выход</button>
                 </div>
             </nav>
 
-            {/* 2. ФИЛЬТРЫ */}
             <div className="filters-container slide-up">
                 <div className="filter-group">
                     <label className="filter-label">Аудитория</label>
                     <select 
-                        className="focus-glow" 
-                        style={{ padding: '12px', borderRadius: '12px', border: '1px solid #ddd' }}
+                        className="styled-select" 
                         value={selectedRoom}
                         onChange={(e) => setSelectedRoom(e.target.value)}
                     >
@@ -81,62 +70,51 @@ const SchedulePage = () => {
                         ))}
                     </select>
                 </div>
-
                 <div className="filter-group" style={{ maxWidth: '250px' }}>
                     <label className="filter-label">Дата</label>
-                    <input 
-                        type="date" 
-                        className="focus-glow"
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                    />
+                    <input type="date" className="card p-10" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
                 </div>
             </div>
 
-            {/* 3. СПИСОК ЗАНЯТИЙ */}
             <div className="flex-col pb-40">
                 {loading ? (
-                    <div className="card text-center" style={{margin: '0 20px'}}>Загрузка...</div>
-                ) : lessons.length > 0 ? (
-                    lessons.map((lesson) => (
-                        <div key={lesson.id} className="lesson-row-container fade-in">
-                            
-                            {/* Время */}
-                            <div className="time-side">
-                                <span>{lesson.start}</span>
+                    <div className="card text-center mx-20">Загрузка расписания...</div>
+                ) : events.length > 0 ? (
+                    events.map((mappedItem, index) => (
+                        <div key={index} className="lesson-row-container fade-in">
+                            {/* Время берем из внешних полей маппера */}
+                            <div className={`time-side ${mappedItem.type === 'booking' ? 'bg-orange' : ''}`}>
+                                <span>{formatTime(mappedItem.date_start)}</span>
                                 <div className="time-line"></div>
-                                <span>{lesson.end}</span>
+                                <span>{formatTime(mappedItem.date_end)}</span>
                             </div>
 
-                            {/* Информация */}
                             <div className="info-side">
                                 <div className="flex-row justify-between align-center mb-10">
                                     <h4 className="subject-name">
-                                        {lesson.type_name}. {lesson.discipline_name}
+                                        {mappedItem.type === 'lesson' 
+                                            ? `${mappedItem.event.type_name}. ${mappedItem.event.discipline_name}`
+                                            : `Бронь: ${mappedItem.event.description}`
+                                        }
                                     </h4>
-                                    <div className="order-badge">
-                                        {lesson.order}-е занятие
-                                    </div>
                                 </div>
                                 
                                 <div className="flex-col">
-                                    <div className="details-text">
-                                        👤 {lesson.teachers_list?.length > 0 ? lesson.teachers_list.join(', ') : 'Преподаватель не указан'}
-                                    </div>
-                                    <div className="details-text">
-                                        👥 Группы: {lesson.groups_list?.join(', ') || 'Не указаны'}
-                                    </div>
-                                    <div className="details-text">
-                                        📍 Аудитория: {lesson.classroom_name}
-                                    </div>
+                                    {mappedItem.type === 'lesson' ? (
+                                        <>
+                                            <div className="details-text">👤 {mappedItem.event.teachers_list?.join(', ')}</div>
+                                            <div className="details-text">👥 Группы: {mappedItem.event.groups_list?.join(', ')}</div>
+                                        </>
+                                    ) : (
+                                        <div className="details-text">👤 Ответственный: {mappedItem.event.user_name}</div>
+                                    )}
+                                    <div className="details-text">📍 Кабинет: {mappedItem.event.classroom_name}</div>
                                 </div>
                             </div>
                         </div>
                     ))
                 ) : (
-                    <div className="card text-center text-muted" style={{margin: '0 20px'}}>
-                        Занятий на выбранный день не найдено
-                    </div>
+                    <div className="card text-center text-muted mx-20">Событий не найдено</div>
                 )}
             </div>
         </div>

@@ -10,7 +10,9 @@
 .fc {
     width: 100% !important;
     height: 100% !important;
+    min-width: 100%;
     font-family: 'Inter', sans-serif;
+    min-width: 400px;
 }
 
 /* Стилизация внутренних элементов под КГУ */
@@ -22,5 +24,41 @@
 }
 
 .fc-timegrid-slot {
-    height: 30px !important; /* Увеличим высоту слотов для удобства */
+    height: 3em !important; 
+    border-bottom: 1px solid #f0f0f0 !important;
+}
+.fc-timegrid-slot-label {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--primary-color);
+}
+
+/* Стили событий (пары/брони) */
+.fc-v-event {
+    border-radius: 8px !important;
+    border: none !important;
+    padding: 2px !important;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+
+.fc-event-title {
+    font-weight: 700;
+    font-size: 11px;
+}
+
+.preview-event-pulse {
+    border: 2px dashed #ffffff !important;
+    animation: pulse-green 2s infinite;
+    z-index: 10;
+}
+@keyframes pulse-green {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+/* Сделаем инпуты времени красивее */
+input[type="time"]::-webkit-calendar-picker-indicator {
+    filter: invert(24%) sepia(87%) saturate(2256%) hue-rotate(224deg) brightness(89%) contrast(92%);
+    cursor: pointer;
 }

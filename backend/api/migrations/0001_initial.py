@@ -15,667 +15,243 @@ class Migration(migrations.Migration):
 
     operations = [
         migrations.CreateModel(
-            name="Request",
+            name='Request',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("description", models.TextField()),
-                ("created_at", models.DateTimeField(auto_now_add=True)),
-                (
-                    "status",
-                    models.IntegerField(
-                        choices=[
-                            (0, "На модерации"),
-                            (1, "Одобрена"),
-                            (2, "Отклонена"),
-                            (3, "Отменена"),
-                        ],
-                        db_index=True,
-                        default=0,
-                    ),
-                ),
-                (
-                    "request_type",
-                    models.IntegerField(
-                        choices=[
-                            (0, "Исключение времени занятия"),
-                            (1, "Предпочтения по аудитории"),
-                            (2, "Изменение в расписании"),
-                            (3, "Бронирование аудитории"),
-                        ],
-                        null=True,
-                    ),
-                ),
-                (
-                    "user",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        to=settings.AUTH_USER_MODEL,
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('description', models.TextField()),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('status', models.IntegerField(choices=[(0, 'На модерации'), (1, 'Одобрена'), (2, 'Отклонена'), (3, 'Отменена')], db_index=True, default=0)),
+                ('request_type', models.IntegerField(choices=[(0, 'Исключение времени занятия'), (1, 'Предпочтения по аудитории'), (2, 'Изменение в расписании'), (3, 'Бронирование аудитории')], null=True)),
+                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to=settings.AUTH_USER_MODEL)),
             ],
         ),
         migrations.CreateModel(
-            name="Building",
+            name='Building',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("name", models.CharField(max_length=50)),
-                ("short_name", models.CharField(max_length=5)),
-                ("address", models.CharField(max_length=255)),
-                ("work_start_time", models.TimeField()),
-                ("work_end_time", models.TimeField()),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=50)),
+                ('short_name', models.CharField(max_length=5)),
+                ('address', models.CharField(max_length=255)),
+                ('work_start_time', models.TimeField()),
+                ('work_end_time', models.TimeField()),
             ],
         ),
         migrations.CreateModel(
-            name="Constraint",
+            name='Constraint',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("name", models.TextField(unique=True)),
-                ("description", models.TextField(max_length=255)),
-                ("weight", models.IntegerField()),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.TextField(unique=True)),
+                ('description', models.TextField(max_length=255)),
+                ('weight', models.IntegerField()),
             ],
         ),
         migrations.CreateModel(
-            name="Discipline",
+            name='Discipline',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("name", models.CharField(max_length=255)),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=255)),
             ],
         ),
         migrations.CreateModel(
-            name="Equipment",
+            name='Equipment',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("name", models.CharField(max_length=100)),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=100)),
             ],
         ),
         migrations.CreateModel(
-            name="LessonType",
+            name='LessonType',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("name", models.CharField(max_length=100)),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=100)),
             ],
         ),
         migrations.CreateModel(
-            name="Semester",
+            name='Semester',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("name", models.CharField(max_length=255, unique=True)),
-                ("date_start", models.DateField(unique=True)),
-                ("date_end", models.DateField(unique=True)),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=255, unique=True)),
+                ('date_start', models.DateField(unique=True)),
+                ('date_end', models.DateField(unique=True)),
             ],
         ),
         migrations.CreateModel(
-            name="Timeslot",
+            name='Timeslot',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("day", models.PositiveSmallIntegerField()),
-                ("week_num", models.PositiveSmallIntegerField()),
-                ("order_number", models.PositiveSmallIntegerField(default=1)),
-                ("time_start", models.TimeField()),
-                ("time_end", models.TimeField()),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('day', models.PositiveSmallIntegerField()),
+                ('week_num', models.PositiveSmallIntegerField()),
+                ('order_number', models.PositiveSmallIntegerField(default=1)),
+                ('time_start', models.TimeField()),
+                ('time_end', models.TimeField()),
             ],
         ),
         migrations.CreateModel(
-            name="BuildingPriority",
+            name='BuildingPriority',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("weight", models.IntegerField()),
-                (
-                    "building",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.building"
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('weight', models.IntegerField()),
+                ('building', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.building')),
             ],
         ),
         migrations.CreateModel(
-            name="Classroom",
+            name='Classroom',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("num", models.CharField(max_length=20)),
-                ("name", models.CharField(blank=True, max_length=100)),
-                ("capacity", models.PositiveIntegerField()),
-                (
-                    "eios_id",
-                    models.IntegerField(
-                        blank=True,
-                        help_text="ID аудитории в системе EIOS",
-                        null=True,
-                        unique=True,
-                    ),
-                ),
-                (
-                    "building",
-                    models.ForeignKey(
-                        blank=True,
-                        null=True,
-                        on_delete=django.db.models.deletion.SET_NULL,
-                        related_name="classrooms",
-                        to="api.building",
-                    ),
-                ),
-                (
-                    "equipment",
-                    models.ManyToManyField(
-                        blank=True, related_name="classrooms", to="api.equipment"
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('num', models.CharField(max_length=20)),
+                ('name', models.CharField(blank=True, max_length=100)),
+                ('capacity', models.PositiveIntegerField()),
+                ('eios_id', models.IntegerField(blank=True, help_text='ID аудитории в системе EIOS', null=True, unique=True)),
+                ('building', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, related_name='classrooms', to='api.building')),
+                ('equipment', models.ManyToManyField(blank=True, related_name='classrooms', to='api.equipment')),
             ],
         ),
         migrations.CreateModel(
-            name="Institute",
+            name='Institute',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("name", models.CharField(max_length=255)),
-                ("short_name", models.CharField(max_length=100)),
-                (
-                    "buildings_priority",
-                    models.ManyToManyField(
-                        related_name="institutes_priority",
-                        through="api.BuildingPriority",
-                        to="api.building",
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=255)),
+                ('short_name', models.CharField(max_length=100)),
+                ('buildings_priority', models.ManyToManyField(related_name='institutes_priority', through='api.BuildingPriority', to='api.building')),
             ],
         ),
         migrations.AddField(
-            model_name="buildingpriority",
-            name="institute",
-            field=models.ForeignKey(
-                on_delete=django.db.models.deletion.CASCADE, to="api.institute"
-            ),
+            model_name='buildingpriority',
+            name='institute',
+            field=models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.institute'),
         ),
         migrations.CreateModel(
-            name="EquipmentRequirement",
+            name='EquipmentRequirement',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                (
-                    "discipline",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.discipline"
-                    ),
-                ),
-                (
-                    "equipment",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.equipment"
-                    ),
-                ),
-                (
-                    "lesson_type",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.lessontype"
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('discipline', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.discipline')),
+                ('equipment', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.equipment')),
+                ('lesson_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.lessontype')),
             ],
         ),
         migrations.CreateModel(
-            name="ScheduleScenario",
+            name='ScheduleScenario',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("name", models.CharField(max_length=255)),
-                ("is_active", models.BooleanField(default=False)),
-                ("total_penalty", models.IntegerField(default=0)),
-                ("created_at", models.DateTimeField(auto_now_add=True)),
-                (
-                    "semester",
-                    models.ForeignKey(
-                        null=True,
-                        on_delete=django.db.models.deletion.SET_NULL,
-                        to="api.semester",
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=255)),
+                ('is_active', models.BooleanField(default=False)),
+                ('total_penalty', models.IntegerField(default=0)),
+                ('created_at', models.DateTimeField(auto_now_add=True)),
+                ('semester', models.ForeignKey(null=True, on_delete=django.db.models.deletion.SET_NULL, to='api.semester')),
             ],
         ),
         migrations.CreateModel(
-            name="StudyProgram",
+            name='StudyProgram',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("name", models.CharField(max_length=255)),
-                ("short_name", models.CharField(max_length=100)),
-                (
-                    "institute",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="study_programs",
-                        to="api.institute",
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=255)),
+                ('short_name', models.CharField(max_length=100)),
+                ('institute', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='study_programs', to='api.institute')),
             ],
         ),
         migrations.CreateModel(
-            name="StudyGroup",
+            name='StudyGroup',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("admission_year", models.PositiveIntegerField()),
-                ("learning_form", models.CharField(max_length=20)),
-                ("learning_stage", models.CharField(max_length=20)),
-                ("group_num", models.PositiveIntegerField()),
-                ("sub_group_num", models.PositiveIntegerField()),
-                ("name", models.CharField(max_length=50)),
-                ("students_count", models.PositiveIntegerField()),
-                ("sub_groups", models.ManyToManyField(blank=True, to="api.studygroup")),
-                (
-                    "stud_program",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        to="api.studyprogram",
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('admission_year', models.PositiveIntegerField()),
+                ('learning_form', models.CharField(max_length=20)),
+                ('learning_stage', models.CharField(max_length=20)),
+                ('group_num', models.PositiveIntegerField()),
+                ('sub_group_num', models.PositiveIntegerField()),
+                ('name', models.CharField(max_length=50)),
+                ('students_count', models.PositiveIntegerField()),
+                ('sub_groups', models.ManyToManyField(blank=True, to='api.studygroup')),
+                ('stud_program', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.studyprogram')),
             ],
         ),
         migrations.CreateModel(
-            name="Teacher",
+            name='Teacher',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("name", models.CharField(max_length=255)),
-                ("weight", models.IntegerField()),
-                (
-                    "user",
-                    models.OneToOneField(
-                        blank=True,
-                        null=True,
-                        on_delete=django.db.models.deletion.SET_NULL,
-                        to=settings.AUTH_USER_MODEL,
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('name', models.CharField(max_length=255)),
+                ('weight', models.IntegerField()),
+                ('user', models.OneToOneField(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to=settings.AUTH_USER_MODEL)),
             ],
         ),
         migrations.CreateModel(
-            name="AcademicLoad",
+            name='AcademicLoad',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("whole_hours", models.PositiveIntegerField()),
-                (
-                    "discipline",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.discipline"
-                    ),
-                ),
-                (
-                    "lesson_type",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.lessontype"
-                    ),
-                ),
-                (
-                    "semester",
-                    models.ForeignKey(
-                        null=True,
-                        on_delete=django.db.models.deletion.SET_NULL,
-                        to="api.semester",
-                    ),
-                ),
-                (
-                    "study_group",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="loads",
-                        to="api.studygroup",
-                    ),
-                ),
-                (
-                    "teacher",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="loads",
-                        to="api.teacher",
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('semester', models.PositiveSmallIntegerField()),
+                ('hours_per_week', models.PositiveIntegerField()),
+                ('discipline', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.discipline')),
+                ('lesson_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.lessontype')),
+                ('study_group', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='loads', to='api.studygroup')),
+                ('teacher', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='loads', to='api.teacher')),
             ],
         ),
         migrations.CreateModel(
-            name="Lesson",
+            name='Lesson',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                (
-                    "classroom",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.classroom"
-                    ),
-                ),
-                (
-                    "discipline",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.discipline"
-                    ),
-                ),
-                (
-                    "lesson_type",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.lessontype"
-                    ),
-                ),
-                (
-                    "scenario",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="lessons",
-                        to="api.schedulescenario",
-                    ),
-                ),
-                ("study_groups", models.ManyToManyField(to="api.studygroup")),
-                ("teachers", models.ManyToManyField(to="api.teacher")),
-                (
-                    "timeslot",
-                    models.ForeignKey(
-                        blank=True,
-                        null=True,
-                        on_delete=django.db.models.deletion.SET_NULL,
-                        to="api.timeslot",
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('classroom', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.classroom')),
+                ('discipline', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.discipline')),
+                ('lesson_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.lessontype')),
+                ('scenario', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='lessons', to='api.schedulescenario')),
+                ('study_groups', models.ManyToManyField(to='api.studygroup')),
+                ('teachers', models.ManyToManyField(to='api.teacher')),
+                ('timeslot', models.ForeignKey(blank=True, null=True, on_delete=django.db.models.deletion.SET_NULL, to='api.timeslot')),
             ],
         ),
         migrations.CreateModel(
-            name="Booking",
+            name='Booking',
             fields=[
-                (
-                    "request_ptr",
-                    models.OneToOneField(
-                        auto_created=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        parent_link=True,
-                        primary_key=True,
-                        serialize=False,
-                        to="api.request",
-                    ),
-                ),
-                ("date_start", models.DateTimeField()),
-                ("date_end", models.DateTimeField()),
-                (
-                    "classroom",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.classroom"
-                    ),
-                ),
+                ('request_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='api.request')),
+                ('date_start', models.DateTimeField()),
+                ('date_end', models.DateTimeField()),
+                ('classroom', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.classroom')),
             ],
-            bases=("api.request",),
+            bases=('api.request',),
         ),
         migrations.CreateModel(
-            name="ClassroomPreference",
+            name='ClassroomPreference',
             fields=[
-                (
-                    "request_ptr",
-                    models.OneToOneField(
-                        auto_created=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        parent_link=True,
-                        primary_key=True,
-                        serialize=False,
-                        to="api.request",
-                    ),
-                ),
-                (
-                    "classroom",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.classroom"
-                    ),
-                ),
-                (
-                    "discipline",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.discipline"
-                    ),
-                ),
-                (
-                    "lesson_type",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.lessontype"
-                    ),
-                ),
-                (
-                    "teacher",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.teacher"
-                    ),
-                ),
+                ('request_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='api.request')),
+                ('classroom', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.classroom')),
+                ('discipline', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.discipline')),
+                ('lesson_type', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.lessontype')),
+                ('teacher', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.teacher')),
             ],
-            bases=("api.request",),
+            bases=('api.request',),
         ),
         migrations.CreateModel(
-            name="ExcludedTimeslot",
+            name='ExcludedTimeslot',
             fields=[
-                (
-                    "request_ptr",
-                    models.OneToOneField(
-                        auto_created=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        parent_link=True,
-                        primary_key=True,
-                        serialize=False,
-                        to="api.request",
-                    ),
-                ),
-                (
-                    "teacher",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.teacher"
-                    ),
-                ),
-                (
-                    "timeslot",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.timeslot"
-                    ),
-                ),
+                ('request_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='api.request')),
+                ('teacher', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.teacher')),
+                ('timeslot', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.timeslot')),
             ],
-            bases=("api.request",),
+            bases=('api.request',),
         ),
         migrations.CreateModel(
-            name="ScheduleAdjustment",
+            name='ScheduleAdjustment',
             fields=[
-                (
-                    "request_ptr",
-                    models.OneToOneField(
-                        auto_created=True,
-                        on_delete=django.db.models.deletion.CASCADE,
-                        parent_link=True,
-                        primary_key=True,
-                        serialize=False,
-                        to="api.request",
-                    ),
-                ),
-                ("date", models.DateField()),
-                (
-                    "lesson",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.lesson"
-                    ),
-                ),
-                (
-                    "timeslot",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE, to="api.timeslot"
-                    ),
-                ),
+                ('request_ptr', models.OneToOneField(auto_created=True, on_delete=django.db.models.deletion.CASCADE, parent_link=True, primary_key=True, serialize=False, to='api.request')),
+                ('date', models.DateField()),
+                ('lesson', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.lesson')),
+                ('timeslot', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='api.timeslot')),
             ],
-            bases=("api.request",),
+            bases=('api.request',),
         ),
         migrations.CreateModel(
-            name="BuildingTravelTime",
+            name='BuildingTravelTime',
             fields=[
-                (
-                    "id",
-                    models.BigAutoField(
-                        auto_created=True,
-                        primary_key=True,
-                        serialize=False,
-                        verbose_name="ID",
-                    ),
-                ),
-                ("travel_time_minutes", models.PositiveIntegerField()),
-                (
-                    "from_building",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="travel_from",
-                        to="api.building",
-                    ),
-                ),
-                (
-                    "to_building",
-                    models.ForeignKey(
-                        on_delete=django.db.models.deletion.CASCADE,
-                        related_name="travel_to",
-                        to="api.building",
-                    ),
-                ),
+                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
+                ('travel_time_minutes', models.PositiveIntegerField()),
+                ('from_building', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='travel_from', to='api.building')),
+                ('to_building', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='travel_to', to='api.building')),
             ],
             options={
-                "unique_together": {("from_building", "to_building")},
+                'unique_together': {('from_building', 'to_building')},
             },
         ),
         migrations.AddConstraint(
-            model_name="schedulescenario",
-            constraint=models.UniqueConstraint(
-                condition=models.Q(("is_active", True)),
-                fields=("semester",),
-                name="unique_active_record",
-            ),
+            model_name='schedulescenario',
+            constraint=models.UniqueConstraint(condition=models.Q(('is_active', True)), fields=('semester',), name='unique_active_record'),
         ),
     ]

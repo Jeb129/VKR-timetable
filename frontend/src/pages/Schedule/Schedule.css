@@ -121,3 +121,31 @@
     background: white;
     color: var(--primary-color);
 }
+/*Селектор*/
+.styled-select {
+    width: 100%;
+    padding: 12px 16px;
+    border: 2px solid var(--primary-color);
+    border-radius: 12px;
+    background-color: white;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-main);
+    cursor: pointer;
+    appearance: none; /* Убираем стандартную стрелку браузера */
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%232c3ab3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 1rem center;
+    background-size: 1em;
+    transition: var(--transition);
+}
+
+.styled-select:hover {
+    border-color: var(--primary-hover);
+    box-shadow: 0 4px 12px rgba(44, 58, 179, 0.1);
+}
+
+.styled-select:focus {
+    outline: none;
+    box-shadow: 0 0 0 4px rgba(44, 58, 179, 0.15);
+}

@@ -10,5 +10,6 @@ router.register(r'classrooms', ClassroomViewSet, basename='classroom')
 
 urlpatterns = [
     path('', include(router.urls)),
+    path('', include('api.urls.infrastructure')), 
     path("schedule/",include("api.urls.schedule"))
 ]

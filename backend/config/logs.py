@@ -33,6 +33,11 @@ CONFIG = {
             "level": "DEBUG",
             "propagate": False,
         },
+        "cheker": {               
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
     }
 }
 
