@@ -98,6 +98,22 @@ class BookingViewSet(viewsets.ModelViewSet):
     queryset = Booking.objects.all()
     serializer_class = BookingSerializer
     permission_class = [IsAuthenticated]
+    
+    # Фильтр заявок закрытых
+    def get_queryset(self):
+        queryset = Booking.objects.all().order_by("-created_at")
+        
+        # Получаем статус из ссылки (?status=0)
+        status_param = self.request.query_params.get('status')
+        my_param = self.request.query_params.get('my')
+        
+        if status_param is not None:
+            # Если параметр передан, фильтруем по нему
+            queryset = queryset.filter(status=status_param)
+        if my_param == 'true':
+            # Фильтруем по текущему пользователю из токена
+            queryset = queryset.filter(user=self.request.user)
+        return queryset
 
     @action(detail=False, methods=['get'])
     def busy_slots(self, request):

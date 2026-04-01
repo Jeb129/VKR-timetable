@@ -140,7 +140,7 @@ const BookingPage = () => {
                             <label className="filter-label">Начало</label>
                             <input 
                                 type="time" 
-                                step="900" // Шаг 15 минут
+                                step="900" // Шаг 15 минут надо увеличить до полу часа или часа
                                 className="card"
                                 style={{ padding: '10px', borderRadius: '12px' }}
                                 value={startTime}

@@ -13,6 +13,7 @@ class Request(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
+    admin_comment = models.TextField(null=True, blank=True, help_text="Причина отказа или заметка модератора")
     status = models.IntegerField(
         choices=enums.RequestStatus.choices,
         default=enums.RequestStatus.ON_MODERATION,
