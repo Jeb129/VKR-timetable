@@ -38,6 +38,11 @@ CONFIG = {
             "level": "DEBUG",
             "propagate": False,
         },
+        "schedule": {               
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
     }
 }
 

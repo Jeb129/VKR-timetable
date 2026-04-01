@@ -53,7 +53,7 @@ class ClassroomScheduleView(ListAPIView):
             return Response({"error": "Параметры date и classroom_id обязательны"}, status=400)
 
         try:
-            # Превращаем строку "2026-03-30" в объект datetime для маппера
+        # Превращаем строку "2026-03-30" в объект datetime для маппера
             dt = datetime.strptime(date_str, '%Y-%m-%d')
             
             # Вызываем маппер (он сам разберется с числителем/знаменателем)
@@ -64,7 +64,7 @@ class ClassroomScheduleView(ListAPIView):
             )
             
             # Логируем количество найденных событий (исправленная версия того, что не работало)
-            logger.debug(f"Найдено событий для аудитории {classroom_id}: {len(mapped_events)}")
+            logger.debug(f"Найдено событий для аудитории {classroom_id}: {len(mapped_events) if mapped_events else 0}")
             
             serializer = self.get_serializer(mapped_events, many=True)
             return Response(serializer.data)

@@ -1,4 +1,6 @@
 from collections import defaultdict
+import logging
+from turtle import reset
 from typing import Any, List
 from dataclasses import dataclass
 from django.db.models import Q
@@ -10,11 +12,13 @@ from api.models import (
     ScheduleAdjustment,
     Booking,
     enums,
+    AcademicLoad
 )
 from datetime import datetime, timedelta, timezone
 
+logger = logging.getLogger("schedule")
+
 @dataclass
-from api.models.constraints import AcademicLoad
 class MappedEvent:
     event: Lesson | ScheduleAdjustment | Booking
     type: str
@@ -52,6 +56,7 @@ def get_dates_qs(date_from: datetime, date_to: datetime) -> tuple[defaultdict[An
         current_week_num = 1 if current_date.isocalendar()[1] % 2 != 0 else 2
 
         combo = (day_of_week, current_week_num)
+        logger.debug(combo)
         lesson_dates[combo].append(current_date)
 
         if combo not in seen:
@@ -69,10 +74,12 @@ def map_lessons(
     *, date_from: datetime, date_to: datetime, lessons = None
 ) -> List[MappedEvent]:
     #
+    logger.debug("Поиск семестра")
     sem = get_semester_by_date(date_from)
     if not sem:
         raise ValueError("Не найден семестр для указанного промежутка дат")
-
+    
+    logger.debug("Поиск активного расписания")
     scenario = get_active_scenario(sem=sem)
     if not scenario:
         raise ValueError("Не найден активный сценарий в семестре")
@@ -83,10 +90,18 @@ def map_lessons(
         .select_related("discipline", "lesson_type", "timeslot", "classroom")
         .prefetch_related("teachers", "study_groups"))
 
+
+    logger.debug("Разбиение на даты")
+
     lesson_dates, ts_filter = get_dates_qs(date_from, date_to)
 
+    logger.debug(ts_filter)
+
+    logger.debug("Поиск занятий")
     lessons = lessons.filter(ts_filter)
+    logger.debug(lessons.query)
     lesson_ids = lessons.values_list("id", flat=True)
+    logger.debug("Поиск корректировок")
 
     adjustments = ScheduleAdjustment.objects.filter(
         status=enums.RequestStatus.VERIFIED,
@@ -94,35 +109,50 @@ def map_lessons(
         date__gte=date_from,
         date__lte=date_to,
     ).select_related("lesson", "lesson__timeslot")
+    # logger.debug("Мапинг занятий", lesson_ids)
+
 
     mapped_events: List[MappedEvent] = [] 
 
+    # lessons = list(lessons.all())
+    logger.debug(f"Найдено занятий: {lessons.count()}")
+
     for lesson in lessons:
         # Берем корректировки для занятия
+        logger.debug(f"Маппинк занятия {lesson.id}")
         lesson_adj = [a for a in adjustments if a.lesson.id == lesson.id]
         g_ids = lesson.study_groups.values_list("id",flat=True)
         t_ids = lesson.teachers.values_list("id",flat=True)
         # Для вывода обычных занятий мы контролируем количество академических часов.
         # Если в одном занятии участвуют несколько преподавателей и групп, то учебный план (AcademicLoad) совпадает!!!!!!!!.
         # Поэтому другие ограничения не учитываются - берется первая найденная запись
+        logger.debug("Поиск нагрузки")
         load  = AcademicLoad.objects.filter(
             semester__id = sem.id,
             discipline__id = lesson.discipline.id,
             lesson_type__id = lesson.lesson_type.id,
             teacher__id__in = t_ids,
             study_group__id__in=g_ids
-        ).first()
+        )
+        logger.debug(load.query)
+        load = load.first()
+
+        allowed_count = None
+        produced_count = None
         if load:
             allowed_count = load.whole_hours // 2
             produced_count = 0
+            logger.debug(load.whole_hours)
 
         # Получаем даты для слота
         dates = lesson_dates.get((lesson.timeslot.day, lesson.timeslot.week_num), [])
 
         for d in dates:
+            logger.debug("Разбиение расписания")
             # Находим корректировку на текущую дату
             day_adj = [a for a in lesson_adj if a.date == d]
             if day_adj:
+                logger.debug("найденаы корректировки")
                 # Берем последнюю по created_at
                 latest_adj = max(day_adj, key=lambda x: x.created_at)
                 if latest_adj.timeslot:
@@ -139,12 +169,14 @@ def map_lessons(
                         )
                     )
             else:
+                logger.debug("Проверка нагрузки")
+
                 # Нет корректировки — берем обычное занятие
                 if allowed_count is not None:
+                    # Не выдаем занятие если превысили план
                     if produced_count >= allowed_count:
-                        # Не выдаем занятие если превысили план
                         continue
-                produced_count += 1            
+                    produced_count += 1            
                 mapped_events.append(
                     MappedEvent(
                         event=lesson,
@@ -168,7 +200,7 @@ def map_bookings(*,date_from: datetime, date_to: datetime, classroom_id:int) -> 
         type="booking",
         date_start=b.date_start,
         date_end=b.date_end
-    ) for b in bookings]
+    ) for b in bookings] 
 
 def get_group_schedule(*,group_id:int,date_from: datetime, date_to: datetime) -> List[MappedEvent]:
     lessons_qs = Lesson.objects.filter(
@@ -186,6 +218,11 @@ def get_classroom_schedule(*,classroom_id:int,date_from: datetime, date_to: date
     lessons_qs = Lesson.objects.filter(
         classroom__id=classroom_id
     )
+    result: List[MappedEvent] = []
     bookings = map_bookings(date_from=date_from,date_to=date_to,classroom_id=classroom_id)
+    if bookings:
+        result.extend(bookings)
     lessons = map_lessons(date_from=date_from, date_to=date_to,lessons=lessons_qs)
-    return lessons.extend(bookings)
+    if lessons:
+        result.extend(lessons)
+    return result
