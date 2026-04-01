@@ -1,6 +1,6 @@
 from collections import defaultdict
 from typing import Any, List
-from django.db.models import Q
+from django.db.models import Q #, BaseManager
 
 from api.models import (
     Semester,
@@ -11,6 +11,8 @@ from api.models import (
     enums,
 )
 from datetime import datetime, timedelta, timezone
+
+from api.models.constraints import AcademicLoad
 
 
 class MappedEvent:
@@ -64,7 +66,7 @@ def get_dates_qs(date_from: datetime, date_to: datetime) -> tuple[defaultdict[An
 
 
 def map_lessons(
-    *, date_from: datetime, date_to: datetime, lessons= None
+    *, date_from: datetime, date_to: datetime, lessons = None
 ) -> List[MappedEvent]:
     #
     sem = get_semester_by_date(date_from)
@@ -93,11 +95,26 @@ def map_lessons(
         date__lte=date_to,
     ).select_related("lesson", "lesson__timeslot")
 
-    mapped_events: List[MappedEvent] = []
+    mapped_events: List[MappedEvent] = [] 
 
     for lesson in lessons:
         # Берем корректировки для занятия
         lesson_adj = [a for a in adjustments if a.lesson.id == lesson.id]
+        g_ids = lesson.study_groups.values_list("id",flat=True)
+        t_ids = lesson.teachers.values_list("id",flat=True)
+        # Для вывода обычных занятий мы контролируем количество академических часов.
+        # Если в одном занятии участвуют несколько преподавателей и групп, то учебный план (AcademicLoad) совпадает!!!!!!!!.
+        # Поэтому другие ограничения не учитываются - берется первая найденная запись
+        load  = AcademicLoad.objects.filter(
+            semester__id = sem.id,
+            discipline__id = lesson.discipline.id,
+            lesson_type__id = lesson.lesson_type.id,
+            teacher__id__in = t_ids,
+            study_group__id__in=g_ids
+        ).first()
+        if load:
+            allowed_count = load.whole_hours // 2
+            produced_count = 0
 
         # Получаем даты для слота
         dates = lesson_dates.get((lesson.timeslot.day, lesson.timeslot.week_num), [])
@@ -108,20 +125,26 @@ def map_lessons(
             if day_adj:
                 # Берем последнюю по created_at
                 latest_adj = max(day_adj, key=lambda x: x.created_at)
-                mapped_events.append(
-                    MappedEvent(
-                        event=latest_adj,
-                        type="adjustment",
-                        date_start=datetime.combine(
-                            d, latest_adj.lesson.timeslot.time_start
-                        ),
-                        date_end=datetime.combine(
-                            d, latest_adj.lesson.timeslot.time_end
-                        ),
+                if latest_adj.timeslot:
+                    mapped_events.append(
+                        MappedEvent(
+                            event=latest_adj,
+                            type="adjustment",
+                            date_start=datetime.combine(
+                                d, latest_adj.lesson.timeslot.time_start
+                            ),
+                            date_end=datetime.combine(
+                                d, latest_adj.lesson.timeslot.time_end
+                            ),
+                        )
                     )
-                )
             else:
                 # Нет корректировки — берем обычное занятие
+                if allowed_count is not None:
+                    if produced_count >= allowed_count:
+                        # Не выдаем занятие если превысили план
+                        continue
+                produced_count += 1            
                 mapped_events.append(
                     MappedEvent(
                         event=lesson,
@@ -163,4 +186,6 @@ def get_classroom_schedule(*,classroom_id:int,date_from: datetime, date_to: date
     lessons_qs = Lesson.objects.filter(
         classroom__id=classroom_id
     )
-    return map_lessons(date_from=date_from, date_to=date_to,lessons=lessons_qs)
+    bookings = map_bookings(date_from=date_from,date_to=date_to,classroom_id=classroom_id)
+    lessons = map_lessons(date_from=date_from, date_to=date_to,lessons=lessons_qs)
+    return lessons.extend(bookings)
