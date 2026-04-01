@@ -186,4 +186,6 @@ def get_classroom_schedule(*,classroom_id:int,date_from: datetime, date_to: date
     lessons_qs = Lesson.objects.filter(
         classroom__id=classroom_id
     )
-    return map_lessons(date_from=date_from, date_to=date_to,lessons=lessons_qs)
+    bookings = map_bookings(date_from=date_from,date_to=date_to,classroom_id=classroom_id)
+    lessons = map_lessons(date_from=date_from, date_to=date_to,lessons=lessons_qs)
+    return lessons.extend(bookings)
