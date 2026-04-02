@@ -1,10 +1,13 @@
 from dataclasses import dataclass
+import logging
 from typing import Any
 
+logger = logging.getLogger("constraints")
 
 registry = {}
 def constraint(name):
     """Регистрирует функцию проверки под именем ограничения."""
+    logger.debug("Регистрация метода %s", name)
     def decorator(func):
         registry[name] = func
         return func
