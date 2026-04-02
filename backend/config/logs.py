@@ -1,49 +1,60 @@
-import logging
 from logging.config import dictConfig
 from pathlib import Path
 
-LOG_DIR= Path(__file__).resolve().parent.parent
+LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
 
-CONFIG = {
-    "version": 1,
-    "disable_existing_loggers": False,
-
-    "formatters": {
-        "default": {
-            "format": "[%(asctime)s] [%(levelname)s] %(name)s: %(message)s",
-        },
+FORMATTERS = {
+    "default": {
+        "format": "[%(asctime)s] [%(levelname)s] %(name)s: %(message)s",
     },
+}
 
-    "handlers": {
-        "console": {
-            "class": "logging.StreamHandler",
-            "formatter": "default",
-        },
-        "constraint-file": {
+HANDLERS = {
+    "console": {
+        "class": "logging.StreamHandler",
+        "formatter": "default",
+    },
+    "constraint-file": {
         "class": "logging.FileHandler",
         "formatter": "default",
         "filename": f"{LOG_DIR}/constraint-check.log",
         "encoding": "utf-8",
-    }
     },
+    "sql-file": {
+        "class": "logging.FileHandler",
+        "formatter": "default",
+        "filename": f"{LOG_DIR}/sql.log",
+        "encoding": "utf-8",
+    },
+}
 
+CONFIG = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": FORMATTERS,
+    "handlers": HANDLERS,
     "loggers": {
-        "constraints": {               # ваш основной логгер
+        "constraints": {
             "handlers": ["console", "constraint-file"],
             "level": "DEBUG",
             "propagate": False,
         },
-        "cheker": {               
+        "cheker": {
             "handlers": ["console"],
             "level": "DEBUG",
             "propagate": False,
         },
-        "schedule": {               
+        "schedule": {
             "handlers": ["console"],
             "level": "DEBUG",
             "propagate": False,
         },
-    }
+        "sql": {
+            "handlers": ["console", "sql-file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+    },
 }
 
 
