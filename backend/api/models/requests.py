@@ -13,7 +13,9 @@ class Request(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     description = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
-    admin_comment = models.TextField(null=True, blank=True, help_text="Причина отказа или заметка модератора")
+    admin_comment = models.TextField(
+        null=True, blank=True, help_text="Причина отказа или заметка модератора"
+    )
     status = models.IntegerField(
         choices=enums.RequestStatus.choices,
         default=enums.RequestStatus.ON_MODERATION,
@@ -36,6 +38,7 @@ class ClassroomPreference(Request):
     discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE)
     lesson_type = models.ForeignKey(LessonType, on_delete=models.CASCADE)
     classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE)
+
     def save(self, *args, **kwargs):
         self.request_type = enums.RequestType.CLASSROOM_PREFERENCE
         super().save(*args, **kwargs)

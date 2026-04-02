@@ -1,10 +1,11 @@
 from django.core.management.base import BaseCommand
+
 # ИСПРАВЛЕННЫЕ ИМПОРТЫ: вытягиваем модели из новых файлов
-from api.models.schedule import Timeslot
-from api.models.constraints import Constraint
+from api.models import Timeslot, Constraint
+
 
 class Command(BaseCommand):
-    help = 'Заполнение сетки времени и базовых ограничений'
+    help = "Заполнение сетки времени и базовых ограничений"
 
     def handle(self, *args, **kwargs):
         # 1. Заполняем сетку времени (6 дней по 7 пар)
@@ -18,9 +19,9 @@ class Command(BaseCommand):
             ("17:20", "18:50"),
             ("19:00", "20:30"),
         ]
-        
+
         ts_count = 0
-        for week in [1, 2]: # Числитель и знаменатель
+        for week in [1, 2]:  # Числитель и знаменатель
             for day in days:
                 for idx, (start, end) in enumerate(pairs, 1):
                     # Используем get_or_create, чтобы не дублировать при повторном запуске
@@ -28,12 +29,10 @@ class Command(BaseCommand):
                         day=day,
                         week_num=week,
                         order_number=idx,
-                        defaults={
-                            'time_start': start,
-                            'time_end': end
-                        }
+                        defaults={"time_start": start, "time_end": end},
                     )
-                    if created: ts_count += 1
+                    if created:
+                        ts_count += 1
 
         # 2. Заполняем ограничения (Constraints)
         # Формат: (Описание, Вес, Техническое имя)
@@ -42,24 +41,38 @@ class Command(BaseCommand):
             ("Пересечение по группе", 500, "group_no_overlap"),
             ("Пересечение по аудиториям", 500, "room_no_overlap"),
             ("Аудитория вмещает всех студентов", 500, "room_has_enough_seats"),
-            ("Аудитория соответствует оборудованию", 400, "room_meets_equipment_requirements"),
-            ("Предпочтения преподавателя по аудитории", 300, "matches_teacher_room_preference"),
-            ("Предпочтения преподавателя по времени", 200, "matches_teacher_time_preference"),
+            (
+                "Аудитория соответствует оборудованию",
+                400,
+                "room_meets_equipment_requirements",
+            ),
+            (
+                "Предпочтения преподавателя по аудитории",
+                300,
+                "matches_teacher_room_preference",
+            ),
+            (
+                "Предпочтения преподавателя по времени",
+                200,
+                "matches_teacher_time_preference",
+            ),
             ("Переход между корпусами", 500, "building_change"),
             ("Окно у студентов", 100, "students_gap"),
             ("Окно у преподавателя", 50, "teachers_gap"),
-            ("Перегрузка преподавателя", 50, "teacher_overload")
+            ("Перегрузка преподавателя", 50, "teacher_overload"),
         ]
-        
+
         c_count = 0
         for description, weight, name in constraints:
             obj, created = Constraint.objects.get_or_create(
-                name=name, # name теперь уникальное поле
-                defaults={
-                    'weight': weight,
-                    'description': description
-                }
+                name=name,  # name теперь уникальное поле
+                defaults={"weight": weight, "description": description},
             )
-            if created: c_count += 1
+            if created:
+                c_count += 1
 
-        self.stdout.write(self.style.SUCCESS(f'Создано: {ts_count} таймслотов и {c_count} ограничений!'))
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Создано: {ts_count} таймслотов и {c_count} ограничений!"
+            )
+        )
