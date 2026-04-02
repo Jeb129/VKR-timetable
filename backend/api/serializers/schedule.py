@@ -6,8 +6,8 @@ from api.services.schedule.mapper import MappedEvent
 
 class MappedEventSerializer(serializers.Serializer):
     type = serializers.CharField()
-    date_start = serializers.DateTimeField()
-    date_end = serializers.DateTimeField()
+    start = serializers.DateTimeField(source="date_start")
+    end = serializers.DateTimeField(source="date_end")
     event = serializers.SerializerMethodField()
 
     def get_event(self, obj: MappedEvent):
