@@ -18,3 +18,9 @@ class RequestType(models.IntegerChoices):
     CLASSROOM_PREFERENCE = 1, "Предпочтения по аудитории"
     SCHEDULE_ADJUSTMENT = 2, "Изменение в расписании"
     BOOKING = 3, "Бронирование аудитории"
+
+class EventType(models.IntegerChoices):
+    """Типы заявок"""
+    LESSON = 0, "Учебное занятие"
+    SCHEDULE_ADJUSTMENT = 1, "Изменение в расписании"
+    BOOKING = 2, "Бронирование аудитории"
