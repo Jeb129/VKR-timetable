@@ -13,12 +13,13 @@ from api.models import (
     ScheduleAdjustment,
     Booking,
     enums,
-    AcademicLoad
+    AcademicLoad,
 )
 from datetime import datetime, timedelta, timezone
 
 logger = logging.getLogger("schedule")
 sql_logger = logging.getLogger("sql")
+
 
 @dataclass
 class MappedEvent:
@@ -44,7 +45,9 @@ def get_active_scenario(sem) -> ScheduleScenario:
     return ScheduleScenario.objects.filter(semester__id=sem.id, is_active=True).first()
 
 
-def get_dates_qs(date_from: datetime, date_to: datetime) -> tuple[defaultdict[Any, List], Q]:
+def get_dates_qs(
+    date_from: datetime, date_to: datetime
+) -> tuple[defaultdict[Any, List], Q]:
     # Собираем комбинации из таймслотов и да, попутно создаем фильтры для занятий
     lesson_dates = defaultdict(list)
     ts_filter = Q()
@@ -72,65 +75,74 @@ def get_dates_qs(date_from: datetime, date_to: datetime) -> tuple[defaultdict[An
 
 
 def map_lessons(
-    *, date_from: datetime, date_to: datetime, lessons = None
+    *, date_from: datetime, date_to: datetime, lessons=None
 ) -> List[MappedEvent]:
     logger.info("Маппинг расписания: %s → %s", date_from.date(), date_to.date())
     sem = get_semester_by_date(date_from)
     if not sem:
-        msg = "Не найден семестр для указанного промежутка дат %s - %s", date_from.date(), date_to.date()
+        msg = (
+            "Не найден семестр для указанного промежутка дат %s - %s",
+            date_from.date(),
+            date_to.date(),
+        )
         logger.warning(msg)
         raise ValueError(msg)
 
     logger.debug("Поиск активного варианта расписания")
     scenario = get_active_scenario(sem=sem)
     if not scenario:
-        msg = "Не найден активный сценарий в семестре:%s",sem
+        msg = "Не найден активный сценарий в семестре:%s", sem
         logger.warning(msg)
         raise ValueError(msg)
 
-    logger.debug("Получаем список слотов для указанного промежутка дат")   
+    logger.debug("Получаем список слотов для указанного промежутка дат")
     lesson_dates, ts_filter = get_dates_qs(date_from, date_to)
 
     logger.debug("Поиск занятий в сценарии")
     if not lessons:
         lessons = Lesson.objects
-    lessons = (lessons.filter(scenario__id=scenario.id)
+    lessons = (
+        lessons.filter(scenario__id=scenario.id)
         .select_related("discipline", "lesson_type", "timeslot", "classroom")
-        .prefetch_related("teachers", "study_groups").filter(ts_filter))
+        .prefetch_related("teachers", "study_groups")
+        .filter(ts_filter)
+    )
 
-    sql_logger.debug("map_lessons()\n%s",lessons.query)
+    sql_logger.debug("map_lessons()\n%s", lessons.query)
 
     logger.debug("Поиск корректировок")
 
-    lesson_ids = lessons.values_list("id", flat=True) # подзапрос SELECT id FROM Lessons
+    lesson_ids = lessons.values_list(
+        "id", flat=True
+    )  # подзапрос SELECT id FROM Lessons
     adjustments = ScheduleAdjustment.objects.filter(
         status=enums.RequestStatus.VERIFIED,
         lesson__id__in=lesson_ids,
         date__gte=date_from,
         date__lte=date_to,
     ).select_related("lesson", "lesson__timeslot")
-    sql_logger.debug("map_lessons()\n%s",adjustments.query)
+    sql_logger.debug("map_lessons()\n%s", adjustments.query)
 
-    mapped_events: List[MappedEvent] = [] 
+    mapped_events: List[MappedEvent] = []
 
     for lesson in lessons:
         # Берем корректировки для занятия
         logger.debug(f"Маппинк занятия {lesson.id}")
         lesson_adj = [a for a in adjustments if a.lesson.id == lesson.id]
-        g_ids = lesson.study_groups.values_list("id",flat=True)
-        t_ids = lesson.teachers.values_list("id",flat=True)
+        g_ids = lesson.study_groups.values_list("id", flat=True)
+        t_ids = lesson.teachers.values_list("id", flat=True)
         # Для вывода обычных занятий мы контролируем количество академических часов.
         # Если в одном занятии участвуют несколько преподавателей и групп, то учебный план (AcademicLoad) совпадает!!!!!!!!.
         # Поэтому другие ограничения не учитываются - берется первая найденная запись
         logger.debug("Поиск нагрузки")
-        load  = AcademicLoad.objects.filter(
-            semester__id = sem.id,
-            discipline__id = lesson.discipline.id,
-            lesson_type__id = lesson.lesson_type.id,
-            teacher__id__in = t_ids,
-            study_group__id__in=g_ids
+        load = AcademicLoad.objects.filter(
+            semester__id=sem.id,
+            discipline__id=lesson.discipline.id,
+            lesson_type__id=lesson.lesson_type.id,
+            teacher__id__in=t_ids,
+            study_group__id__in=g_ids,
         )
-        sql_logger.debug("map_lessons()\n%s",load.query)
+        sql_logger.debug("map_lessons()\n%s", load.query)
         load = load.first()
 
         allowed_count = None
@@ -168,7 +180,7 @@ def map_lessons(
                     # Не выдаем занятие если превысили план
                     if produced_count >= allowed_count:
                         continue
-                    produced_count += 1            
+                    produced_count += 1
                 mapped_events.append(
                     MappedEvent(
                         event=lesson,
@@ -177,46 +189,65 @@ def map_lessons(
                         date_end=datetime.combine(d, lesson.timeslot.time_end),
                     )
                 )
-    logger.debug("Найдено занятий: %d, из них корректировки: %d",len(mapped_events),len(filter(lambda x: x.type == enums.EventType.SCHEDULE_ADJUSTMENT,mapped_events)))
+    logger.debug(
+        "Найдено занятий: %d, из них корректировки: %d",
+        len(mapped_events),
+        len(
+            filter(
+                lambda x: x.type == enums.EventType.SCHEDULE_ADJUSTMENT, mapped_events
+            )
+        ),
+    )
     return mapped_events
 
-def map_bookings(*,date_from: datetime, date_to: datetime, classroom_id:int) -> List[MappedEvent]:
+
+def map_bookings(
+    *, date_from: datetime, date_to: datetime, classroom_id: int
+) -> List[MappedEvent]:
     bookings = Booking.objects.filter(
         status=enums.RequestStatus.VERIFIED,
         classroom__id=classroom_id,
         date_start__gte=date_from,
         date_start__lte=date_to,
     )
-    sql_logger.debug("map_bookings()\n%s",bookings.query)
+    sql_logger.debug("map_bookings()\n%s", bookings.query)
 
-    return [MappedEvent(
-        event=b,
-        type=enums.EventType.BOOKING,
-        date_start=b.date_start,
-        date_end=b.date_end
-    ) for b in bookings] 
+    return [
+        MappedEvent(
+            event=b,
+            type=enums.EventType.BOOKING,
+            date_start=b.date_start,
+            date_end=b.date_end,
+        )
+        for b in bookings
+    ]
 
-def get_group_schedule(*,group_id:int,date_from: datetime, date_to: datetime) -> List[MappedEvent]:
-    lessons_qs = Lesson.objects.filter(
-        groups__id__in=group_id
-    )
-    return map_lessons(date_from=date_from, date_to=date_to,lessons=lessons_qs)
 
-def get_teacher_schedule(*,teacher_id:int,date_from: datetime, date_to: datetime) -> List[MappedEvent]:
-    lessons_qs = Lesson.objects.filter(
-        teachers__id__in=teacher_id
-    )
-    return map_lessons(date_from=date_from, date_to=date_to,lessons=lessons_qs)
+def get_group_schedule(
+    *, group_id: int, date_from: datetime, date_to: datetime
+) -> List[MappedEvent]:
+    lessons_qs = Lesson.objects.filter(groups__id__in=group_id)
+    return map_lessons(date_from=date_from, date_to=date_to, lessons=lessons_qs)
 
-def get_classroom_schedule(*,classroom_id:int,date_from: datetime, date_to: datetime) -> List[MappedEvent]:
-    lessons_qs = Lesson.objects.filter(
-        classroom__id=classroom_id
-    )
+
+def get_teacher_schedule(
+    *, teacher_id: int, date_from: datetime, date_to: datetime
+) -> List[MappedEvent]:
+    lessons_qs = Lesson.objects.filter(teachers__id__in=teacher_id)
+    return map_lessons(date_from=date_from, date_to=date_to, lessons=lessons_qs)
+
+
+def get_classroom_schedule(
+    *, classroom_id: int, date_from: datetime, date_to: datetime
+) -> List[MappedEvent]:
+    lessons_qs = Lesson.objects.filter(classroom__id=classroom_id)
     result: List[MappedEvent] = []
-    bookings = map_bookings(date_from=date_from,date_to=date_to,classroom_id=classroom_id)
+    bookings = map_bookings(
+        date_from=date_from, date_to=date_to, classroom_id=classroom_id
+    )
     if bookings:
         result.extend(bookings)
-    lessons = map_lessons(date_from=date_from, date_to=date_to,lessons=lessons_qs)
+    lessons = map_lessons(date_from=date_from, date_to=date_to, lessons=lessons_qs)
     if lessons:
         result.extend(lessons)
     return result

@@ -1,20 +1,28 @@
 from django.db.models import Q
 
-from api.models.models import AcademicLoad, BuildingTravelTime, ClassroomPreference, ExcludedTimeslot, Lesson
+from api.models import (
+    AcademicLoad,
+    BuildingTravelTime,
+    ClassroomPreference,
+    ExcludedTimeslot,
+    Lesson,
+)
 from api.models.enums import RequestStatus
 from api.services.constraunt.meta import *
 
+logger.info("Регистрация мотодов проверки ограничений")
+
+
 @constraint("teacher_no_overlap")
-def teacher_no_overlap(lesson: Lesson,*, weight):
+def teacher_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
     teacher_ids = lesson.teachers.values_list("id", flat=True)
     slot = lesson.timeslot
 
     conflicts = (
-        Lesson.objects
-        .filter(scenario__id=lesson.scenario.id)
+        Lesson.objects.filter(scenario__id=lesson.scenario.id)
         .filter(timeslot=slot)
         .filter(teachers__id__in=teacher_ids)
-        .exclude(id=lesson.id) # type: ignore
+        .exclude(id=lesson.id)  # type: ignore
         .distinct()
     )
 
@@ -33,10 +41,12 @@ def teacher_no_overlap(lesson: Lesson,*, weight):
 
         penalties.append(weight * max_teacher_weight)
 
-        conflict_entries.append({
-            "lesson": conf,
-            "teachers": common_teachers,
-        })
+        conflict_entries.append(
+            {
+                "lesson": conf,
+                "teachers": common_teachers,
+            }
+        )
 
     final_penalty = max(penalties)
 
@@ -44,22 +54,20 @@ def teacher_no_overlap(lesson: Lesson,*, weight):
         name="teacher_no_overlap",
         penalty=final_penalty,
         message="Преподаватель занят в это время",
-        data={
-            "conflicts": conflict_entries
-        }
+        data={"conflicts": conflict_entries},
     )
 
+
 @constraint("group_no_overlap")
-def group_no_overlap(lesson: Lesson,*, weight):
+def group_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
     groups_ids = lesson.study_groups.values_list("id", flat=True)
     slot = lesson.timeslot
 
     conflicts = (
-        Lesson.objects
-        .filter(scenario__id=lesson.scenario.id)
+        Lesson.objects.filter(scenario__id=lesson.scenario.id)
         .filter(timeslot=slot)
         .filter(groups__id__in=groups_ids)
-        .exclude(id=lesson.id) # type: ignore
+        .exclude(id=lesson.id)  # type: ignore
         .distinct()
     )
 
@@ -71,58 +79,57 @@ def group_no_overlap(lesson: Lesson,*, weight):
     for conf in conflicts:
         common_groups = list(conf.study_groups.filter(id__in=groups_ids))
 
-        conflict_entries.append({
-            "lesson": conf,
-            "groups": common_groups,
-        })
+        conflict_entries.append(
+            {
+                "lesson": conf,
+                "groups": common_groups,
+            }
+        )
 
     return ConstraintError(
         name="group_no_overlap",
         penalty=weight,
         message="Группы заняты в это время",
-        data={
-            "conflicts": conflict_entries
-        }
+        data={"conflicts": conflict_entries},
     )
 
+
 @constraint("room_no_overlap")
-def room_no_overlap(lesson: Lesson,*, weight):
-    room_id = lesson.classroom.id # type: ignore
+def room_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
+    room_id = lesson.classroom.id  # type: ignore
     slot = lesson.timeslot
 
     conflicts = (
-        Lesson.objects
-        .filter(scenario__id=lesson.scenario.id)
+        Lesson.objects.filter(scenario__id=lesson.scenario.id)
         .filter(timeslot=slot)
         .filter(classroom__id=room_id)
-        .exclude(id=lesson.id) # type: ignore
+        .exclude(id=lesson.id)  # type: ignore
         .distinct()
     )
     if not conflicts.exists():
         return ConstraintError(name="room_no_overlap")
-    
+
     return ConstraintError(
         name="room_no_overlap",
         penalty=weight,
         message="Аудитория занята в это время",
-        data={
-            "conflicts": conflicts
-        }
+        data={"conflicts": conflicts},
     )
 
+
 @constraint("room_has_enough_seats")
-def room_has_enough_seats(lesson:Lesson,*, weight):
+def room_has_enough_seats(lesson: Lesson, *, weight) -> ConstraintError:
     classroom = lesson.classroom
     if not classroom:
-        return ConstraintError( name="classroom_capacity" )
-    
+        return ConstraintError(name="classroom_capacity")
+
     capacity = classroom.capacity
     groups = lesson.study_groups.all()
     total_students = sum(g.students_count for g in groups)
 
     if total_students <= total_students:
-        return ConstraintError( name="classroom_capacity" )
-    
+        return ConstraintError(name="classroom_capacity")
+
     overflow = total_students - capacity
 
     return ConstraintError(
@@ -134,13 +141,12 @@ def room_has_enough_seats(lesson:Lesson,*, weight):
             "capacity": capacity,
             "total_students": total_students,
             "overflow": overflow,
-        }
+        },
     )
+
 
 @constraint("room_meets_equipment_requirements")
 def room_meets_equipment_requirements(lesson: Lesson, *, weight) -> ConstraintError:
-    
-
 
     # Аудитория занятия
     classroom = lesson.classroom
@@ -153,11 +159,12 @@ def room_meets_equipment_requirements(lesson: Lesson, *, weight) -> ConstraintEr
             penalty=weight,
             message="У занятия не назначена аудитория",
         )
-    
-    academic_load = (AcademicLoad.objects
-                    .filter(discipline__id=lesson.discipline.id)# type: ignore
-                    .filter(lesson_type=lesson.lesson_type)
-                ) 
+
+    academic_load = AcademicLoad.objects.filter(
+        discipline__id=lesson.discipline.id
+    ).filter(  # type: ignore
+        lesson_type=lesson.lesson_type
+    )
 
     # Требуемое оборудование
     required = list(academic_load.required_equipment.all())
@@ -195,8 +202,9 @@ def room_meets_equipment_requirements(lesson: Lesson, *, weight) -> ConstraintEr
             "required_equipment": required,
             "provided_equipment": provided,
             "missing_equipment": missing,
-        }
+        },
     )
+
 
 @constraint("matches_teacher_room_preference")
 def matches_teacher_room_preference(lesson: Lesson, *, weight) -> ConstraintError:
@@ -218,7 +226,7 @@ def matches_teacher_room_preference(lesson: Lesson, *, weight) -> ConstraintErro
             teacher=t,
             discipline=discipline,
             lesson_type=lesson_type,
-            status=RequestStatus.VERIFIED
+            status=RequestStatus.VERIFIED,
         )
 
         if not prefs.exists():
@@ -230,11 +238,13 @@ def matches_teacher_room_preference(lesson: Lesson, *, weight) -> ConstraintErro
             preferred_classroom = p.classroom
 
             if preferred_classroom.id != classroom.id:
-                violations.append({
-                    "teacher": t,
-                    "preference": p,
-                    "preferred_classroom": preferred_classroom,
-                })
+                violations.append(
+                    {
+                        "teacher": t,
+                        "preference": p,
+                        "preferred_classroom": preferred_classroom,
+                    }
+                )
 
     if not violations:
         return ConstraintError(name="matches_teacher_room_preference")
@@ -248,8 +258,9 @@ def matches_teacher_room_preference(lesson: Lesson, *, weight) -> ConstraintErro
         message="Занятие не соответствует предпочтению преподавателя по аудитории",
         data={
             "violations": violations,
-        }
+        },
     )
+
 
 @constraint("matches_teacher_time_preference")
 def matches_teacher_time_preference(lesson: Lesson, *, weight) -> ConstraintError:
@@ -267,15 +278,17 @@ def matches_teacher_time_preference(lesson: Lesson, *, weight) -> ConstraintErro
         excluded = ExcludedTimeslot.objects.filter(
             teacher=t,
             timeslot=slot,
-            status=RequestStatus.VERIFIED  # только одобренные заявки
+            status=RequestStatus.VERIFIED,  # только одобренные заявки
         )
 
         if excluded.exists():
-            violations.append({
-                "teacher": t,
-                "excluded": list(excluded),  # модели заявок
-                "timeslot": slot,            # модель timeslot
-            })
+            violations.append(
+                {
+                    "teacher": t,
+                    "excluded": list(excluded),  # модели заявок
+                    "timeslot": slot,  # модель timeslot
+                }
+            )
 
     if not violations:
         return ConstraintError(name="matches_teacher_time_preference")
@@ -288,10 +301,9 @@ def matches_teacher_time_preference(lesson: Lesson, *, weight) -> ConstraintErro
         name="matches_teacher_time_preference",
         penalty=penalty,
         message="Занятие назначено  для преподавателя ",
-        data={
-            "violations": violations
-        }
+        data={"violations": violations},
     )
+
 
 @constraint("building_change")
 def building_change(lesson: Lesson, *, weight) -> ConstraintError:
@@ -300,7 +312,6 @@ def building_change(lesson: Lesson, *, weight) -> ConstraintError:
     current_slot = lesson.timeslot
     if not lesson.timeslot:
         return ConstraintError(name="building_change")
-    
 
     # classroom = lesson.classroom
     # from_building = classroom.building if classroom else None
@@ -311,25 +322,29 @@ def building_change(lesson: Lesson, *, weight) -> ConstraintError:
     violations = []
 
     # Ищем следующее и предыдущее занятие у групп и преподавателей
-    prev_lessons = (Lesson.objects
-                    .filter(scenario__id=lesson.scenario.id) # отбор по варианту расписания
-                    .filter( # отбор по времени пары
-                        timeslot__day=lesson.timeslot.day,
-                        timeslot__order_number=lesson.timeslot.order_number - 1)
-                    .filter( # отбор по группам и преподавателям
-                        Q(teachers__id__in=teacher_ids) |
-                        Q(study_groups__id__in=groups_ids))
-                    .distinct())
+    prev_lessons = (
+        Lesson.objects.filter(
+            scenario__id=lesson.scenario.id
+        )  # отбор по варианту расписания
+        .filter(  # отбор по времени пары
+            timeslot__day=lesson.timeslot.day,
+            timeslot__order_number=lesson.timeslot.order_number - 1,
+        )
+        .filter(  # отбор по группам и преподавателям
+            Q(teachers__id__in=teacher_ids) | Q(study_groups__id__in=groups_ids)
+        )
+        .distinct()
+    )
 
-    next_lessons = (Lesson.objects
-                    .filter(scenario__id=lesson.scenario.id)
-                    .filter(
-                        timeslot__day=lesson.timeslot.day,
-                        timeslot__order_number=lesson.timeslot.order_number + 1)
-                    .filter(
-                        Q(teachers__id__in=teacher_ids) |
-                        Q(study_groups__id__in=groups_ids))
-                    .distinct())
+    next_lessons = (
+        Lesson.objects.filter(scenario__id=lesson.scenario.id)
+        .filter(
+            timeslot__day=lesson.timeslot.day,
+            timeslot__order_number=lesson.timeslot.order_number + 1,
+        )
+        .filter(Q(teachers__id__in=teacher_ids) | Q(study_groups__id__in=groups_ids))
+        .distinct()
+    )
 
     # Функция проверки перехода между двумя аудиториями
     def check_transition(source: Lesson, destination: Lesson):
@@ -345,8 +360,7 @@ def building_change(lesson: Lesson, *, weight) -> ConstraintError:
             return 0
 
         travel = BuildingTravelTime.objects.filter(
-            from_building__id=b1,
-            to_building__id=b2
+            from_building__id=b1, to_building__id=b2
         ).first()
 
         return travel.travel_time_minutes if travel else 9999
@@ -355,33 +369,39 @@ def building_change(lesson: Lesson, *, weight) -> ConstraintError:
     for prev in prev_lessons:
         travel = check_transition(prev, lesson)
         available = (
-            current_slot.time_start.hour * 60 + current_slot.time_start.minute
+            current_slot.time_start.hour * 60
+            + current_slot.time_start.minute
             - (prev.timeslot.time_end.hour * 60 + prev.timeslot.time_end.minute)
         )
 
         if travel > available:
-            violations.append({
-                "from_lesson": prev,
-                "to_lesson": lesson,
-                "travel_minutes": travel,
-                "available_minutes": available 
-            })
+            violations.append(
+                {
+                    "from_lesson": prev,
+                    "to_lesson": lesson,
+                    "travel_minutes": travel,
+                    "available_minutes": available,
+                }
+            )
 
     # Проверка правой границы (текущий → следующий)
     for nxt in next_lessons:
         travel = check_transition(lesson, nxt)
         available = (
-            nxt.timeslot.time_start.hour * 60 + nxt.timeslot.time_start.minute
+            nxt.timeslot.time_start.hour * 60
+            + nxt.timeslot.time_start.minute
             - (current_slot.time_end.hour * 60 + current_slot.time_end.minute)
         )
 
         if travel > available:
-            violations.append({
-                "from_lesson": lesson,
-                "to_lesson": nxt,
-                "travel_minutes": travel,
-                "available_minutes": available
-            })
+            violations.append(
+                {
+                    "from_lesson": lesson,
+                    "to_lesson": nxt,
+                    "travel_minutes": travel,
+                    "available_minutes": available,
+                }
+            )
 
     if not violations:
         return ConstraintError(name="building_change")
@@ -395,8 +415,9 @@ def building_change(lesson: Lesson, *, weight) -> ConstraintError:
         data={
             "lesson": lesson,
             "violations": violations,
-        }
+        },
     )
+
 
 @constraint("students_gap")
 def students_gap(lesson: Lesson, *, weight) -> ConstraintError:
@@ -408,48 +429,43 @@ def students_gap(lesson: Lesson, *, weight) -> ConstraintError:
     violations = []
 
     for g in groups_ids:
-        prev = (Lesson.objects
-                .filter(scenario__id=lesson.scenario.id)
-                .filter(study_groups__id=g.id)
-                .filter(
-                    timeslot__day=slot.day,
-                    timeslot__order_number__lt=slot.order_number
-                    )
-                .order_by("-timeslot__order_number")
-                .first()
-                )
-        next = (Lesson.objects
-                .filter(scenario__id=lesson.scenario.id)
-                .filter(study_groups__id=g.id)
-                .filter(
-                    timeslot__day=slot.day,
-                    timeslot__order_number__gt=slot.order_number
-                    )
-                .order_by("-timeslot__order_number")
-                .first()
-                )
-        
+        prev = (
+            Lesson.objects.filter(scenario__id=lesson.scenario.id)
+            .filter(study_groups__id=g.id)
+            .filter(
+                timeslot__day=slot.day, timeslot__order_number__lt=slot.order_number
+            )
+            .order_by("-timeslot__order_number")
+            .first()
+        )
+        next = (
+            Lesson.objects.filter(scenario__id=lesson.scenario.id)
+            .filter(study_groups__id=g.id)
+            .filter(
+                timeslot__day=slot.day, timeslot__order_number__gt=slot.order_number
+            )
+            .order_by("-timeslot__order_number")
+            .first()
+        )
+
         if prev and prev.timeslot.order_number != slot.order_number - 1:
-            violations.append({
-                "order": prev.timeslot.order_number,
-                "group": g,
-                "lesson": prev
-            })
+            violations.append(
+                {"order": prev.timeslot.order_number, "group": g, "lesson": prev}
+            )
         if next and next.timeslot.order_number != slot.order_number - 1:
-            violations.append({
-                "order": next.timeslot.order_number,
-                "group": g,
-                "lesson": next
-            })
+            violations.append(
+                {"order": next.timeslot.order_number, "group": g, "lesson": next}
+            )
 
     if not violations:
-        return ConstraintError(name="students_gap") 
+        return ConstraintError(name="students_gap")
     return ConstraintError(
         name="students_gap",
         penalty=weight,
         message="У некоторых групп возникает окно",
-        data=violations
+        data=violations,
     )
+
 
 @constraint("teachers_gap")
 def teachers_gap(lesson: Lesson, *, weight) -> ConstraintError:
@@ -461,48 +477,43 @@ def teachers_gap(lesson: Lesson, *, weight) -> ConstraintError:
     violations = []
 
     for t in teachers_ids:
-        prev = (Lesson.objects
-                .filter(scenario__id=lesson.scenario.id)
-                .filter(teachers__id=t.id)
-                .filter(
-                    timeslot__day=slot.day,
-                    timeslot__order_number__lt=slot.order_number
-                    )
-                .order_by("-timeslot__order_number")
-                .first()
-                )
-        next = (Lesson.objects
-                .filter(scenario__id=lesson.scenario.id)
-                .filter(teachers__id=t.id)
-                .filter(
-                    timeslot__day=slot.day,
-                    timeslot__order_number__gt=slot.order_number
-                    )
-                .order_by("-timeslot__order_number")
-                .first()
-                )
-        
+        prev = (
+            Lesson.objects.filter(scenario__id=lesson.scenario.id)
+            .filter(teachers__id=t.id)
+            .filter(
+                timeslot__day=slot.day, timeslot__order_number__lt=slot.order_number
+            )
+            .order_by("-timeslot__order_number")
+            .first()
+        )
+        next = (
+            Lesson.objects.filter(scenario__id=lesson.scenario.id)
+            .filter(teachers__id=t.id)
+            .filter(
+                timeslot__day=slot.day, timeslot__order_number__gt=slot.order_number
+            )
+            .order_by("-timeslot__order_number")
+            .first()
+        )
+
         if prev and prev.timeslot.order_number != slot.order_number - 1:
-            violations.append({
-                "order": prev.timeslot.order_number,
-                "teacher": t,
-                "lesson": prev
-            })
+            violations.append(
+                {"order": prev.timeslot.order_number, "teacher": t, "lesson": prev}
+            )
         if next and next.timeslot.order_number != slot.order_number - 1:
-            violations.append({
-                "order": next.timeslot.order_number,
-                "teacher": t,
-                "lesson": next
-            })
+            violations.append(
+                {"order": next.timeslot.order_number, "teacher": t, "lesson": next}
+            )
 
     if not violations:
-        return ConstraintError(name="teachers_gap") 
+        return ConstraintError(name="teachers_gap")
     return ConstraintError(
         name="teachers_gap",
         penalty=weight,
         message="У некоторых преподавателей возникает окно",
-        data=violations
+        data=violations,
     )
+
 
 @constraint("teacher_overload")
 def teacher_overload(lesson: Lesson, *, weight) -> ConstraintError:
@@ -514,22 +525,19 @@ def teacher_overload(lesson: Lesson, *, weight) -> ConstraintError:
     violations = []
 
     for t in teachers_ids:
-        lesson_count = (Lesson.objects
-                .filter(scenario__id=lesson.scenario.id)
-                .filter(teachers__id=t.id)
-                .filter(timeslot__week_num=slot.week_num)
-                .count()
-                )
-        if lesson_count > 17: # КОСТЫЛИЩЕ. Нужно бы хранить в бд где то
-            violations.append({
-                "teacher":t,
-                "current_load":lesson_count
-            })
+        lesson_count = (
+            Lesson.objects.filter(scenario__id=lesson.scenario.id)
+            .filter(teachers__id=t.id)
+            .filter(timeslot__week_num=slot.week_num)
+            .count()
+        )
+        if lesson_count > 17:  # КОСТЫЛИЩЕ. Нужно бы хранить в бд где то
+            violations.append({"teacher": t, "current_load": lesson_count})
     if not violations:
-        return ConstraintError(name="teacher_overload") 
+        return ConstraintError(name="teacher_overload")
     return ConstraintError(
         name="teacher_overload",
         penalty=weight,
         message="У некоторых преподавателей превышена нагрузка",
-        data=violations
+        data=violations,
     )
