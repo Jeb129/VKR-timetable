@@ -5,12 +5,14 @@ from api.services.schedule.mapper import MappedEvent
 
 
 class MappedEventSerializer(serializers.Serializer):
+    '''Сереализует в формат для отображения через FullCalendar'''
     type = serializers.CharField()
     start = serializers.DateTimeField(source="date_start")
     end = serializers.DateTimeField(source="date_end")
-    event = serializers.SerializerMethodField()
+    title = serializers.SerializerMethodField()
+    extendedProps = serializers.SerializerMethodField()
 
-    def get_event(self, obj: MappedEvent):
+    def get_extendedProps(self, obj: MappedEvent):
         """
         Возвращает сериализованное представление поля event
         в зависимости от его типа.
@@ -22,9 +24,12 @@ class MappedEventSerializer(serializers.Serializer):
         )
 
         if isinstance(obj.event, Lesson):
-            return LessonSerializer(obj.event).data
+            return {"event": LessonSerializer(obj.event).data}
         elif isinstance(obj.event, ScheduleAdjustment):
-            return ScheduleAdjustmentSerializer(obj.event).data
+            return {"event": ScheduleAdjustmentSerializer(obj.event).data}
         elif isinstance(obj.event, Booking):
-            return BookingSerializer(obj.event).data
+            return {"event": BookingSerializer(obj.event).data}
         return None
+    
+    def get_title(self, obj: MappedEvent):
+        return str(obj.event)
