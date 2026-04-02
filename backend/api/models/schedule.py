@@ -82,3 +82,6 @@ class Lesson(models.Model):
 
     # Ограничение: В одном занятии нельзя объединять несколько
     study_groups = models.ManyToManyField(StudyGroup)
+
+    def __str__(self) -> str:
+        return f"{self.lesson_type} {self.discipline}"

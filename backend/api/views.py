@@ -43,14 +43,17 @@ class ScheduleView(ListAPIView):
 
     def list(self, request, *args, **kwargs):
         try:
+            logger.debug("запрос списка событий")
             data = self.get_queryset()
             serializer = self.get_serializer(data, many=True)
             return Response(serializer.data)
         except ValueError as e:
-            return Response({"error": ("%s", e)}, status=status.HTTP_400_BAD_REQUEST)
+            logger.exception(e)
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
         except Exception as e:
+            logger.exception(e)
             return Response(
-                {"error": ("%s", e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error":  str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 

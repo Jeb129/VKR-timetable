@@ -99,7 +99,7 @@ def map_lessons(
     lesson_dates, ts_filter = get_dates_qs(date_from, date_to)
 
     logger.debug("Поиск занятий в сценарии")
-    if not lessons:
+    if lessons is None:
         lessons = Lesson.objects
     lessons = (
         lessons.filter(scenario__id=scenario.id)
@@ -193,9 +193,9 @@ def map_lessons(
         "Найдено занятий: %d, из них корректировки: %d",
         len(mapped_events),
         len(
-            filter(
+            list(filter(
                 lambda x: x.type == enums.EventType.SCHEDULE_ADJUSTMENT, mapped_events
-            )
+            ))
         ),
     )
     return mapped_events
@@ -226,7 +226,7 @@ def map_bookings(
 def get_group_schedule(
     *, group_id: int, date_from: datetime, date_to: datetime
 ) -> List[MappedEvent]:
-    lessons_qs = Lesson.objects.filter(groups__id__in=group_id)
+    lessons_qs = Lesson.objects.filter(study_groups__id__in=group_id)
     return map_lessons(date_from=date_from, date_to=date_to, lessons=lessons_qs)
 
 
