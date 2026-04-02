@@ -12,7 +12,7 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options):
         # Путь к файлу (с учетом config)
-        file_path = os.path.join(os.path.dirname(settings.BASE_DIR), 'api', 'classrooms.csv')
+        file_path = settings.BASE_DIR / "api/classrooms.csv"
         
         if not os.path.exists(file_path):
             self.stdout.write(self.style.ERROR(f"Файл не найден по пути: {file_path}"))
