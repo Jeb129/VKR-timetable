@@ -1,9 +1,9 @@
 import { useAuth } from "@/context/AuthContext";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { dbService } from "@/services/crud"; // Наш CRUD сервис
-import type { Lesson } from "@/types/schedule"; // Используем общие типы
-import "./Profile.css";
+import { dbService } from "@/services/crud"; 
+import type { Lesson } from "@/types/schedule"; 
+import "@/styles/Profile.css";
 
 // Интерфейс для заявок на бронирование
 interface BookingRequest {
@@ -50,21 +50,20 @@ const UserProfilePage = () => {
     // Функция для определения цвета и текста статуса
     const getStatusInfo = (status: number) => {
         switch (status) {
-            case 0: return { label: "На модерации", color: "#e69100", bg: "#fff8e1" };
-            case 1: return { label: "Одобрена", color: "#2e7d32", bg: "#e8f5e9" };
-            case 2: return { label: "Отклонена", color: "#d32f2f", bg: "#ffebee" };
-            default: return { label: "Черновик", color: "#718096", bg: "#f8f9fa" };
+            case 0: return { label: "На модерации", color: "var(--p-orange)", bg: "var(--bg-main)" };
+            case 1: return { label: "Одобрена", color: "var(--p-green)", bg: "var(--bg-main)" };
+            case 2: return { label: "Отклонена", color: "var(--p-red)", bg: "var(--bg-main)" };
+            default: return { label: "Черновик", color: "var(p-blue-light)", bg: "var(--bg-main)" };
         }
     };
 
     return (
-        <div className="flex-col bg-main min-h-screen">
-            {/* Хедер */}
+        <div className="flex-col bg-main min-h-screen m-0 p-0"> 
             <nav className="navbar">
                 <div className="logo-white" onClick={() => navigate("/schedule")}>КГУ</div>
                 <div className="flex-row gap-10">
-                    <button className="nav-btn" onClick={() => navigate("/schedule")}>К расписанию</button>
-                    <button className="nav-btn" style={{ backgroundColor: '#f5222d' }} onClick={logout}>Выйти</button>
+                    <button className="btn nav-btn" onClick={() => navigate("/schedule")}>К расписанию</button>
+                    <button className="btn nav-btn btn-red" onClick={logout}>Выйти</button>
                 </div>
             </nav>
 
@@ -93,18 +92,16 @@ const UserProfilePage = () => {
                         </div>
                     </div>
 
-                    <div className="card actions-card slide-up" style={{ borderColor: '#e69100' }}>
-                        <h3 style={{ color: '#e69100' }}>Действия</h3>
-                        <div className="action-buttons">
-                            {/* Подать заявку на перенос (пока заглушка или на ту же страницу) */}
-                            <button className="primary-btn bg-orange hover-lift" onClick={() => navigate("/schedule")}>
-                                Перенести занятие
-                            </button>
-                            {/* Кнопка бронирования теперь функциональна */}
-                            <button className="primary-btn bg-green hover-lift" onClick={() => navigate("/booking")}>
-                                Забронировать ауд.
-                            </button>
-                        </div>
+                    <div className="card slide-up" style={{ borderColor: 'var(--p-orange)' }}>
+                        <h3 className="text-orange">Действия</h3>
+                            <div className="action-buttons">
+                                <button className="btn btn-orange" onClick={() => navigate("/schedule")}>
+                                    Перенести занятие
+                                </button>
+                                <button className="btn btn-green" onClick={() => navigate("/booking")}>
+                                    Забронировать ауд.
+                                </button>
+                            </div>
                     </div>
                 </div>
 
@@ -114,18 +111,16 @@ const UserProfilePage = () => {
                     {/* Моё расписание */}
                     <div className="card fade-in">
                         <h3>Моё ближайшее расписание</h3>
-                        <div className="flex-col mt-10">
-                            {loading ? (
-                                <p className="empty-text">Загрузка...</p>
-                            ) : myLessons.length > 0 ? (
+                        <div className="flex-col mt-2">
+                            {myLessons.length > 0 ? (
                                 myLessons.map(lesson => (
                                     <div key={lesson.id} className="list-item flex-row align-center">
-                                        <div style={{ fontWeight: 800, width: '120px', color: '#2c3ab3' }}>
+                                        <div className="text-primary" style={{ fontWeight: 800, width: '120px' }}>
                                             {lesson.start}
                                         </div>
                                         <div className="flex-grow">
-                                            <div style={{ fontWeight: 600, fontSize: '16px' }}>{lesson.discipline_name}</div>
-                                            <div style={{ fontSize: '13px', color: '#718096' }}>
+                                            <div style={{ fontWeight: 600 }}>{lesson.discipline_name}</div>
+                                            <div className="text-muted" style={{ fontSize: '13px' }}>
                                                 Кабинет {lesson.classroom_name} • {lesson.type_name}
                                             </div>
                                         </div>
@@ -159,7 +154,7 @@ const UserProfilePage = () => {
                                                     {status.label.toUpperCase()}
                                                 </span>
                                             </div>
-                                            <div style={{ fontSize: '12px', color: '#888', marginTop: '5px' }}>
+                                            <div style={{ fontSize: '12px', marginTop: '5px' }}>
                                                 {new Date(req.date_start).toLocaleString('ru-RU')}
                                             </div>
                                             {req.admin_comment && (

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { dbService } from "@/services/crud"; 
 import type { MappedEvent } from "@/types/schedule";
 import type { Classroom } from "@/types/classroom"; 
-import "./Schedule.css";
+import "@/styles/Schedule.css";
 
 const SchedulePage = () => {
     const navigate = useNavigate();
@@ -53,7 +53,7 @@ const SchedulePage = () => {
                 <div className="logo-white" onClick={() => navigate("/schedule")}>КГУ</div>
                 <div className="flex-row gap-10">
                     <button className="nav-btn" onClick={() => navigate("/profile")}>Профиль</button>
-                    <button className="nav-btn" style={{backgroundColor: '#f5222d'}} onClick={() => navigate("/login")}>Выход</button>
+                    <button className="nav-btn" style={{backgroundColor: 'var(--p-red)'}} onClick={() => navigate("/login")}>Выход</button>
                 </div>
             </nav>
 

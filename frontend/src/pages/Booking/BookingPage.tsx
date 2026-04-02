@@ -5,7 +5,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { dbService } from "@/services/crud";
 import type { Classroom } from "@/types/classroom";
-import "./Booking.css";
+import "@/styles/Booking.css";
 
 const BookingPage = () => {
     const navigate = useNavigate();
@@ -43,7 +43,7 @@ const BookingPage = () => {
                     title: item.type === 'lesson' ? 'ЗАНЯТО' : 'БРОНЬ',
                     start: item.date_start,
                     end: item.date_end,
-                    backgroundColor: item.type === 'lesson' ? '#2c3ab3' : '#e69100',
+                    backgroundColor: item.type === 'lesson' ? 'var(--p-blue)' : 'var(--p-orange)',
                     borderColor: 'transparent',
                     editable: false
                 }));
@@ -66,8 +66,8 @@ const BookingPage = () => {
             title: 'ВАШ ВЫБОР',
             start: `${selectedDate}T${startTime}:00`,
             end: `${selectedDate}T${endTime}:00`,
-            backgroundColor: '#2e7d32', // Зеленый цвет для выбора
-            borderColor: '#1b5e20',
+            backgroundColor: '#2e7d32', // не работает если не так 
+            borderColor: 'transparent',
             className: 'preview-event-pulse'
         }];
     }, [startTime, endTime, selectedDate]);
@@ -102,15 +102,16 @@ const BookingPage = () => {
         <div className="flex-col bg-main min-h-screen">
             <nav className="navbar">
                 <div className="logo-white" onClick={() => navigate("/schedule")}>КГУ</div>
-                <div className="flex-row gap-10" style={{width: 'auto'}}>
-                    <button className="nav-btn" onClick={() => navigate("/schedule")}>К расписанию</button>
-                    <button className="nav-btn" onClick={() => navigate("/profile")}>В профиль</button>
+                <div className="nav-actions">
+                    <button className="btn nav-btn" onClick={() => navigate("/schedule")}>К расписанию</button>
+                    <button className="btn nav-btn" onClick={() => navigate("/profile")}>В профиль</button>
                 </div>
             </nav>
 
-            <div className="profile-wrapper flex-row gap-20 align-start" style={{ flex: 1, padding: '20px' }}>
-                <div className="card flex-col gap-20" style={{ width: '380px', flexShrink: 0 }}>
-                    <h3 className="text-primary">Параметры брони</h3>
+            <div className="profile-wrapper flex-row gap-20 align-start p-2" style={{ flex: 1 }}>
+                {/* ЛЕВАЯ ПАНЕЛЬ */}
+                <div className="card flex-col gap-2" style={{ width: '380px', flexShrink: 0 }}>
+                    <h3 className="text-primary mb-1">Параметры брони</h3>
                     
                     <div className="flex-col">
                         <label className="filter-label">Аудитория</label>
@@ -128,21 +129,19 @@ const BookingPage = () => {
                         <label className="filter-label">Дата</label>
                         <input 
                             type="date" 
-                            className="card" 
-                            style={{ padding: '12px', borderRadius: '12px' }}
+                            className="input-styled" 
                             value={selectedDate}
                             onChange={(e) => setSelectedDate(e.target.value)}
                         />
                     </div>
 
-                    <div className="flex-row gap-10">
+                    <div className="flex-row gap-2">
                         <div className="flex-col flex-grow">
                             <label className="filter-label">Начало</label>
                             <input 
                                 type="time" 
-                                step="900" // Шаг 15 минут надо увеличить до полу часа или часа
-                                className="card"
-                                style={{ padding: '10px', borderRadius: '12px' }}
+                                step="1800" // Шаг 30 минут
+                                className="input-styled"
                                 value={startTime}
                                 onChange={(e) => setStartTime(e.target.value)}
                             />
@@ -151,9 +150,8 @@ const BookingPage = () => {
                             <label className="filter-label">Конец</label>
                             <input 
                                 type="time" 
-                                step="900"
-                                className="card"
-                                style={{ padding: '10px', borderRadius: '12px' }}
+                                step="1800"
+                                className="input-styled"
                                 value={endTime}
                                 onChange={(e) => setEndTime(e.target.value)}
                             />
@@ -163,24 +161,25 @@ const BookingPage = () => {
                     <div className="flex-col">
                         <label className="filter-label">Причина</label>
                         <textarea 
-                            className="card" 
-                            placeholder="Зачем вам аудитория?"
-                            style={{ padding: '12px', minHeight: '80px', borderRadius: '12px' }}
+                            className="input-styled" 
+                            placeholder="Например: Собрание кафедры"
+                            style={{ minHeight: '100px' }}
                             value={reason}
                             onChange={(e) => setReason(e.target.value)}
                         />
                     </div>
 
+                    {/* ГЛАВНАЯ КНОПКА */}
                     <button 
-                        className="primary-btn" 
-                        style={{backgroundColor: '#2e7d32'}}
+                        className="btn btn-green mt-1" 
                         onClick={handleBookingSubmit}
                     >
                         Отправить заявку
                     </button>
                 </div>
 
-                <div className="card" style={{ flex: 1, minWidth: '500px', height: '80vh' }}>
+                {/* ПРАВАЯ ПАНЕЛЬ С КАЛЕНДАРЕМ */}
+                <div className="card f-1" style={{ minWidth: '500px', height: '80vh' }}>
                     {selectedRoomObj ? (
                         <FullCalendar
                             key={`${selectedRoomId}-${selectedDate}`} 
@@ -194,15 +193,15 @@ const BookingPage = () => {
                             locale="ru"
                             height="100%"
                             headerToolbar={false}
-                            // Настройки отображения
                             events={allEvents}
                             slotMinTime={selectedRoomObj.work_start || "08:00:00"}
                             slotMaxTime={selectedRoomObj.work_end || "22:00:00"}
-                            selectable={false} // Отключаем выделение мышкой
+                            selectable={false}
                         />
                     ) : (
-                        <div className="flex-col justify-center align-center h-full text-muted">
+                        <div className="flex-col justify-center align-center h-100 text-muted">
                             <h3>Выберите аудиторию</h3>
+                            <p>чтобы увидеть график занятости</p>
                         </div>
                     )}
                 </div>
