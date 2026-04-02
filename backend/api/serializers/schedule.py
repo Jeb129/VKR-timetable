@@ -5,7 +5,8 @@ from api.services.schedule.mapper import MappedEvent
 
 
 class MappedEventSerializer(serializers.Serializer):
-    '''Сереализует в формат для отображения через FullCalendar'''
+    """Сереализует в формат для отображения через FullCalendar"""
+
     type = serializers.CharField()
     start = serializers.DateTimeField(source="date_start")
     end = serializers.DateTimeField(source="date_end")
@@ -30,6 +31,6 @@ class MappedEventSerializer(serializers.Serializer):
         elif isinstance(obj.event, Booking):
             return {"event": BookingSerializer(obj.event).data}
         return None
-    
+
     def get_title(self, obj: MappedEvent):
         return str(obj.event)
