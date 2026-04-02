@@ -1,12 +1,12 @@
 import logging
 from typing import List
 
-from api.models import Constraint, Lesson
+from api.models.models import Constraint, Lesson
 from api.services.constraunt.constraints import registry
-from api.services.constraunt.meta import ConstraintError,logger
+from api.services.constraunt.meta import ConstraintError
 
 
-
+logger = logging.getLogger("constraints")
 
 # constraints = [
 #     ("Пересечение по преподавателю", 500, "teacher_no_overlap"),
@@ -31,7 +31,7 @@ class ConstraintManager():
    
     def load(self):
         """Загружает ограничения и сопоставляет с реализованными функциями."""
-        logger.debug("Проверка реализации ограничений ограничений")
+        logger.info("Проверка реализации ограничений ограничений")
 
         for c in Constraint.objects.all():
             func = registry.get(c.name)
