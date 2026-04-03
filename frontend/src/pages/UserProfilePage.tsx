@@ -3,23 +3,12 @@ import { Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { dbService } from "@/services/crud"; 
 import type { Lesson } from "@/types/schedule"; 
+import type { BookingRequest } from "@/types/booking";
 import "@/styles/Profile.css";
-
-// Интерфейс для заявок на бронирование
-interface BookingRequest {
-    id: number;
-    classroom_num: string;
-    date_start: string;
-    date_end: string;
-    status: number;
-    description: string;
-    admin_comment?: string;
-}
 
 const UserProfilePage = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
-    
     const [myLessons, setMyLessons] = useState<Lesson[]>([]);
     const [myBookings, setMyBookings] = useState<BookingRequest[]>([]);
     const [loading, setLoading] = useState(true);
@@ -28,13 +17,21 @@ const UserProfilePage = () => {
         if (user) {
             const loadProfileData = async () => {
                 try {
-                    // 1. Загружаем личное расписание (через экшен 'my' во вьюсете)
-                    const lessonsData = await dbService.list("lessons/my");
+                    const today = new Date().toISOString().split('T')[0];
+
+                    const lessonsParams = {
+                        teacher_id: user.id, 
+                        date_from: today,
+                        date_to: today
+                    };
+
+                    const lessonsData = await dbService.list("schedule/teacher", lessonsParams);
                     setMyLessons(lessonsData);
 
-                    // 2. Загружаем свои заявки (используем фильтр my=true)
+                    // ЗАГРУЗКА БРОНИ 
                     const bookingsData = await dbService.list("bookings", { my: 'true' });
                     setMyBookings(bookingsData);
+
                 } catch (err) {
                     console.error("Ошибка при загрузке данных профиля:", err);
                 } finally {
@@ -46,14 +43,13 @@ const UserProfilePage = () => {
     }, [user]);
 
     if (!user) return <Navigate to="/login" replace />;
-
     // Функция для определения цвета и текста статуса
     const getStatusInfo = (status: number) => {
         switch (status) {
-            case 0: return { label: "На модерации", color: "var(--p-orange)", bg: "var(--bg-main)" };
-            case 1: return { label: "Одобрена", color: "var(--p-green)", bg: "var(--bg-main)" };
-            case 2: return { label: "Отклонена", color: "var(--p-red)", bg: "var(--bg-main)" };
-            default: return { label: "Черновик", color: "var(p-blue-light)", bg: "var(--bg-main)" };
+            case 0: return { label: "На модерации", color: "var(--p-orange)" };
+            case 1: return { label: "Одобрена", color: "var(--p-green)" };
+            case 2: return { label: "Отклонена", color: "var(--p-red)" };
+            default: return { label: "Черновик", color: "var(--text-muted)" };
         }
     };
 
@@ -135,38 +131,38 @@ const UserProfilePage = () => {
                     {/* Статус заявок */}
                     <div className="card fade-in">
                         <h3>Статус моих заявок</h3>
-                        <div className="flex-col mt-10">
-                            {!loading && myBookings.length > 0 ? (
+                        <div className="flex-col mt-2">
+                            {myBookings.length > 0 ? (
                                 myBookings.map(req => {
                                     const status = getStatusInfo(req.status);
                                     return (
-                                        <div key={req.id} className="list-item flex-col" style={{ alignItems: 'stretch' }}>
-                                            <div className="flex-row justify-between align-center">
-                                                <div style={{ fontWeight: 600 }}>Бронь аудитории {req.classroom_num}</div>
-                                                <span style={{ 
-                                                    fontSize: '12px', 
-                                                    padding: '4px 12px', 
-                                                    borderRadius: '20px', 
-                                                    backgroundColor: status.bg, 
+                                        <div key={req.id} className="list-item flex-col">
+                                            <div className="flex-row space-between align-center">
+                                                <div style={{ fontWeight: 700 }}>Бронь аудитории {req.classroom_num}</div>
+                                                <span className="badge" style={{ 
+                                                    backgroundColor: 'var(--bg-main)', 
                                                     color: status.color,
-                                                    fontWeight: 700 
+                                                    border: `1px solid ${status.color}`
                                                 }}>
-                                                    {status.label.toUpperCase()}
+                                                    {status.label}
                                                 </span>
                                             </div>
-                                            <div style={{ fontSize: '12px', marginTop: '5px' }}>
-                                                {new Date(req.date_start).toLocaleString('ru-RU')}
+                                            <div className="text-muted mt-1" style={{ fontSize: '13px' }}>
+                                                {new Date(req.date_start).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
                                             </div>
+                                            
+                                            {/* Комментарий админа */}
                                             {req.admin_comment && (
-                                                <div className="mt-10 p-10 bg-main" style={{ borderRadius: '8px', borderLeft: `4px solid ${status.color}`, fontSize: '13px' }}>
-                                                    <strong>Комментарий:</strong> {req.admin_comment}
+                                                <div className="bg-main mt-1" style={{ borderLeft: `4px solid ${status.color}`, padding: '10px', borderRadius: '8px' }}>
+                                                    <small><strong>Комментарий модератора:</strong></small>
+                                                    <p style={{ fontSize: '13px', margin: '4px 0 0 0' }}>{req.admin_comment}</p>
                                                 </div>
                                             )}
                                         </div>
                                     );
                                 })
                             ) : (
-                                <p className="empty-text">Активных заявок не найдено</p>
+                                <p className="empty-text">История заявок пуста</p>
                             )}
                         </div>
                     </div>

@@ -1,17 +1,22 @@
 export interface MappedEvent {
-    type: 'lesson' | 'adjustment' | 'booking';
-    date_start: string; // ISO string
-    date_end: string;   // ISO string
-    event: {
-        id: number;
-        discipline_name?: string;
-        type_name?: string;
-        classroom_name?: string;
-        teachers_list?: string[];
-        groups_list?: string[];
-        description?: string; // для броней
-        user_name?: string;    // для броней
-    };
+    start: string;  // ISO дата-время
+    end: string;    // ISO дата-время
+    title: string;  
+    type: string;   // "0", "2", "3"
+    extendedProps: {
+        event: {
+            id: number;
+            discipline_name?: string;
+            type_name?: string;
+            classroom_name?: string;
+            teachers_list?: string[];
+            groups_list?: string[];
+            description?: string;   // Для брони
+            user_name?: string;     // Для брони
+            status?: number;
+            admin_comment?: string;
+        }
+    }
 }
 export interface Lesson {
     id: number;
