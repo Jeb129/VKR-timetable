@@ -26,6 +26,12 @@ HANDLERS = {
         "filename": f"{LOG_DIR}/sql.log",
         "encoding": "utf-8",
     },
+    "system-file": {
+        "class": "logging.FileHandler",
+        "formatter": "default",
+        "filename": f"{LOG_DIR}/system.log",
+        "encoding": "utf-8",
+    },
 }
 
 CONFIG = {
@@ -51,6 +57,11 @@ CONFIG = {
         },
         "sql": {
             "handlers": ["console", "sql-file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+        "system": {
+            "handlers": ["console", "system-file"],
             "level": "DEBUG",
             "propagate": False,
         },
