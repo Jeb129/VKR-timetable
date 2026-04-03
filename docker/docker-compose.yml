@@ -25,7 +25,6 @@ services:
       sh -c "
               redis-server
                 ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
-                ${REDIS_AOF:+--appendonly ${REDIS_AOF}}
             "
     env_file:
     - ../redis/.env
