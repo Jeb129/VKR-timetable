@@ -4,13 +4,13 @@ from typing import List
 from api.models import Constraint, Lesson
 from api.services.constraunt.constraints import registry
 from api.services.constraunt.meta import ConstraintError
+from api.services.schedule.draft.context import draft_context
 
 
 logger = logging.getLogger("constraints")
 
-class ConstraintManager():
-    '''Сессия проверки расписания Проверяет ограничения из бд и проверяет есть ли его реализация'''
-
+class ConstraintManager:
+    """Класс для управления проверкой ограничений"""
     def __init__(self):
         self.constraints: List[Constraint] = []
         self.methods = {}  
@@ -28,24 +28,46 @@ class ConstraintManager():
             self.constraints.append(c)
             self.methods[c.name] = func
 
-    def check_lesson(self, lesson: Lesson) -> List[ConstraintError]:
-        """Проверяет одно занятие всеми реализованными ограничениями."""
-        errors: List[ConstraintError] = []
-
+    def check_lesson(self, lesson):
+        errors = []
         for c in self.constraints:
             func = self.methods.get(c.name)
             if func is None:
                 continue
-
             result = func(lesson, weight=c.weight)
             if result:
                 errors.append(result)
-
         return errors
 
-    def check_scenario(self, scenario) -> List[ConstraintError]:
-        """Проверяет всё расписание."""
-        errors: List[ConstraintError] = []
+    def check_scenario(self, scenario):
+        errors = []
         for lesson in scenario.lessons.all():
             errors.extend(self.check_lesson(lesson))
         return errors
+
+    def check_lesson_draft(self, scenario, lesson_id, storage):
+        """
+        Проверяет Lesson в черновом контексте.
+        """
+        with draft_context(scenario, storage) as dr_scenario:
+            lesson = dr_scenario.lessons.get(id=lesson_id)
+            return self.check_lesson(lesson), lesson
+
+    def check_scenario_draft(self, scenario, storage):
+        """
+        Проверяет весь сценарий в черновом контексте.
+        """
+        with draft_context(scenario, storage) as dr_scenario:
+            return self.check_scenario(dr_scenario)
+
+    def prepare_draft_lesson(self, scenario, lesson_id, data, storage):
+        """
+        Сохраняет изменения занятия в Redis, подмешивает и проверяет.
+        """
+        # Записываем diff
+        storage.save_lesson(lesson_id, data)
+
+        # Проверка
+        errors, lesson = self.check_lesson_draft(scenario, lesson_id, storage)
+
+        return lesson, errors
