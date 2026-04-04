@@ -1,63 +1,37 @@
-from typing import Any
-from django.db.models.manager import BaseManager
+from django.db.models import Manager
+from django.db.models.sql import Query
 
+from api.models import Lesson
 from api.services.schedule.draft.queryset import DraftLessonQuerySet
-from api.services.redis.storage import RedisDraftStorage
 
 
-class DraftLessonManager(BaseManager):
-    """
-    Оборачивает обычный RelatedManager (scenario.lessons)
-    и заменяет его методы на работу через DraftLessonQuerySet.
-    """
+# class DraftLessonManager(Manager):
+#     def __init__(self, storage, scenario_id):
+#         super().__init__()
+#         self.storage = storage
+#         self.scenario_id = scenario_id
 
-    def __init__(self, related_manager, redis_storage: RedisDraftStorage):
-        super().__init__()
-        self.related_manager = related_manager
-        self.redis = redis_storage
+#     def get_queryset(self):
+#         qs = super().get_queryset()
+#         return DraftLessonQuerySet(
+#             model=qs.model,
+#             query=qs.query.clone(),
+#             storage=self.storage,
+#             scenario_id=self.scenario_id,
+#         )
+    
+class DraftLessonManager(Manager):
+    def __init__(self, storage, scenario_id, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.model = Lesson
+        self._storage = storage
+        self._scenario_id = scenario_id
 
-    # Основные методы
-    def all(self):
-        qs = self.related_manager.all()
-        return DraftLessonQuerySet(qs, self.redis)
-
-    def filter(self, *args, **kwargs):
-        qs = self.related_manager.filter(*args, **kwargs)
-        return DraftLessonQuerySet(qs, self.redis)
-
-    def exclude(self, *args, **kwargs):
-        qs = self.related_manager.exclude(*args, **kwargs)
-        return DraftLessonQuerySet(qs, self.redis)
-
-    def get(self, *args, **kwargs):
-        """
-        get() должен вернуть урок с применёнными черновыми изменениями.
-        """
-        qs = self.related_manager.all()
-        draft_qs = DraftLessonQuerySet(qs, self.redis)
-        obj = qs.get(*args, **kwargs)
-        return draft_qs.apply_drafts([obj])[0]
-
-    def count(self) -> int:
-        """count() должен учитывать новые и удалённые занятия."""
-        drafts = self.redis.list_changes()
-        removed = drafts.get("removed", [])
-        base_count = self.related_manager.count()
-        new_count = len([1 for k in drafts if k.startswith("new:")])
-        return base_count - len(removed) + new_count
-
-    # Проксирование остальных методов RelatedManager
-    def __getattr__(self, item: str) -> Any:
-        """
-        Для select_related, prefetch_related, order_by и других
-        возвращаем DraftLessonQuerySet.
-        """
-        if hasattr(self.related_manager, item):
-
-            def wrapper(*args, **kwargs):
-                qs = getattr(self.related_manager, item)(*args, **kwargs)
-                return DraftLessonQuerySet(qs, self.redis)
-
-            return wrapper
-
-        return super().__getattribute__(item)
+    def get_queryset(self):
+        return DraftLessonQuerySet(
+            model=self.model,
+            query=Query(self.model),
+            storage=self._storage,
+            scenario_id=self._scenario_id,
+            using=self._db,
+        )

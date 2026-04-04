@@ -1,32 +1,17 @@
 from contextlib import contextmanager
-from typing import Generator
-
-from api.models.schedule import Lesson, ScheduleScenario
+from api.models.schedule import Lesson
 from api.services.schedule.draft.manager import DraftLessonManager
-from api.services.schedule.draft.scenario import DraftScenario
-from api.services.redis.storage import RedisDraftStorage
 
 
 @contextmanager
-def draft_context(
-    scenario: ScheduleScenario, redis_storage: RedisDraftStorage
-) -> Generator[DraftScenario, None, None]:
+def draft_context(scenario, storage):
     """
-    Контекст подменяет Lesson.objects на DraftLessonManager.
-    Это необходимо, чтобы constraint-функции, которые выполняют
-    Lesson.objects.filter(...), работали с черновиками.
+    Подменяет Lesson._default_manager и Lesson.objects.
     """
-
-    # 1. Сохраняем оригинальный менеджер
-    original_manager = Lesson.objects
-
+    original_base_manager = Lesson.objects
+    draft_manager = DraftLessonManager(storage=storage, scenario_id=scenario.id)
+    Lesson.objects = draft_manager
     try:
-        # 2. Подменяем Lesson.objects на наш DraftLessonManager
-        Lesson.objects = DraftLessonManager(Lesson.objects, redis_storage)
-
-        # 3. Возвращаем DraftScenario
-        yield DraftScenario(scenario, redis_storage)
-
+        yield draft_manager
     finally:
-        # 4. Восстанавливаем оригинальный менеджер
-        Lesson.objects = original_manager
+        Lesson.objects = original_base_manager
