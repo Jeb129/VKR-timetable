@@ -23,8 +23,7 @@ services:
     container_name: vkr-redis
     command: >
       sh -c "
-              redis-server
-                ${REDIS_PASSWORD:+--requirepass ${REDIS_PASSWORD}}
+              redis-server --requirepass 123321
             "
     env_file:
     - ../redis/.env

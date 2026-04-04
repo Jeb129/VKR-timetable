@@ -25,7 +25,7 @@ class DraftLessonQuerySet(QuerySet):
     Подмешивает изменения из RedisDraftStorage.
     """
 
-    def __init__(self, *args, storage=None, scenario_id=None, **kwargs):
+    def __init__(self, *args, storage=None, scenario_id=None, base_manager=None, **kwargs):
         # print("storage is none?",storage is None)
         super().__init__(*args,**kwargs)
         self.storage = storage
@@ -42,6 +42,13 @@ class DraftLessonQuerySet(QuerySet):
             self.updated = {}
             self.created = {}
             self.deleted = set()
+
+        if base_manager:
+            self._updated_base_cache = {
+                obj.id: obj for obj in base_manager.filter(id__in=self.updated)
+                }
+        else:
+            self._updated_base_cache = []
     
     def _clone(self, **kwargs):
         clone = super()._clone(**kwargs)
@@ -57,12 +64,7 @@ class DraftLessonQuerySet(QuerySet):
     # ------------------------------------------------------------------
     def apply_drafts(self, lesson):
         lesson_id = lesson.id
-
-        # Удалён?
-        if lesson_id in self.deleted:
-            return None
-
-        # Обновление существующего урока
+        # Обновление существующего занятия
         if lesson_id in self.updated:
             diff = self.updated[lesson_id]
             for field, value in diff.items():
@@ -70,7 +72,7 @@ class DraftLessonQuerySet(QuerySet):
                     # M2M подмена на proxy
                     model = getattr(lesson, field).model
                     proxy = DraftRelationProxy(model, value)
-                    setattr(lesson, field, proxy)
+                    setattr(lesson, f"_draft_{field}", proxy)
                 else:
                     setattr(lesson, field, value)
 
@@ -102,16 +104,51 @@ class DraftLessonQuerySet(QuerySet):
             obj.study_groups = DraftRelationProxy(model, data["study_groups"])
 
         return obj
+    def __iter__(self):
+        """
+        Гарантируем, что именно наш iterator() используется.
+        """
+        return self.iterator()
+
+
+    def _fetch_all(self):
+        """
+        Запрещаем Django использовать стандартный кешированный fetch_all,
+        заставляя его идти через iterator() каждый раз.
+        """
+        if self._result_cache is None:
+            self._result_cache = list(self.iterator())
+        self._prefetch_related_objects()
+    
 
     def iterator(self, *args, **kwargs):
-        # Сначала существующие уроки
+        # updated_ids = self.updated.keys()
+        # deleted_ids = self.deleted
+
         for lesson in super().iterator(*args, **kwargs):
-            obj = self.apply_drafts(lesson)
-            if obj is not None:
-                yield obj
-        # Добавляем созданные
-        for key, data in self.created.items():
-            yield self.build_created_instance(key, data)
+            lid = lesson.id
+            # Удалён?
+            if lid in self.deleted:
+                continue
+            # Обновлён? Не отдаём оригинальный, отдаём измененный ныиже
+            if lid in self.updated:
+                continue
+
+            yield lesson
+        if self._updated_base_cache:
+            for lid, _ in self.updated.items():
+                # lesson из базы
+                try:
+                    base = self._updated_base_cache.get(lid)
+                except self.model.DoesNotExist:
+                    continue  # если базы нет — странно, но пропускаем
+
+                patched = self.apply_drafts(base)
+                yield patched
+
+        # Созданные (pk нет)
+        for lid, data in self.created.items():
+            yield self.build_created_instance(lid, data)
 
 
     # ------------------------------------------------------------------

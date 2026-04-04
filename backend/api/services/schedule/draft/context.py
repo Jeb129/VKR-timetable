@@ -9,9 +9,9 @@ def draft_context(scenario, storage):
     Подменяет Lesson._default_manager и Lesson.objects.
     """
     original_base_manager = Lesson.objects
-    draft_manager = DraftLessonManager(storage=storage, scenario_id=scenario.id)
+    draft_manager = DraftLessonManager(storage=storage, scenario_id=scenario.id, base_manager = original_base_manager)
     Lesson.objects = draft_manager
     try:
-        yield draft_manager
+        yield draft_manager,
     finally:
         Lesson.objects = original_base_manager
