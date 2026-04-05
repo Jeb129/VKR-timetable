@@ -140,7 +140,7 @@ class DraftLessonQuerySet(QuerySet):
                 # lesson из базы
                 try:
                     base = self._updated_base_cache.get(lid)
-                except self.model.DoesNotExist:
+                except:
                     continue  # если базы нет — странно, но пропускаем
 
                 patched = self.apply_drafts(base)
