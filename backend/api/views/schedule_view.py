@@ -1,12 +1,14 @@
 import logging
 from typing import List
-from rest_framework import status
+from rest_framework import status, viewsets
 from rest_framework.views import Response
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from datetime import datetime
 from rest_framework.permissions import AllowAny
-from api.serializers import MappedEventSerializer
+from api.models import Timeslot, ScheduleScenario
+from api.serializers.schedule import ScheduleScenarioSerializer
+from api.serializers import MappedEventSerializer, TimeslotSerializer
 from api.services.schedule.mapper import (
     MappedEvent,
     get_classroom_schedule,
@@ -15,6 +17,18 @@ from api.services.schedule.mapper import (
 )
 
 logger = logging.getLogger("cheker")
+
+
+class TimeslotViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Timeslot.objects.all().order_by("day", "order_number")
+    serializer_class = TimeslotSerializer
+    permission_classes = [AllowAny]
+
+
+class ScheduleScenarioViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ScheduleScenario.objects.all().order_by("-created_at")
+    serializer_class = ScheduleScenarioSerializer
+    permission_classes = [AllowAny]
 
 
 class ScheduleView(ListAPIView):
@@ -47,7 +61,7 @@ class ScheduleView(ListAPIView):
         except Exception as e:
             logger.exception(e)
             return Response(
-                {"error":  str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
 

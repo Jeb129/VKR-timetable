@@ -1,0 +1,33 @@
+/* Booking.css */
+
+/* Отступ между кнопками в шапке */
+.nav-actions {
+    display: flex;
+    gap: 12px; /* Расстояние между кнопками Профиль и Расписание */
+}
+
+/* Поля времени */
+input[type="time"].card {
+    padding: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    font-weight: 600;
+    color: var(--p-blue);
+}
+
+/* Пульсация превью выбора */
+.preview-event-pulse {
+    border: 2px dashed rgba(255,255,255,0.8) !important;
+    animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+    0% { opacity: 1; }
+    50% { opacity: 0.6; }
+    100% { opacity: 1; }
+}
+
+/* Увеличиваем высоту слотов в календаре для наглядности */
+.fc-timegrid-slot {
+    height: 3.5rem !important;
+}

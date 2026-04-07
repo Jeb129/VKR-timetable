@@ -1,8 +1,12 @@
 from rest_framework import serializers
 
-from api.models import Lesson, ScheduleAdjustment, Booking
+from api.models import Lesson, ScheduleAdjustment, Booking, ScheduleScenario
 from api.services.schedule.mapper import MappedEvent
 
+class ScheduleScenarioSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScheduleScenario
+        fields = '__all__'
 
 class MappedEventSerializer(serializers.Serializer):
     """Сереализует в формат для отображения через FullCalendar"""

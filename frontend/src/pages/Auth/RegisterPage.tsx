@@ -2,6 +2,7 @@ import { useState } from "react"
 import { Navigate, useNavigate } from "react-router-dom"
 import type { RegisterRequest } from "../../types/user"
 import { useAuth } from "@/context/AuthContext"
+import "@/styles/Auth.css";
 
 const RegisterPage = () => {
 

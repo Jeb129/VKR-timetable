@@ -1,0 +1,53 @@
+/* Moderation.css */
+
+.moderation-wrapper {
+    padding: 2rem 2.5rem;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.moderation-card {
+    border-left: 6px solid var(--p-blue);
+    transition: var(--transition);
+}
+
+.moderation-card:hover {
+    transform: translateX(5px);
+}
+
+.badge-user {
+    background: var(--p-blue-light);
+    color: var(--p-blue);
+    padding: 0.4rem 1rem;
+    border-radius: 100px;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.time-range-text {
+    font-weight: 800;
+    font-size: 1.3rem;
+    color: var(--text-main);
+    margin: 0.5rem 0;
+}
+
+.reason-box {
+    background: var(--bg-main);
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    margin-top: 1rem;
+    font-size: 0.95rem;
+    border-left: 3px solid var(--border-color);
+}
+
+.reject-container {
+    padding: 1.5rem;
+    background: #fff1f0;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--p-red);
+    margin-top: 1.5rem;
+}
+
+.moderation-card.is-rejecting {
+    border-left-color: var(--p-red);
+}

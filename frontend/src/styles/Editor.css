@@ -1,0 +1,105 @@
+/* Editor.css */
+
+.editor-grid {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed; /* Одинаковая ширина колонок */
+}
+
+.editor-grid th {
+    background: var(--p-blue);
+    color: white;
+    padding: 15px;
+    font-family: 'Montserrat';
+    font-size: 0.8rem;
+    text-transform: uppercase;
+}
+
+.time-column {
+    width: 100px;
+}
+
+.time-cell {
+    background: var(--p-blue-light);
+    text-align: center;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.order-num { font-weight: 800; color: var(--p-blue); font-size: 0.7rem; }
+.time-range { font-size: 0.9rem; font-weight: 600; }
+
+.grid-cell {
+    height: 120px;
+    border: 1px solid var(--border-color);
+    vertical-align: top;
+    padding: 5px;
+    transition: background 0.2s;
+}
+
+.grid-cell:hover:not(.disabled) {
+    background: #fdfdfd;
+}
+
+.grid-cell.disabled {
+    background: #f0f0f0;
+    cursor: not-allowed;
+}
+
+/* Карточка пары внутри сетки */
+.draggable-lesson {
+    background: white;
+    border: 2px solid var(--p-blue) !important;
+    padding: 10px !important;
+    height: 100%;
+    cursor: grab;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    font-size: 0.8rem;
+    overflow: hidden;
+}
+
+.draggable-lesson:active {
+    cursor: grabbing;
+}
+
+.subject-short {
+    font-weight: 700;
+    color: var(--p-blue);
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.room-short {
+    align-self: flex-end;
+    font-weight: 800;
+    background: var(--p-blue-light);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+.empty-slot-plus {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--border-color);
+    font-size: 2rem;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.grid-cell:hover .empty-slot-plus {
+    opacity: 1;
+}
+
+/* Переключатель недель */
+.week-switcher {
+    background: rgba(255,255,255,0.1);
+    padding: 4px;
+    border-radius: var(--radius-md);
+    gap: 5px;
+}

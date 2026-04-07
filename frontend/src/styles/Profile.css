@@ -1,0 +1,134 @@
+/* Profile.css */
+
+.profile-wrapper {
+    padding: 30px 40px; 
+    display: flex;
+    flex-direction: row;
+    gap: 30px; 
+    width: 100%;
+    max-width: 1600px;
+    margin: 0 auto;
+    align-items: flex-start;
+}
+
+/* Левая колонка */
+.profile-sidebar {
+    width: 380px;
+    display: flex;
+    flex-direction: column;
+    gap: 25px; 
+    flex-shrink: 0;
+}
+
+/* Правая колонка */
+.content-area {
+    display: flex;
+    flex-direction: column;
+    gap: 25px; 
+    flex-grow: 1;
+}
+
+.card h3 {
+    margin-bottom: 20px;
+}
+
+/* Стилизация */
+.info-group {
+    margin-bottom: 1.5rem;
+}
+
+.info-group:last-child {
+    margin-bottom: 0;
+}
+
+.info-label {
+    margin-bottom: 0.5rem !important;
+}
+
+.info-value {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: var(--text-main);
+    display: block;
+}
+
+/* Кнопки действий */
+.action-buttons {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.primary-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    border-radius: var(--radius-md);
+    padding: 0.8rem 1.5rem;
+    font-family: 'Inter', sans-serif;
+    font-weight: 600;
+    cursor: pointer;
+    transition: var(--transition);
+    text-align: center;
+    color: white;
+}
+
+.primary-btn.bg-orange { background-color: var(--p-orange); }
+.primary-btn.bg-green  { background-color: var(--p-green); }
+
+.primary-btn:hover {
+    filter: brightness(1.1);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+/*Списки (Расписание и Заявки) */
+.list-item {
+    padding: 1rem 0;
+    border-bottom: 1px solid var(--border-color);
+    transition: var(--transition);
+}
+
+.list-item:last-child {
+    border-bottom: none;
+}
+
+.list-item:hover {
+    background-color: rgba(44, 58, 179, 0.02);
+    padding-left: 0.5rem;
+}
+
+/* Статусы и комментарии */
+.bg-main {
+    background-color: var(--bg-light);
+    border-radius: var(--radius-md);
+}
+
+.min-h-screen {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.empty-text {
+    color: var(--text-muted);
+    padding: 2rem 0;
+    text-align: center;
+    font-style: italic;
+}
+
+/* Адаптация Navbar  */
+.navbar {
+  width: 100%;
+  margin: 0; 
+  padding: 0.75rem 2.5rem;
+  background-color: var(--p-blue);
+  box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+  flex-shrink: 0;
+}
+
+.nav-btn {
+    margin-left: 0.5rem;
+}
