@@ -21,7 +21,7 @@ const ScheduleEditorPage = () => {
     const [currentWeek, setCurrentWeek] = useState<number>(1); // 1 - числитель, 2 - знаменатель
     
     // Данные расписания
-    //const [events, setEvents] = useState<MappedEvent[]>([]);
+    const [events, setEvents] = useState<MappedEvent[]>([]);
     const [loading, setLoading] = useState(false);
 
     // 1. Костыльные таймслоты (если бэк не отдает список слотов)
@@ -72,7 +72,7 @@ const ScheduleEditorPage = () => {
         }
     ];
 
-    const [events, setEvents] = useState<MappedEvent[]>(mockEvents);
+    //const [events, setEvents] = useState<MappedEvent[]>(mockEvents);
 
     // 1. Инициализация справочников
     useEffect(() => {
