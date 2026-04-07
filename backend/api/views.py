@@ -10,8 +10,9 @@ from datetime import datetime
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import action
-from api.models import Classroom, Booking
-from api.serializers import ClassroomSerializer, MappedEventSerializer
+from api.models import Classroom, Booking, Timeslot, ScheduleScenario, StudyGroup, Teacher
+from api.serializers.schedule import ScheduleScenarioSerializer
+from api.serializers import ClassroomSerializer, MappedEventSerializer, TimeslotSerializer, StudyGroupSerializer, TeacherSerializer 
 from api.services.schedule.mapper import (
     MappedEvent,
     get_classroom_schedule,
@@ -88,6 +89,25 @@ class ClassroomViewSet(viewsets.ReadOnlyModelViewSet):
     serializer_class = ClassroomSerializer
     permission_classes = [AllowAny]
 
+class TimeslotViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Timeslot.objects.all().order_by("day", "order_number")
+    serializer_class = TimeslotSerializer
+    permission_classes = [AllowAny]
+
+class ScheduleScenarioViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = ScheduleScenario.objects.all().order_by("-created_at")
+    serializer_class = ScheduleScenarioSerializer
+    permission_classes = [AllowAny]
+
+class StudyGroupViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = StudyGroup.objects.all().order_by("name")
+    serializer_class = StudyGroupSerializer
+    permission_classes = [AllowAny]
+
+class TeacherViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Teacher.objects.all().order_by("name")
+    serializer_class = TeacherSerializer
+    permission_classes = [AllowAny]
 
 # Вьюсет для бронирования (Создание заявок в BookingPage.tsx)
 class BookingViewSet(viewsets.ModelViewSet):
