@@ -63,7 +63,6 @@ def test_updated_lesson_fields_are_overridden(redis_client):
 
     storage = RedisDraftStorage(scenario.id, user_id=1,redis=redis_client)
     storage.update_lesson(lesson.id, {"timeslot": None})
-
     with draft_context(scenario, storage) as manager:
         draft = Lesson.objects.get(id=lesson.id)
         assert draft.timeslot is None
@@ -93,15 +92,17 @@ def test_created_lessons_are_returned(redis_client):
     scenario = ScheduleScenario.objects.create(name="Test Scenario")
 
     storage = RedisDraftStorage(scenario.id, user_id=1,redis=redis_client)
-    storage.create_lesson("new:1", {
-        "timeslot": None,
-        "classroom": None,
-        "discipline": None,
-        "lesson_type": None,
+    t1, _ = Timeslot.objects.get_or_create(day=1,week_num=1,order_number=1,time_start="08:30", time_end="10:00")
+    c1, _ = Classroom.objects.get_or_create(num="101",name="аудитория",capacity=30)
+    storage.create_lesson({
+        "timeslot": 1,
+        "classroom": 1,
+        "discipline": 1,
+        "lesson_type": 1,
     })
 
     with draft_context(scenario, storage):
-        lessons = list(Lesson.objects.filter(scenario=scenario))
+        lessons = list(Lesson.objects.all())
         # Один новый урок + (0 реальных)
         assert len(lessons) == 1
         assert lessons[0].id is None
@@ -143,7 +144,7 @@ def test_m2m_override(redis_client):
 
     with draft_context(scenario, storage):
         draft = Lesson.objects.get(id=lesson.id)
-        assert getattr(draft, "_draft_study_groups") == [group1.id, group2.id]
+        assert draft.study_groups.values_list("id",flat=True) == [group1.id, group2.id]
         # Проверяем, что реальные связи не менялись
         assert list(lesson.study_groups.all()) == [group1]
 

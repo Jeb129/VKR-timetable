@@ -27,6 +27,7 @@ class ConstraintManager:
 
             self.constraints.append(c)
             self.methods[c.name] = func
+        return self
 
     def check_lesson(self, lesson):
         errors = []
@@ -49,25 +50,25 @@ class ConstraintManager:
         """
         Проверяет Lesson в черновом контексте.
         """
-        with draft_context(scenario, storage) as dr_scenario:
-            lesson = dr_scenario.lessons.get(id=lesson_id)
-            return self.check_lesson(lesson), lesson
+        with draft_context(scenario, storage):
+            lesson = Lesson.objects.get(id=lesson_id)
+            return self.check_lesson(lesson)
 
     def check_scenario_draft(self, scenario, storage):
         """
         Проверяет весь сценарий в черновом контексте.
         """
-        with draft_context(scenario, storage) as dr_scenario:
-            return self.check_scenario(dr_scenario)
+        with draft_context(scenario, storage):
+            return self.check_scenario(scenario)
 
     def prepare_draft_lesson(self, scenario, lesson_id, data, storage):
         """
         Сохраняет изменения занятия в Redis, подмешивает и проверяет.
         """
         # Записываем diff
-        storage.save_lesson(lesson_id, data)
+        storage.update_lesson(lesson_id, data)
 
         # Проверка
-        errors, lesson = self.check_lesson_draft(scenario, lesson_id, storage)
+        errors = self.check_lesson_draft(scenario, lesson_id, storage)
 
-        return lesson, errors
+        return errors
