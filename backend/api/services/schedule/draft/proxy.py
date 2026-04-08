@@ -1,4 +1,4 @@
-class DraftRelationProxy_v2:
+class DraftRelationProxy:
     """
     Proxy для M2M поля в черновиках.
     Поддерживает фильтры по id и Python iteration.

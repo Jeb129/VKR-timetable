@@ -56,7 +56,6 @@ class DraftScenarioView(APIView):
             storage.clear_all()
 
         return Response(status=status.HTTP_200_OK)
-    
 
 
 class DraftScenarioCommitView(APIView):
