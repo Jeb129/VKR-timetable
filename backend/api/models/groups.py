@@ -32,7 +32,7 @@ class StudyGroup(models.Model):
     learning_stage = models.CharField(max_length=20)
     group_num = models.PositiveIntegerField()
     sub_groups = models.ManyToManyField("self", symmetrical=True, blank=True)
-    sub_group_num = models.PositiveIntegerField()
+    sub_group_num = models.PositiveIntegerField(null=True,blank=True)
     name = models.CharField(max_length=50)
     students_count = models.PositiveIntegerField()
 

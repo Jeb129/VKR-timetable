@@ -71,3 +71,10 @@ export interface ScheduleEvent {
     editable?: boolean; 
     backgroundColor?: string;
 }
+
+export interface ConstraintError {
+    name: string;
+    penalty: number;
+    message: string;
+    data: any
+}
