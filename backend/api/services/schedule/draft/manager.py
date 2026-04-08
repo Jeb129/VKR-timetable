@@ -2,24 +2,8 @@ from django.db.models import Manager
 from django.db.models.sql import Query
 
 from api.models import Lesson
-from api.services.schedule.draft.queryset import DraftLessonQuerySet, DraftLessonQuerySet_v2
+from api.services.schedule.draft.queryset import DraftLessonQuerySet, DraftLessonQuerySet
 
-
-# class DraftLessonManager(Manager):
-#     def __init__(self, storage, scenario_id):
-#         super().__init__()
-#         self.storage = storage
-#         self.scenario_id = scenario_id
-
-#     def get_queryset(self):
-#         qs = super().get_queryset()
-#         return DraftLessonQuerySet(
-#             model=qs.model,
-#             query=qs.query.clone(),
-#             storage=self.storage,
-#             scenario_id=self.scenario_id,
-#         )
-    
 class DraftLessonManager(Manager):
     def __init__(self, storage, scenario_id, base_manager, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -29,11 +13,8 @@ class DraftLessonManager(Manager):
         self._base_manager = base_manager
 
     def get_queryset(self):
-        return DraftLessonQuerySet_v2(
+        return DraftLessonQuerySet(
             model=self.model,
-            # query=Query(self.model),
             storage=self._storage,
             scenario_id=self._scenario_id,
-            # base_manager = self._base_manager,
-            # using=self._db,
-        ).filter(scenario__id=self._scenario_id)
+        )
