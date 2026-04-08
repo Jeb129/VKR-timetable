@@ -98,6 +98,7 @@ class RedisDraftStorage:
         current.update(data)
         created[new_id] = current
         self._save_json_field(self.FIELD_CREATED, created)
+        return new_id
 
     def delete_lesson(self, lesson_id: int):
         """
