@@ -40,28 +40,28 @@ class ConstraintManager:
                 errors.append(result)
         return errors
 
-    def check_scenario(self, scenario):
+    def check_scenario(self, scenario_id):
         errors = []
-        for lesson in scenario.lessons.all():
+        for lesson in Lesson.objects.filter(scenario_id = scenario_id):
             errors.extend(self.check_lesson(lesson))
         return errors
 
-    def check_lesson_draft(self, scenario, lesson_id, storage):
+    def check_lesson_draft(self, scenario_id, lesson_id, storage):
         """
         Проверяет Lesson в черновом контексте.
         """
-        with draft_context(scenario, storage):
+        with draft_context(scenario_id, storage):
             lesson = Lesson.objects.get(id=lesson_id)
             return self.check_lesson(lesson)
 
-    def check_scenario_draft(self, scenario, storage):
+    def check_scenario_draft(self, scenario_id, storage):
         """
         Проверяет весь сценарий в черновом контексте.
         """
-        with draft_context(scenario, storage):
-            return self.check_scenario(scenario)
+        with draft_context(scenario_id, storage):
+            return self.check_scenario(scenario_id)
 
-    def prepare_draft_lesson(self, scenario, lesson_id, data, storage):
+    def prepare_draft_lesson(self, scenario_id, lesson_id, data, storage):
         """
         Сохраняет изменения занятия в Redis, подмешивает и проверяет.
         """
@@ -69,6 +69,6 @@ class ConstraintManager:
         storage.update_lesson(lesson_id, data)
 
         # Проверка
-        errors = self.check_lesson_draft(scenario, lesson_id, storage)
+        errors = self.check_lesson_draft(scenario_id, lesson_id, storage)
 
         return errors
