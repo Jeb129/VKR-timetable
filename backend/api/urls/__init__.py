@@ -1,15 +1,12 @@
 # backend/api/urls.py
 from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from api.views import ClassroomViewSet#, BookingViewSet # Проверьте названия ваших вьюсетов
+from api.urls.database_set import router
+from api.views.test_view import TestDraftScenarioView
 
-router = DefaultRouter()
-# Регистрируем пути:
-router.register(r'classrooms', ClassroomViewSet, basename='classroom')
-##router.register(r'bookings', BookingViewSet, basename='booking')
 
 urlpatterns = [
     path('', include(router.urls)),
-    path('', include('api.urls.infrastructure')), 
-    path("schedule/",include("api.urls.schedule"))
+    path("schedule/",include("api.urls.schedule")),
+    path("scenario/<int:scenario_id>/",include("api.urls.scenario")),
+    path("test/", TestDraftScenarioView.as_view())
 ]

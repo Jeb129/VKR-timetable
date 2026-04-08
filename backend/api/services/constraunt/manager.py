@@ -3,65 +3,72 @@ from typing import List
 
 from api.models import Constraint, Lesson
 from api.services.constraunt.constraints import registry
-from api.services.constraunt.meta import ConstraintError,logger
+from api.services.constraunt.meta import ConstraintError
+from api.services.schedule.draft.context import draft_context
 
 
+logger = logging.getLogger("constraints")
 
-
-# constraints = [
-#     ("Пересечение по преподавателю", 500, "teacher_no_overlap"),
-#     ("Пересечение по группе", 500, "group_no_overlap"),
-#     ("Пересечение по аудиториям", 500, "room_no_overlap"),
-#     ("Аудитория вмещает всех студентов", 500, "room_has_enough_seats"),
-#     ("Аудитория соответствует оборудованию", 400, "room_meets_equipment_requirements"),
-#     ("Предпочтения преподавателя по аудитории", 300, "matches_teacher_room_preference"),
-#     ("Предпочтения преподавателя по времени", 200, "matches_teacher_time_preference"),
-#     ("Переход между корпусами", 500, "building_change"),
-#     ("Окно у студентов", 100, "students_gap"),
-#     ("Окно у преподавателя", 50, "teachers_gap"), # Тоже важно, оказывается, но парвда окно у препода побольше
-#     ("Перегрузка преподователя",50,"teacher_overload")
-# ]
-
-class ConstraintManager():
-    '''Сессия проверки расписания Проверяет ограничения из бд и проверяет есть ли его реализация'''
-   
+class ConstraintManager:
+    """Класс для управления проверкой ограничений"""
     def __init__(self):
         self.constraints: List[Constraint] = []
         self.methods = {}  
-   
+
     def load(self):
         """Загружает ограничения и сопоставляет с реализованными функциями."""
-        logger.debug("Проверка реализации ограничений ограничений")
+        logger.info("Проверка реализации ограничений ограничений")
 
         for c in Constraint.objects.all():
             func = registry.get(c.name)
             if func is None:
-                logger.warning(f"Ограничение '{c.name}' не реализовано.")
+                logger.warning("Ограничение '%s' не реализовано.",c.name)
                 continue
 
             self.constraints.append(c)
             self.methods[c.name] = func
+        return self
 
-    def check_lesson(self, lesson: Lesson):
-            """Проверяет одно занятие всеми реализованными ограничениями."""
-            results = []
-
-            for c in self.constraints:
-                func = self.methods.get(c.name)
-                if func is None:
-                    continue
-
-                result = func(lesson, weight=c.weight)
-                if result:
-                    results.append(result)
-
-            return results
-
-    def check_scenario(self, scenario):
-        """Проверяет всё расписание."""
+    def check_lesson(self, lesson):
         errors = []
-        for lesson in scenario.lessons.all():
+        for c in self.constraints:
+            func = self.methods.get(c.name)
+            if func is None:
+                continue
+            result = func(lesson, weight=c.weight)
+            if result:
+                errors.append(result)
+        return errors
+
+    def check_scenario(self, scenario_id):
+        errors = []
+        for lesson in Lesson.objects.filter(scenario_id = scenario_id):
             errors.extend(self.check_lesson(lesson))
         return errors
- 
 
+    def check_lesson_draft(self, scenario_id, lesson_id, storage):
+        """
+        Проверяет Lesson в черновом контексте.
+        """
+        with draft_context(scenario_id, storage):
+            lesson = Lesson.objects.get(id=lesson_id)
+            return self.check_lesson(lesson)
+
+    def check_scenario_draft(self, scenario_id, storage):
+        """
+        Проверяет весь сценарий в черновом контексте.
+        """
+        with draft_context(scenario_id, storage):
+            return self.check_scenario(scenario_id)
+
+    def prepare_draft_lesson(self, scenario_id, lesson_id, data, storage):
+        """
+        Сохраняет изменения занятия в Redis, подмешивает и проверяет.
+        """
+        # Записываем diff
+        storage.update_lesson(lesson_id, data)
+
+        # Проверка
+        errors = self.check_lesson_draft(scenario_id, lesson_id, storage)
+
+        return errors

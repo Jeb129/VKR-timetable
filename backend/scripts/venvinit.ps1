@@ -1,3 +1,4 @@
+cd ..\
 if (!(Test-Path venv)) {
     Write-Output "Создание окружения..."
     python -m venv venv

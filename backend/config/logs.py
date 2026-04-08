@@ -1,7 +1,11 @@
+import logging
+import os
 from logging.config import dictConfig
 from pathlib import Path
 
-LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
+# from config.settings.base import LOG_DIR
+# BASE_DIR = Path(__file__).resolve().parent.parent.parent
+LOG_DIR = Path(__file__).resolve().parent.parent.parent / "logs"
 
 FORMATTERS = {
     "default": {
@@ -24,6 +28,12 @@ HANDLERS = {
         "class": "logging.FileHandler",
         "formatter": "default",
         "filename": f"{LOG_DIR}/sql.log",
+        "encoding": "utf-8",
+    },
+    "system-file": {
+        "class": "logging.FileHandler",
+        "formatter": "default",
+        "filename": f"{LOG_DIR}/system.log",
         "encoding": "utf-8",
     },
 }
@@ -54,9 +64,82 @@ CONFIG = {
             "level": "DEBUG",
             "propagate": False,
         },
+        "system": {
+            "handlers": ["console", "system-file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
     },
 }
 
 
+class SessionLogger:
+    """
+    Логирование действий пользователя в рамках редактирования сценария расписания.
+    Каждый пользователь получает отдельный лог-файл.
+    """
+
+    def __init__(self, scenario_id: int, user_id: str):
+        self.scenario_id = scenario_id
+        self.user_id = user_id
+        self.logger_name = f"edit_session.{scenario_id}.{user_id}"
+
+        self.logger = logging.getLogger(self.logger_name)
+        self.logger.setLevel(logging.INFO)
+
+        self._ensure_file_handler()
+
+    # Создание логгера и файлов
+    def _log_file_path(self) -> Path:
+        return LOG_DIR / f"scenario_{self.scenario_id}" / f"user_{self.user_id}.log"
+
+    def _ensure_file_handler(self):
+        """
+        Создаёт FileHandler, если он ещё не подключён.
+        """
+        log_path = self._log_file_path()
+
+        # Создаём папки
+        os.makedirs(log_path.parent, exist_ok=True)
+
+        # Если этот логгер уже имеет FileHandler — повторно не добавляем
+        for handler in self.logger.handlers:
+            if isinstance(handler, logging.FileHandler):
+                return
+
+        handler = logging.FileHandler(log_path, encoding="utf-8")
+        formatter = logging.Formatter("%(asctime)s | %(levelname)s | %(message)s")
+        handler.setFormatter(formatter)
+        self.logger.addHandler(handler)
+
+    # Публичные методы
+
+    def debug(self, msg: str):
+        self.logger.debug(msg)
+
+    def info(self, msg: str):
+        self.logger.info(msg)
+
+    def warning(self, msg: str):
+        self.logger.warning(msg)
+
+    def error(self, msg: str):
+        self.logger.error(msg)
+
+    def get_logger(self) -> logging.Logger:
+        return self.logger
+
+    # Очистка (опционально)
+
+    def close(self):
+        """
+        Закрывает FileHandler (можно вызывать после завершения работы).
+        """
+        for handler in self.logger.handlers:
+            handler.close()
+            self.logger.removeHandler(handler)
+
+
 def setup_logging():
+    os.makedirs(LOG_DIR, exist_ok=True)
     dictConfig(CONFIG)
