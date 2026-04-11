@@ -1,4 +1,4 @@
-from django.db.models import QuerySet, Q
+from django.db.models import QuerySet, Q, ManyToManyField
 from api.models import Lesson
 from api.services.redis.storage import RedisDraftStorage
 from api.services.schedule.draft.proxy import DraftRelationProxy
@@ -137,6 +137,8 @@ class DraftLessonQuerySet(QuerySet):
 
 
     def iterator(self, *args, **kwargs):
+        if 'chunk_size' not in kwargs:
+            kwargs['chunk_size'] = 500
         # Существующие объекты
         for lesson in super().iterator(*args, **kwargs):
             lid = lesson.id
@@ -258,7 +260,8 @@ class DraftLessonQuerySet(QuerySet):
             "iexact": lambda a, b: str(a).lower() == str(b).lower(),
             "contains": lambda a, b: b in a if a is not None else False,
             "icontains": lambda a, b: str(b).lower() in str(a).lower() if a is not None else False,
-            "in": lambda a, b: a in b,
+            #"in": lambda a, b: a in b,
+            "in": lambda a, b: a in b if hasattr(b, '__contains__') else False,
             "gt": lambda a, b: a > b,
             "gte": lambda a, b: a >= b,
             "lt": lambda a, b: a < b,
@@ -278,20 +281,48 @@ class DraftLessonQuerySet(QuerySet):
             attr_parts = parts
 
         current = obj
-        for attr in attr_parts:
+        #for attr in attr_parts:
+        #    if hasattr(current, f"_draft_{attr}"):
+        #        current = getattr(current, f"_draft_{attr}")
+        #    else:
+        #        current = getattr(current, attr, None)
+        #    if current is None:
+        #        break
+        for i, attr in enumerate(attr_parts):
+            # 1. Проверяем наличие прокси-данных из Redis
             if hasattr(current, f"_draft_{attr}"):
                 current = getattr(current, f"_draft_{attr}")
             else:
+                # 2. Получаем обычный атрибут (например, 'teachers')
                 current = getattr(current, attr, None)
+
             if current is None:
                 break
         # ---------------------- M2M Пока не работает ----------------------
-        # if isinstance(current, DraftRelationProxy):
-        #     if lookup in ("exact", "in"):
-        #         func = lambda a, b: getattr(b, "id", b) in a._ids if lookup == "in" else getattr(b, "id", b) in a._ids
-        #     else:
+        #if isinstance(current, ManyToManyField):
+        #    if lookup in ("exact", "in"):
+        #        func = lambda a, b: getattr(b, "id", b) in a._ids if lookup == "in" else getattr(b, "id", b) in a._ids
+        #    else:
         #         current = list(current)
         # ------------------------------------------------------------------
+        # Если это менеджер (в БД) или наш DraftRelationProxy (в Redis)
+            if hasattr(current, 'all') or hasattr(current, '_ids'):
+                # Если путь продолжается (например, teachers__id)
+                if i < len(attr_parts) - 1 and attr_parts[i+1] == 'id':
+                    # Получаем все ID (из базы или прокси)
+                    if hasattr(current, '_ids'): # Это наш прокси
+                        ids = current._ids
+                    else: # Это обычный Django Manager
+                        ids = list(current.values_list('id', flat=True))
+                    
+                    # Применяем фильтр к списку ID
+                    func = LOOKUPS[lookup]
+                    if lookup == 'exact': 
+                        return value in ids
+                    if lookup == 'in': # teachers__id__in=[23, 24]
+                        return any(v in ids for v in value)
+                    return False
+                
         if lookup not in LOOKUPS:
             lookup, value = "exact", value
         func = LOOKUPS[lookup]

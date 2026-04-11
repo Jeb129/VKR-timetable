@@ -22,6 +22,19 @@ const list = async (model: string, params: Record<string, any> = {}) => {
     const response = await privateApi.get(`/api/${model}/`, { params });
     return response.data;
 };
+// Специальный метод для черновика (/api/scenario/ID/draft/?lesson_id=ID)
+const updateDraft = async (scenarioId: number, lessonId: number, data: Record<string, any>) => {
+    const response = await privateApi.put(
+        `/api/scenario/${scenarioId}/draft/?lesson_id=${lessonId}`, 
+        data
+    );
+    return response.data;
+};
+// Метод для публикации (/api/scenario/ID/draft/commit/)
+const commitDraft = async (scenarioId: number) => {
+    const response = await privateApi.post(`/api/scenario/${scenarioId}/draft/commit/`);
+    return response.data;
+};
 const get = async (model: string, id: number) => {
     const response = await privateApi.get(
         `/api/${model}/${id}/`
@@ -34,5 +47,7 @@ export const dbService = {
     get,
     list,
     create,
-    search
+    search,
+    updateDraft,
+    commitDraft
 }

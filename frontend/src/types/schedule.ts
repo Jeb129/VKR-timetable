@@ -48,6 +48,8 @@ export interface Lesson {
     discipline_name: string;
     type_name: string;
     classroom_name: string;
+    timeslot: number;
+    week_num: number;
     start: string;
     end: string;
     order: number;

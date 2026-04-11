@@ -63,6 +63,7 @@ class LessonSerializer(serializers.ModelSerializer):
     # Номер пары и день для сортировки
     order = serializers.ReadOnlyField(source="timeslot.order_number")
     day = serializers.ReadOnlyField(source="timeslot.day")
+    week_num = serializers.ReadOnlyField(source='timeslot.week_num') 
 
     # Списки имен преподавателей и групп (Many-to-Many)
     teachers_list = serializers.SlugRelatedField(
@@ -79,8 +80,10 @@ class LessonSerializer(serializers.ModelSerializer):
             "discipline_name",
             "type_name",
             "classroom_name",
+            "timeslot",
             "order",
             "day",
+            "week_num",
             "teachers_list",
             "groups_list",
             "classroom",

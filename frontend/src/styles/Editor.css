@@ -6,6 +6,15 @@
     table-layout: fixed; /* Одинаковая ширина колонок */
 }
 
+.btn-green {
+    margin-top: 0 !important; /* Убираем лишние отступы сверху */
+}
+
+/* Переключатель недель тоже сделаем чуть компактнее */
+.week-switcher button {
+    padding: 4px 12px !important;
+    font-size: 0.8rem;
+}
 .editor-grid th {
     background: var(--p-blue);
     color: white;
@@ -95,6 +104,120 @@
 .grid-cell:hover .empty-slot-plus {
     opacity: 1;
 }
+/* Layout с сайдбаром */
+.editor-container {
+    display: flex;
+    flex-direction: row;
+    position: relative; /* Для позиционирования язычка */
+    gap: 0; 
+    padding: 20px;
+    flex: 1;
+}
+.grid-area {
+    flex: 1;
+    min-width: 0;
+}
+
+/* Сайдбар ошибок */
+.error-sidebar {
+    width: 320px;
+    min-width: 320px;
+    background: white;
+    border: 2px solid var(--p-red);
+    border-radius: var(--radius-lg);
+    display: flex;
+    flex-direction: column;
+    position: relative; /* Чтобы язычок крепился к нему */
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), margin 0.4s;
+    margin-left: 20px;
+}
+
+.error-sidebar.closed {
+    transform: translateX(calc(100% + 40px)); /* Уезжает полностью за экран */
+    margin-left: -320px; /* Схлопываем место */
+}
+
+.error-item {
+    padding: 12px;
+    border-bottom: 1px solid #fee2e2;
+    background: #fff5f5;
+    cursor: pointer;
+    font-size: 0.85rem;
+}
+
+.error-item:hover {
+    background: #fee2e2;
+}
+
+.error-title {
+    font-weight: 800;
+    color: var(--p-red);
+    margin-bottom: 4px;
+}
+
+/* Индикация на карточке */
+.draggable-lesson.has-error {
+    border-color: var(--p-red) !important;
+    background-color: #fff5f5;
+}
+
+/* Язычок-закладка */
+.sidebar-trigger-tab {
+    position: absolute;
+    left: -42px; /* Выступает слева от сайдбара */
+    top: 20px;
+    width: 42px;
+    height: 50px;
+    background: var(--p-red);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    border-radius: 12px 0 0 12px;
+    box-shadow: -4px 0 10px rgba(0,0,0,0.1);
+    font-size: 20px;
+    transition: var(--transition);
+}
+.sidebar-trigger-tab:hover {
+    padding-right: 10px;
+}
+
+.close-sidebar-btn {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: var(--bg-main);
+    color: var(--text-main);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    transition: var(--transition);
+}
+
+.close-sidebar-btn:hover {
+    background: var(--p-red);
+    color: white;
+}
+.error-icon {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: var(--p-red);
+    color: white;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
 
 /* Переключатель недель */
 .week-switcher {
@@ -102,4 +225,14 @@
     padding: 4px;
     border-radius: var(--radius-md);
     gap: 5px;
+}
+/* Анимация пульсации для ошибок */
+.has-error {
+    animation: pulse-red 2s infinite;
+}
+
+@keyframes pulse-red {
+    0% { box-shadow: 0 0 0 0 rgba(245, 34, 45, 0.4); }
+    70% { box-shadow: 0 0 0 10px rgba(245, 34, 45, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(245, 34, 45, 0); }
 }

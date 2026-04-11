@@ -179,7 +179,7 @@ SIMPLE_JWT = {
 REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
 REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
 REDIS_DB = os.getenv("REDIS_DB", "1")
-REDIS_PASSWORD = os.getenv("REDIS_PASSWORD","1234")
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD","123321")
 
 REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 
