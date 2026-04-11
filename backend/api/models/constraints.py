@@ -1,9 +1,9 @@
 from django.db import models
 
-from api.models.buildings import Building, Equipment
-from api.models.groups import Institute, StudyGroup
-from api.models.models import Teacher
-from api.models.schedule import Discipline, LessonType, Semester
+
+from api.models.buildings import Equipment
+from api.models.education_subjects import Institute, StudyGroup,Teacher, Discipline, LessonType, Building
+from api.models.schedule import Semester
 
 
 class EquipmentRequirement(models.Model):
