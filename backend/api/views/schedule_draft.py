@@ -17,12 +17,17 @@ class DraftScenarioView(APIView):
     def get(self, request, scenario_id: int):
         scenario = get_object_or_404(ScheduleScenario, id=scenario_id)
         storage = RedisDraftStorage(scenario_id, request.user.id)
-
-        # Используем ConstraintManager и draft_context косвенно
-        # (check_scenario_draft вызывает draft_context)
+        
+        group_id = request.query_params.get("group_id")
+        teacher_id = request.query_params.get("teacher_id")
         with draft_context(scenario, storage):
-            lessons = Lesson.objects.all()
-            serialized = LessonSerializer(lessons, many=True).data
+            lessons = Lesson.objects.filter(teachers__id=teacher_id)
+            queryset = Lesson.objects.all()
+            if group_id:
+                queryset = queryset.filter(study_groups__id=int(group_id))
+            elif teacher_id:
+                queryset = queryset.filter(teachers__id=int(teacher_id))
+            serialized = LessonSerializer(queryset, many=True).data
 
         return Response({
             "lessons": serialized,
