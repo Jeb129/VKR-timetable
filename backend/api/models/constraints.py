@@ -1,9 +1,9 @@
 from django.db import models
 
-from api.models.buildings import Building, Equipment
-from api.models.groups import Institute, StudyGroup
-from api.models.models import Teacher
-from api.models.schedule import Discipline, LessonType, Semester
+
+from api.models.buildings import Equipment
+from api.models.education_subjects import Institute, StudyGroup,Teacher, Discipline, LessonType, Building
+from api.models.schedule import Semester
 
 
 class EquipmentRequirement(models.Model):
@@ -30,9 +30,10 @@ class AcademicLoad(models.Model):
         StudyGroup, on_delete=models.CASCADE, related_name="loads"
     )
     whole_hours = models.PositiveIntegerField()
+    whole_weeks = models.PositiveIntegerField()
 
     def __str__(self):
-        return f"{self.study_group} - {self.discipline}"
+        return f"{self.study_group} - {self.lesson_type} {self.discipline}"
 
 
 class Constraint(models.Model):
