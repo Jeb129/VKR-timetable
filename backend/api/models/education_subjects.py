@@ -22,10 +22,10 @@ class StudyProgram(models.Model):
     )
     code = models.CharField(max_length=8, blank=False, unique=True, verbose_name="Шифр")
     name = models.CharField(
-        max_length=255, blank=False, unique=True, verbose_name="Наименование"
+        max_length=255, blank=False, verbose_name="Наименование"
     )
     short_name = models.CharField(
-        max_length=100, blank=True, unique=True, verbose_name="Сокращение"
+        max_length=100, blank=True, verbose_name="Сокращение"
     )
 
     class Meta:
@@ -86,7 +86,7 @@ class StudyGroup(models.Model):
 
 
 class Teacher(models.Model):
-    institeute = models.ForeignKey(
+    institute = models.ForeignKey(
         Institute,
         blank=True,
         null=True,
@@ -103,7 +103,7 @@ class Teacher(models.Model):
     )
 
     class Meta:
-        ordering = ["institeute"]
+        ordering = ["institute"]
         verbose_name = "преподаватель"
         verbose_name_plural = "преподаватели"
 

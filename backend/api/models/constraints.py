@@ -30,9 +30,10 @@ class AcademicLoad(models.Model):
         StudyGroup, on_delete=models.CASCADE, related_name="loads"
     )
     whole_hours = models.PositiveIntegerField()
+    whole_weeks = models.PositiveIntegerField()
 
     def __str__(self):
-        return f"{self.study_group} - {self.discipline}"
+        return f"{self.study_group} - {self.lesson_type} {self.discipline}"
 
 
 class Constraint(models.Model):
