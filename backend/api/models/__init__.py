@@ -7,8 +7,14 @@ from .constraints import (
     EquipmentRequirement,
     Constraint,
 )
-from .groups import Institute, StudyGroup, StudyProgram
-from .models import Teacher
+from .education_subjects import (
+    Institute,
+    StudyGroup,
+    StudyProgram,
+    Teacher,
+    Discipline,
+    LessonType,
+)
 from .requests import (
     Request,
     ExcludedTimeslot,
@@ -19,8 +25,6 @@ from .requests import (
 from .schedule import (
     ScheduleScenario,
     Semester,
-    Discipline,
-    LessonType,
     Timeslot,
     Lesson,
 )

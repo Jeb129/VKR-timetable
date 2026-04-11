@@ -1,8 +1,7 @@
 from django.db import models
 
 from api.models.buildings import Classroom
-from api.models.groups import StudyGroup
-from api.models.models import Teacher
+from api.models.education_subjects import Discipline, LessonType, StudyGroup,Teacher
 
 
 class Semester(models.Model):
@@ -39,20 +38,6 @@ class ScheduleScenario(models.Model):
                 name="unique_active_record",
             )
         ]
-
-
-class Discipline(models.Model):
-    name = models.CharField(max_length=255)
-
-    def __str__(self):
-        return self.name
-
-
-class LessonType(models.Model):
-    name = models.CharField(max_length=100)
-
-    def __str__(self):
-        return self.name
 
 
 class Timeslot(models.Model):
