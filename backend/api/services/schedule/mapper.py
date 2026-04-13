@@ -15,7 +15,7 @@ from api.models import (
     enums,
     AcademicLoad,
 )
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, time
 
 logger = logging.getLogger("schedule")
 sql_logger = logging.getLogger("sql")
@@ -243,7 +243,7 @@ def get_classroom_schedule(
     lessons_qs = Lesson.objects.filter(classroom__id=classroom_id)
     result: List[MappedEvent] = []
     bookings = map_bookings(
-        date_from=date_from, date_to=date_to, classroom_id=classroom_id
+        date_from=datetime.combine(date_from,time.min), date_to=datetime.combine(date_to,time.max), classroom_id=classroom_id
     )
     if bookings:
         result.extend(bookings)
