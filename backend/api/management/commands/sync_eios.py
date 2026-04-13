@@ -3,10 +3,11 @@ import time
 import logging
 from datetime import datetime
 from django.core.management.base import BaseCommand
+
+from api.models import Institute, StudyProgram
 from api.models.buildings import Classroom
-from api.models import Teacher
-from api.models import StudyGroup, StudyProgram, Institute
-from api.models.schedule import ScheduleScenario, Lesson, Discipline, LessonType, Timeslot
+from api.models.education_subjects import Discipline, LessonType, StudyGroup, Teacher
+from api.models.schedule import Lesson, ScheduleScenario, Timeslot
 
 logger = logging.getLogger(__name__)
 
@@ -85,7 +86,7 @@ class Command(BaseCommand):
                             # Преподаватель и Группа
                             teacher = None
                             if teacher_fio:
-                                teacher, _ = Teacher.objects.get_or_create(name=teacher_fio, defaults={'weight': 1})
+                                teacher, _ = Teacher.objects.get_or_create(name=teacher_fio)
                             
                             group = None
                             if group_name:

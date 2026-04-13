@@ -45,7 +45,7 @@ class AcademicLoadSerializer(serializers.ModelSerializer):
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teacher
-        fields = ["id", "name", "weight", "user"]
+        fields = "__all__"
 
 
 class TimeslotSerializer(serializers.ModelSerializer):

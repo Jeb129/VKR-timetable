@@ -11,57 +11,66 @@ logger = logging.getLogger("constraints")
 
 class ConstraintManager:
     """Класс для управления проверкой ограничений"""
-    def __init__(self):
-        self.constraints: List[Constraint] = []
-        self.methods = {}  
 
-    def load(self):
+    constraints: List[Constraint] = []
+    methods = {}  
+
+    @classmethod
+    def load(cls):
         """Загружает ограничения и сопоставляет с реализованными функциями."""
         logger.info("Проверка реализации ограничений ограничений")
 
         for c in Constraint.objects.all():
             func = registry.get(c.name)
             if func is None:
-                logger.warning("Ограничение '%s' не реализовано.",c.name)
+                logger.warning("Метод проверки ограничения '%s' не найден.",c.name)
                 continue
 
-            self.constraints.append(c)
-            self.methods[c.name] = func
-        return self
-
-    def check_lesson(self, lesson):
+            cls.constraints.append(c)
+            cls.methods[c.name] = func
+            logger.debug("Успешная инициализация ограничения %s", c.name)
+        return
+    
+    @classmethod
+    def check_lesson(cls, lesson):
         errors = []
-        for c in self.constraints:
-            func = self.methods.get(c.name)
+        for c in cls.constraints:
+            func = cls.methods.get(c.name)
             if func is None:
                 continue
-            result = func(lesson, weight=c.weight)
-            if result:
-                errors.append(result)
+            try:
+                result = func(lesson, weight=c.weight)
+                if result:
+                    errors.append(result)
+            except:
+                pass
         return errors
-
-    def check_scenario(self, scenario_id):
+    
+    @classmethod
+    def check_scenario(cls, scenario_id):
         errors = []
         for lesson in Lesson.objects.filter(scenario_id = scenario_id):
-            errors.extend(self.check_lesson(lesson))
+            errors.extend(cls.check_lesson(lesson))
         return errors
-
-    def check_lesson_draft(self, scenario_id, lesson_id, storage):
+    @classmethod
+    def check_lesson_draft(cls, scenario_id, lesson_id, storage):
         """
         Проверяет Lesson в черновом контексте.
         """
         with draft_context(scenario_id, storage):
             lesson = Lesson.objects.get(id=lesson_id)
-            return self.check_lesson(lesson)
+            return cls.check_lesson(lesson)
 
-    def check_scenario_draft(self, scenario_id, storage):
+    @classmethod
+    def check_scenario_draft(cls, scenario_id, storage):
         """
         Проверяет весь сценарий в черновом контексте.
         """
         with draft_context(scenario_id, storage):
-            return self.check_scenario(scenario_id)
+            return cls.check_scenario(scenario_id)
 
-    def prepare_draft_lesson(self, scenario_id, lesson_id, data, storage):
+    @classmethod
+    def prepare_draft_lesson(cls,*, scenario_id, lesson_id, data, storage):
         """
         Сохраняет изменения занятия в Redis, подмешивает и проверяет.
         """
@@ -69,6 +78,6 @@ class ConstraintManager:
         storage.update_lesson(lesson_id, data)
 
         # Проверка
-        errors = self.check_lesson_draft(scenario_id, lesson_id, storage)
+        errors = cls.check_lesson_draft(scenario_id, lesson_id, storage)
 
         return errors

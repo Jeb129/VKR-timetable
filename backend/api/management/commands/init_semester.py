@@ -9,16 +9,20 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # 1. Создаем или получаем семестр
         # Мы берем период, покрывающий март 2026 года
-        sem_name = "Весенний семестр 2026"
-        semester, created = Semester.objects.get_or_create(
-            name=sem_name,
-            defaults={"date_start": date(2026, 2, 1), "date_end": date(2026, 7, 31)},
+        # sem_name = "Весенний семестр 2026"
+        # semester, created = Semester.objects.get_or_create(
+        #     name=sem_name,
+        #     defaults={"date_start": date(2026, 2, 1), "date_end": date(2026, 7, 31)},
+        # )
+
+        semester = Semester.objects.get(
+            date_start="2026-02-01",
         )
 
-        if created:
-            self.stdout.write(self.style.SUCCESS(f"Создан новый семестр: {sem_name}"))
-        else:
-            self.stdout.write(f"Семестр '{sem_name}' уже существует.")
+        # if created:
+        #     self.stdout.write(self.style.SUCCESS(f"Создан новый семестр: {sem_name}"))
+        # else:
+        #     self.stdout.write(f"Семестр '{sem_name}' уже существует.")
 
         # 2. Ищем сценарий импорта и привязываем его
         scenario = ScheduleScenario.objects.filter(name="EIOS Import").first()
