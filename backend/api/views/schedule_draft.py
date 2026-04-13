@@ -40,21 +40,24 @@ class DraftScenarioView(APIView):
         storage = RedisDraftStorage(scenario_id, request.user.id)
 
         # Готовый метод в ConstraintManager
-        errors= ConstraintManager().load().prepare_draft_lesson(
+        ConstraintManager.load()
+        errors= ConstraintManager.prepare_draft_lesson(
             scenario_id=scenario_id,
             lesson_id=lesson_id,
             data=normalize_diff(Lesson,request.data),
             storage=storage
         )
-
+        print(errors)
         return Response({
-            "errors": [e for e in errors],
+            "errors": len(errors),
+            # "errors": [e for e in errors],
         })
     def post(self, request, scenario_id: int):
         get_object_or_404(ScheduleScenario, id=scenario_id)
         storage = RedisDraftStorage(scenario_id, request.user.id)
         new_id = storage.create_lesson(data=normalize_diff(Lesson,request.data))
         
+        ConstraintManager.load()
         errors= ConstraintManager.check_lesson_draft(
             scenario_id=scenario_id,
             lesson_id=new_id,

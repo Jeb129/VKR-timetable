@@ -38,9 +38,12 @@ class ConstraintManager:
             func = cls.methods.get(c.name)
             if func is None:
                 continue
-            result = func(lesson, weight=c.weight)
-            if result:
-                errors.append(result)
+            try:
+                result = func(lesson, weight=c.weight)
+                if result:
+                    errors.append(result)
+            except:
+                pass
         return errors
     
     @classmethod
@@ -49,7 +52,7 @@ class ConstraintManager:
         for lesson in Lesson.objects.filter(scenario_id = scenario_id):
             errors.extend(cls.check_lesson(lesson))
         return errors
-
+    @classmethod
     def check_lesson_draft(cls, scenario_id, lesson_id, storage):
         """
         Проверяет Lesson в черновом контексте.
@@ -67,7 +70,7 @@ class ConstraintManager:
             return cls.check_scenario(scenario_id)
 
     @classmethod
-    def prepare_draft_lesson(cls, scenario_id, lesson_id, data, storage):
+    def prepare_draft_lesson(cls,*, scenario_id, lesson_id, data, storage):
         """
         Сохраняет изменения занятия в Redis, подмешивает и проверяет.
         """
