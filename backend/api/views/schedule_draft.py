@@ -55,7 +55,7 @@ class DraftScenarioView(APIView):
         storage = RedisDraftStorage(scenario_id, request.user.id)
         new_id = storage.create_lesson(data=normalize_diff(Lesson,request.data))
         
-        errors= ConstraintManager().load().check_lesson_draft(
+        errors= ConstraintManager.check_lesson_draft(
             scenario_id=scenario_id,
             lesson_id=new_id,
             storage=storage
