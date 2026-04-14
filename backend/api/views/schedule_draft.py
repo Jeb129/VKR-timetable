@@ -6,6 +6,7 @@ from django.shortcuts import get_object_or_404
 
 from api.models import Lesson, ScheduleScenario
 from api.serializers import LessonSerializer
+from api.serializers.schedule import ConstraintErrorSerializer
 from api.services.constraunt.manager import ConstraintManager
 from api.services.redis.storage import RedisDraftStorage
 from api.services.schedule.draft.context import draft_context
@@ -47,10 +48,9 @@ class DraftScenarioView(APIView):
             data=normalize_diff(Lesson,request.data),
             storage=storage
         )
-        print(errors)
         return Response({
-            "errors": len(errors),
-            # "errors": [e for e in errors],
+            # "errors": len(errors),
+            "errors": ConstraintErrorSerializer(errors, many = True).data,
         })
     def post(self, request, scenario_id: int):
         get_object_or_404(ScheduleScenario, id=scenario_id)

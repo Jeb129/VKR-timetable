@@ -12,6 +12,10 @@ from api.services.constraunt.meta import *
 
 logger.info("Регистрация мотодов проверки ограничений")
 
+# На будующее
+# Пары с малым количеством академ часов должны стоять по краям
+# Приоритет для определенных записей академического плана (чтобы физра не в середине дня была)
+
 
 @constraint("teacher_no_overlap")
 def teacher_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
@@ -54,7 +58,7 @@ def teacher_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
         name="teacher_no_overlap",
         penalty=final_penalty,
         message="Преподаватель занят в это время",
-        data={"conflicts": conflict_entries},
+        data=conflict_entries,
     )
 
 
@@ -90,7 +94,7 @@ def group_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
         name="group_no_overlap",
         penalty=weight,
         message="Группы заняты в это время",
-        data={"conflicts": conflict_entries},
+        data=conflict_entries,
     )
 
 
@@ -100,9 +104,9 @@ def room_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
     slot = lesson.timeslot
 
     conflicts = (
-        Lesson.objects.filter(scenario__id=lesson.scenario.id)
+        Lesson.objects.filter(scenario_id=lesson.scenario.id)
         .filter(timeslot=slot)
-        .filter(classroom__id=room_id)
+        .filter(classroom_id=room_id)
         .exclude(id=lesson.id)  # type: ignore
         .distinct()
     )
@@ -113,7 +117,7 @@ def room_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
         name="room_no_overlap",
         penalty=weight,
         message="Аудитория занята в это время",
-        data={"conflicts": conflicts},
+        data=conflicts,
     )
 
 
@@ -198,9 +202,6 @@ def room_meets_equipment_requirements(lesson: Lesson, *, weight) -> ConstraintEr
         message="В аудитории отсутствует необходимое оборудование",
         data={
             "lesson": lesson,
-            "classroom": classroom,
-            "required_equipment": required,
-            "provided_equipment": provided,
             "missing_equipment": missing,
         },
     )
@@ -256,9 +257,7 @@ def matches_teacher_room_preference(lesson: Lesson, *, weight) -> ConstraintErro
         name="matches_teacher_room_preference",
         penalty=penalty,
         message="Занятие не соответствует предпочтению преподавателя по аудитории",
-        data={
-            "violations": violations,
-        },
+        data=violations,
     )
 
 
@@ -301,7 +300,7 @@ def matches_teacher_time_preference(lesson: Lesson, *, weight) -> ConstraintErro
         name="matches_teacher_time_preference",
         penalty=penalty,
         message="Занятие назначено  для преподавателя ",
-        data={"violations": violations},
+        data=violations,
     )
 
 
