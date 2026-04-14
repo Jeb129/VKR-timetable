@@ -1,6 +1,9 @@
 from rest_framework import serializers
+from django.db import models
+from django.forms.models import model_to_dict
 
 from api.models import Lesson, ScheduleAdjustment, Booking, ScheduleScenario
+from api.services.constraunt.meta import ConstraintError
 from api.services.schedule.mapper import MappedEvent
 
 class ScheduleScenarioSerializer(serializers.ModelSerializer):
@@ -11,9 +14,9 @@ class ScheduleScenarioSerializer(serializers.ModelSerializer):
 class MappedEventSerializer(serializers.Serializer):
     """Сереализует в формат для отображения через FullCalendar"""
 
-    type = serializers.CharField()
-    start = serializers.DateTimeField(source="date_start")
-    end = serializers.DateTimeField(source="date_end")
+    type = serializers.ReadOnlyField()
+    start = serializers.ReadOnlyField(source="date_start")
+    end = serializers.ReadOnlyField(source="date_end")
     title = serializers.SerializerMethodField()
     extendedProps = serializers.SerializerMethodField()
 
@@ -38,3 +41,33 @@ class MappedEventSerializer(serializers.Serializer):
 
     def get_title(self, obj: MappedEvent):
         return str(obj.event)
+
+class ConstraintErrorSerializer(serializers.Serializer):
+    name = serializers.CharField()
+    penalty = serializers.IntegerField()
+    message = serializers.CharField()
+    data = serializers.SerializerMethodField()
+
+    def get_data(self, obj):
+        return self._serialize(obj.data)
+
+    def _serialize(self, value):
+        # Модель → сериализуем
+        if isinstance(value, models.Model):
+            return self._serialize_model(value)
+
+        # Словарь → обойти рекурсивно
+        if isinstance(value, dict):
+            return {k: self._serialize(v) for k, v in value.items()}
+
+        # Список/кортеж → обойти элементы
+        if isinstance(value, (list, tuple)):
+            return [self._serialize(v) for v in value]
+
+        # Примитивы
+        return value
+
+    def _serialize_model(self, instance):
+        # Сереализуем через model_to_dict т.к. в ошибке вряд ли нужен полноценный объект.
+        # Потом можно будет заменить на полноценное применение сериальзатором
+        return model_to_dict(instance)
