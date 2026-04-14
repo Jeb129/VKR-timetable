@@ -18,7 +18,7 @@ class ConstraintManager:
 
     def load(self):
         """Загружает ограничения и сопоставляет с реализованными функциями."""
-        logger.info("Проверка реализации ограничений ограничений")
+        logger.info("Проверка реализации ограничений")
 
         for c in Constraint.objects.all():
             func = registry.get(c.name)
