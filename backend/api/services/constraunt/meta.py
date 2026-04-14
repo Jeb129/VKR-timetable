@@ -14,15 +14,9 @@ def constraint(name):
     # logger.debug("Регистрация метода %s", name)
 
     def decorator(func):
-        def wrapper(*args,**kwargs):
-            logger.debug("Проверка ограничения %s", name)
-            return func(*args,**kwargs)
-
         if name not in registry:
-            logger.debug("Регистрация метода %s", name)
-            registry[name] = wrapper
-
-        return wrapper
+            registry[name] = func
+        return func
     return decorator
 
 @dataclass
