@@ -10,8 +10,6 @@ from api.models import (
 from api.models.enums import RequestStatus
 from api.services.constraunt.meta import *
 
-logger.info("Регистрация мотодов проверки ограничений")
-
 # На будующее
 # Пары с малым количеством академ часов должны стоять по краям
 # Приоритет для определенных записей академического плана (чтобы физра не в середине дня была)
@@ -23,8 +21,8 @@ def teacher_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
     slot = lesson.timeslot
 
     conflicts = (
-        Lesson.objects.filter(scenario__id=lesson.scenario.id)
-        .filter(timeslot=slot)
+        Lesson.objects.filter(scenario_id=lesson.scenario.id)
+        .filter(timeslot_id=slot.id)
         .filter(teachers__id__in=teacher_ids)
         .exclude(id=lesson.id)  # type: ignore
         .distinct()
@@ -117,7 +115,7 @@ def room_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
         name="room_no_overlap",
         penalty=weight,
         message="Аудитория занята в это время",
-        data=conflicts,
+        data=list(conflicts),
     )
 
 

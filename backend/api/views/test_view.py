@@ -31,8 +31,7 @@ class TestDraftScenarioView(APIView):
         #     # print(draft.count())
 
         #     data = LessonSerializer(draft, many=True).data
-        ConstraintManager.load()
-        data = ConstraintManager.prepare_draft_lesson(
+        data = ConstraintManager.load().prepare_draft_lesson(
             scenario_id=1,
             lesson_id=1,
             data=normalize_diff(Lesson,request.data),
@@ -51,8 +50,7 @@ class TestDraftScenarioView(APIView):
         storage = RedisDraftStorage(scenario_id, 0)
 
         # Готовый метод в ConstraintManager
-        ConstraintManager.load()
-        errors= ConstraintManager.prepare_draft_lesson(
+        errors= ConstraintManager.load().prepare_draft_lesson(
             scenario_id=scenario_id,
             lesson_id=lesson_id,
             data=normalize_diff(Lesson,request.data),
