@@ -1,4 +1,4 @@
-from django.db.models import QuerySet, Q, ManyToManyField
+from django.db.models import QuerySet, Q
 from api.models import Lesson
 from api.services.redis.storage import RedisDraftStorage
 from api.services.schedule.draft.proxy import DraftRelationProxy
@@ -47,7 +47,7 @@ class DraftLessonQuerySet(QuerySet):
     
     def get(self, *args, **kwargs):
         if "id" in kwargs:
-            key = kwargs["id"]
+            key = int( kwargs["id"])
             if key in self.deleted:
                 raise Lesson.DoesNotExist()
             if key in self.created:
