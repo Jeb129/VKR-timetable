@@ -48,9 +48,11 @@ class DraftScenarioView(APIView):
             data=normalize_diff(Lesson,request.data),
             storage=storage
         )
+        #фильтрация ошибок с 0 штрафом
+        real_errors = [e for e in errors if e.penalty > 0]
         return Response({
             # "errors": len(errors),
-            "errors": ConstraintErrorSerializer(errors, many = True).data,
+            "errors": ConstraintErrorSerializer(real_errors, many = True).data,
         })
     def post(self, request, scenario_id: int):
         get_object_or_404(ScheduleScenario, id=scenario_id)
