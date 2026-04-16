@@ -1,5 +1,6 @@
 import requests
 import time
+import re
 import logging
 from datetime import datetime
 from django.core.management.base import BaseCommand
@@ -11,9 +12,35 @@ from api.models.schedule import Lesson, ScheduleScenario, Timeslot
 
 logger = logging.getLogger(__name__)
 
+def parse_group_info(group_code):
+    """
+    Разбирает строку типа '24-ИСбо-1'
+    """
+    # Паттерн: Год - Направление (Буквы) - Уровень - Форма - Номер
+    pattern = r"(\d{2})-([А-Яа-я]+)([бмса])([озо])-([\w\d]+)"
+    match = re.search(pattern, group_code)
+    
+    if not match:
+        return None
+        
+    year_short, prog_abbr, stage_char, form_char, num = match.groups()
+    
+    # Маппинг для твоих моделей
+    stages = {'б': 'Бакалавриат', 'м': 'Магистратура', 'с': 'Специалитет', 'а': 'Аспирантура'}
+    forms = {'о': 'Очная', 'з': 'Заочная', 'в': 'Вечерняя'}
+    
+    return {
+        'year': 2000 + int(year_short),
+        'prog_code': prog_abbr.upper(), # Это пойдет в StudyProgram.code
+        'stage': stages.get(stage_char, 'Бакалавриат'),
+        'form': forms.get(form_char, 'Очная'),
+        'group_num': num,
+        'sub_group_num': int(re.search(r"п/г\s*(\d+)", group_code).group(1)) if "п/г" in group_code else None
+    }
+
 class Command(BaseCommand):
     help = 'Устойчивая синхронизация расписания EIOS через JSON API'
-
+        
     def handle(self, *args, **options):
         # 1. Базовые объекты для связей
         inst, _ = Institute.objects.get_or_create(name="Импорт", short_name="ИМП")
@@ -88,13 +115,33 @@ class Command(BaseCommand):
                             if teacher_fio:
                                 teacher, _ = Teacher.objects.get_or_create(name=teacher_fio)
                             
+                            group_name = item.get('группа')
                             group = None
-                            if group_name:
-                                group, _ = StudyGroup.objects.get_or_create(
-                                    name=group_name,
-                                    defaults={'stud_program': prog, 'admission_year': 2024, 'learning_form': 'Очная', 
-                                            'learning_stage': 'Бакалавриат', 'group_num': 1, 'sub_group_num': 0, 'students_count': 25}
-                                )
+                            if group_name and group_name != "Не указана":
+                                info = parse_group_info(group_name)
+                                
+                                if info:
+                                    # Ищем/Создаем направление подготовки
+                                    # Поле 'code' теперь обязательно и уникально!
+                                    current_prog, _ = StudyProgram.objects.get_or_create(
+                                        code=info['prog_code'][:8], # Ограничение max_length=8
+                                        defaults={
+                                            'name': f"Направление {info['prog_code']}",
+                                            'short_name': info['prog_code'], # Чтобы save не сгенерировал ерунду
+                                            'institute': inst
+                                        }
+                                    )
+
+                                    # Создаем группу
+                                    group, _ = StudyGroup.objects.get_or_create(
+                                        admission_year=info['year'],
+                                        stud_program=current_prog,
+                                        learning_form=info['form'],
+                                        learning_stage=info['stage'],
+                                        group_num=info['group_num'],
+                                        sub_group_num=info['sub_group_num'],
+                                        defaults={'students_count': 25}
+                                    )
 
                             # Чётность недели
                             dt_obj = datetime.fromisoformat(date_iso.replace('Z', ''))

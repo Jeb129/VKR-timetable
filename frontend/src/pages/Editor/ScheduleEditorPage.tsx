@@ -24,6 +24,7 @@ const ScheduleEditorPage = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [loading, setLoading] = useState(false);
+    const [isChecking, setIsChecking] = useState(false);
 
     useEffect(() => {
         const init = async () => {
@@ -80,15 +81,22 @@ const ScheduleEditorPage = () => {
             ? { ...l, timeslot: targetTimeslotId, day: targetSlot.day, order: targetSlot.order_number } 
             : l
         ));
+        // Включаем статус проверки
+        setIsChecking(true);
 
         try {
             const response = await dbService.updateDraft(selectedScenarioId, lessonId, {
                 timeslot: targetTimeslotId
             });
-
+            //console.log("ОШИБКИ ОТ СЕРВЕРА:", response.errors);
+            
             if (response.errors && response.errors.length > 0) {
-                setLessonErrors(prev => ({ ...prev, [lessonId]: response.errors }));
+                // Сохраняем только сообщения
+                const errorMessages = response.errors.map((e: any) => e.message);
+                setLessonErrors(prev => ({ ...prev, [lessonId]: errorMessages }));
+                setIsSidebarOpen(true); // Открываем сайдбар если есть реальный конфликт
             } else {
+                // Если ошибок нет - чистим старые ошибки для этого занятия
                 setLessonErrors(prev => {
                     const newErrors = { ...prev };
                     delete newErrors[lessonId];
@@ -101,12 +109,25 @@ const ScheduleEditorPage = () => {
             console.error("Ошибка перемещения");
             loadDraft(); // Возвращаем как было при ошибке сети
         }
+        finally {
+        setIsChecking(false); // Выключаем в любом случае
+        }
     };
 
     // Собираем все ошибки в один список для сайдбара
-    const allConflicts = Object.entries(lessonErrors).flatMap(([id, errs]) => 
-        errs.map(text => ({ lessonId: Number(id), text }))
-    );
+    const allConflicts = Object.entries(lessonErrors).flatMap(([id, errs]) => {
+        const lesson = lessons.find(l => l.id === Number(id));
+        const disciplineName = lesson ? lesson.discipline_name : `Занятие #${id}`;
+
+        // Фильтруем "OK", если они вдруг просочились с бэка
+        return errs
+            .filter(msg => msg !== "OK") 
+            .map(msg => ({
+                lessonId: Number(id),
+                disciplineName: disciplineName,
+                text: msg
+            }));
+    });
 
 
     const handleCommit = async () => {
@@ -215,6 +236,7 @@ const ScheduleEditorPage = () => {
 
                 {/* САЙДБАР С ЯЗЫЧКОМ */}
                 <div className={`error-sidebar ${isSidebarOpen ? '' : 'closed'}`}>
+                    {/* Язычок-закладка */}
                     <div className="sidebar-trigger-tab" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
                         {isSidebarOpen ? '▶' : '⚠️'}
                     </div>
@@ -224,16 +246,26 @@ const ScheduleEditorPage = () => {
                         <button className="close-sidebar-btn" onClick={() => setIsSidebarOpen(false)}>×</button>
                     </div>
 
+                    {/* Текст о проверке (вместо точки) */}
+                    {isChecking && (
+                        <div className="checking-banner fade-in">
+                            Проверка ограничений...
+                        </div>
+                    )}
+
                     <div className="flex-col scroll-y f-1">
                         {allConflicts.length > 0 ? (
                             allConflicts.map((err, i) => (
-                                <div key={i} className="error-item">
-                                    <div className="error-title">Занятие #{err.lessonId}</div>
+                                <div key={i} className="error-item fade-in">
+                                    {/* Теперь тут название предмета */}
+                                    <div className="error-title">{err.disciplineName}</div>
                                     <div className="error-text">{err.text}</div>
                                 </div>
                             ))
                         ) : (
-                            <div className="p-4 text-center text-muted">Конфликтов нет</div>
+                            <div className="p-4 text-center text-muted">
+                                {isChecking ? 'Выполняется анализ...' : 'Конфликтов не обнаружено'}
+                            </div>
                         )}
                     </div>
                 </div>
