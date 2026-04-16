@@ -70,4 +70,5 @@ class ConstraintErrorSerializer(serializers.Serializer):
     def _serialize_model(self, instance):
         # Сереализуем через model_to_dict т.к. в ошибке вряд ли нужен полноценный объект.
         # Потом можно будет заменить на полноценное применение сериальзатором
-        return model_to_dict(instance)
+        fields = [f.name for f in instance._meta.concrete_fields]
+        return model_to_dict(instance, fields=fields)

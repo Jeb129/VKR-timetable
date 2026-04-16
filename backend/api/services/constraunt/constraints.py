@@ -115,7 +115,7 @@ def room_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
         name="room_no_overlap",
         penalty=weight,
         message="Аудитория занята в это время",
-        data=conflicts,
+        data=list(conflicts),
     )
 
 
