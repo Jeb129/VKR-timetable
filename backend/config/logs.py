@@ -5,7 +5,7 @@ from pathlib import Path
 
 # from config.settings.base import LOG_DIR
 # BASE_DIR = Path(__file__).resolve().parent.parent.parent
-LOG_DIR = Path(__file__).resolve().parent.parent.parent / "logs"
+LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
 
 FORMATTERS = {
     "default": {
