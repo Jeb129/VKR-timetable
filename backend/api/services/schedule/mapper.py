@@ -207,8 +207,8 @@ def map_bookings(
     bookings = Booking.objects.filter(
         status=enums.RequestStatus.VERIFIED,
         classroom__id=classroom_id,
-        date_start__gte=date_from,
-        date_start__lte=date_to,
+        date_start__lt=date_to,
+        date_end__gt=date_from,
     )
     sql_logger.debug("map_bookings()\n%s", bookings.query)
 

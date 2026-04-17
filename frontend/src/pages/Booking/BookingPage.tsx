@@ -17,15 +17,18 @@ const BookingPage = () => {
     const [busyEvents, setBusyEvents] = useState<any[]>([]); 
     
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-    const [startTime, setStartTime] = useState("08:30");
-    const [endTime, setEndTime] = useState("10:00");
+    const [startTime, setStartTime] = useState("10:00");
+    const [endTime, setEndTime] = useState("11:00");
     const [reason, setReason] = useState("");
+
+    const [formError, setFormError] = useState<string | null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         dbService.list("classrooms").then(setRooms);
     }, []);
 
-    // ЗАГРУЗКА ЗАНЯТОСТИ 
+    // Загрузка занятости
     useEffect(() => {
         const room = rooms.find(r => String(r.id) === selectedRoomId);
         setSelectedRoomObj(room || null);
@@ -39,31 +42,61 @@ const BookingPage = () => {
                     });
 
                     const formatted = data.map((item: any) => {
-                        const isLesson = item.type === "0";
-                        const isAdjustment = item.type === "2";
+                        const tStart = item.start.split('T')[1].substring(0, 5);
+                        const tEnd = item.end.split('T')[1].substring(0, 5);
+                        // "0" - LESSON (Урок)
+                        // "2" - SCHEDULE_ADJUSTMENT (Корректировка/Замена)
+                        // "3" - BOOKING (Бронирование)
+                        const isLesson = item.type === "0" || item.type === "2";
                         const isBooking = item.type === "3";
 
                         return {
-                            title: isBooking ? `БРОНЬ: ${item.extendedProps.event.description}` : item.title,
+                            title: isBooking  ? `БРОНЬ: ${item.extendedProps?.event?.description}` : item.title,
                             start: item.start, 
                             end: item.end,
-                            backgroundColor: isLesson ? '#2c3ab3' : '#e69100',
+                            backgroundColor: isLesson  ? "var(--p-orange)" : "var(--p-blue)",
                             borderColor: 'transparent',
-                            editable: false,
-                            display: 'block'
+                            display: 'block',
+                            timeStart: tStart,
+                            timeEnd: tEnd
                         };
                     });
                     setBusyEvents(formatted);
                 } catch (err) {
-                    console.error("Ошибка загрузки занятости:", err);
+                    console.error("Ошибка загрузки занятости");
                 }
             };
             fetchBusy();
         }
     }, [selectedRoomId, selectedDate, rooms]); 
 
+    // Валидация при изменении времени или списка занятых слотов
+    useEffect(() => {
+        setFormError(null);
+
+        if (!startTime || !endTime) return;
+
+        if (startTime >= endTime) {
+            setFormError("Время начала не может быть позже или равно времени окончания");
+            return;
+        }
+
+        // Проверка наложений
+        const hasOverlap = busyEvents.some(event => {
+            // Математика пересечения интервалов:
+            // Выбор начнется раньше, чем занятость закончится И выбор закончится позже, чем занятость начнется
+            return startTime < event.timeEnd && endTime > event.timeStart;
+        });
+
+        if (hasOverlap) {
+            setFormError("Выбранное время пересекается с существующим занятием или бронью");
+        }
+    }, [startTime, endTime, busyEvents]);
+
+    // Динамическое превью (рисуем только если нет ошибок)
     const previewEvent = useMemo(() => {
-        if (!startTime || !endTime || !selectedRoomId) return [];
+        if (!selectedRoomId || !startTime || !endTime || formError) return [];
+
         return [{
             id: 'preview',
             title: 'ВАШ ВЫБОР',
@@ -73,18 +106,17 @@ const BookingPage = () => {
             borderColor: 'transparent',
             className: 'preview-event-pulse'
         }];
-    }, [startTime, endTime, selectedDate, selectedRoomId]);
+    }, [startTime, endTime, selectedDate, selectedRoomId, formError]);
 
     const allEvents = [...busyEvents, ...previewEvent];
 
     const handleBookingSubmit = async () => {
-        if (!startTime || !endTime || !reason || !selectedRoomId) {
-            return alert("Пожалуйста, заполните все поля!");
-        }
-        if (startTime >= endTime) {
-            return alert("Время начала не может быть позже времени конца");
+        if (formError || !reason || !selectedRoomId) {
+            if (!reason) setFormError("Укажите причину бронирования");
+            return;
         }
 
+        setIsSubmitting(true);
         try {
             await dbService.create("bookings", {
                 classroom: selectedRoomId,
@@ -92,10 +124,12 @@ const BookingPage = () => {
                 date_end: `${selectedDate}T${endTime}:00`,
                 description: reason
             });
-            alert("Заявка успешно отправлена на модерацию!");
             navigate("/profile");
-        } catch (err) {
-            alert("Ошибка при создании брони. Возможно, это время уже занято.");
+        } catch (err: any) {
+            const serverMsg = err.response?.data?.non_field_errors?.[0] || "Ошибка сервера";
+            setFormError(serverMsg);
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -103,7 +137,7 @@ const BookingPage = () => {
         <div className="flex-col bg-main min-h-screen">
             <nav className="navbar">
                 <div className="logo-white" onClick={() => navigate("/schedule")}>КГУ</div>
-                <div className="flex-row gap-2">
+                <div className="nav-actions">
                     <button className="btn nav-btn" onClick={() => navigate("/schedule")}>К расписанию</button>
                     <button className="btn nav-btn" onClick={() => navigate("/profile")}>В профиль</button>
                 </div>
@@ -115,11 +149,7 @@ const BookingPage = () => {
                     
                     <div className="flex-col">
                         <label className="filter-label">Аудитория</label>
-                        <select 
-                            className="styled-select" 
-                            value={selectedRoomId}
-                            onChange={(e) => setSelectedRoomId(e.target.value)}
-                        >
+                        <select className="styled-select" value={selectedRoomId} onChange={(e) => setSelectedRoomId(e.target.value)}>
                             <option value="">Выберите...</option>
                             {rooms.map(r => <option key={r.id} value={r.id}>{r.num}</option>)}
                         </select>
@@ -127,53 +157,37 @@ const BookingPage = () => {
 
                     <div className="flex-col">
                         <label className="filter-label">Дата</label>
-                        <input 
-                            type="date" 
-                            className="input-styled" 
-                            value={selectedDate}
-                            onChange={(e) => setSelectedDate(e.target.value)}
-                        />
+                        <input type="date" className="input-styled" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
                     </div>
 
                     <div className="flex-row gap-2">
                         <div className="flex-col f-1">
                             <label className="filter-label">Начало</label>
-                            <input 
-                                type="time" 
-                                step="1800" 
-                                className="input-styled"
-                                value={startTime}
-                                onChange={(e) => setStartTime(e.target.value)}
-                            />
+                            <input type="time" step="1800" className="input-styled" value={startTime} onChange={(e) => setStartTime(e.target.value)} />
                         </div>
                         <div className="flex-col f-1">
                             <label className="filter-label">Конец</label>
-                            <input 
-                                type="time" 
-                                step="1800"
-                                className="input-styled"
-                                value={endTime}
-                                onChange={(e) => setEndTime(e.target.value)}
-                            />
+                            <input type="time" step="1800" className="input-styled" value={endTime} onChange={(e) => setEndTime(e.target.value)} />
                         </div>
                     </div>
 
                     <div className="flex-col">
                         <label className="filter-label">Причина</label>
-                        <textarea 
-                            className="input-styled" 
-                            placeholder="Зачем вам аудитория?"
-                            style={{ minHeight: '100px' }}
-                            value={reason}
-                            onChange={(e) => setReason(e.target.value)}
-                        />
+                        <textarea className="input-styled" placeholder="Зачем вам аудитория?" style={{ minHeight: '100px' }} value={reason} onChange={(e) => setReason(e.target.value)} />
                     </div>
 
+                    {formError && (
+                        <div className="error fade-in" style={{ fontSize: '13px', textAlign: 'center' }}>
+                            {formError}
+                        </div>
+                    )}
+
                     <button 
-                        className="btn btn-green mt-2" 
+                        className="btn btn-green mt-1" 
                         onClick={handleBookingSubmit}
+                        disabled={isSubmitting || !!formError}
                     >
-                        Отправить заявку
+                        {isSubmitting ? "Отправка..." : "Отправить заявку"}
                     </button>
                 </div>
 
