@@ -1,7 +1,225 @@
 from django.db.models import QuerySet, Q
-from api.models import Lesson
 from api.services.redis.storage import RedisDraftStorage
-from api.services.schedule.draft.proxy import DraftRelationProxy
+
+class DraftFilters:
+    """
+    Отвечает за применение Django-like фильтров к объекту.
+    """
+
+    def __init__(self, filters=None):
+        self.filters = filters or []
+
+    def matches(self, obj):
+        """
+        Проверяет, проходит ли объект все фильтры и exclude.
+        """
+        for ftype, q_objects, lookups in self.filters:
+            passed = True
+
+            # Q-объекты
+            for q in q_objects:
+                if not self._evaluate_q(obj, q):
+                    passed = False
+                    break
+
+            # обычные lookups
+            for expr, value in lookups.items():
+                if not self._evaluate_expr(obj, expr, value):
+                    passed = False
+                    break
+
+            if ftype == "exclude":
+                passed = not passed
+
+            if not passed:
+                return False
+        return True
+
+
+    def _evaluate_q(self, obj, q):
+        """
+        Рекурсивно оценивает Q-объект на python-объекте.
+        """
+        result = None
+        for child in q.children:
+            if isinstance(child, Q):
+                val = self._evaluate_q(obj, child)
+            else:
+                expr, value = child
+                val = self._evaluate_expr(obj, expr, value)
+            if result is None:
+                result = val
+            elif q.connector == Q.AND:
+                result = result and val
+            else:  # OR
+                result = result or val
+
+        if q.negated:
+            result = not result
+        return result
+    
+
+    def _evaluate_expr(self, obj, expr, value):
+        """
+        Оценивает lookup expr на объекте, включая overlay M2M через _prefetched_objects_cache.
+        Поддерживает related__field__lookup.
+        """
+
+        LOOKUPS = {
+            "exact": lambda a, b: a == b,
+            "iexact": lambda a, b: str(a).lower() == str(b).lower(),
+            "contains": lambda a, b: b in a if a is not None else False,
+            "icontains": lambda a, b: str(b).lower() in str(a).lower() if a is not None else False,
+            "in": lambda a, b: a in b if hasattr(b, '__contains__') else False,
+            "gt": lambda a, b: a > b,
+            "gte": lambda a, b: a >= b,
+            "lt": lambda a, b: a < b,
+            "lte": lambda a, b: a <= b,
+            "startswith": lambda a, b: str(a).startswith(b) if a is not None else False,
+            "istartswith": lambda a, b: str(a).lower().startswith(str(b).lower()) if a is not None else False,
+            "endswith": lambda a, b: str(a).endswith(b) if a is not None else False,
+            "iendswith": lambda a, b: str(a).lower().endswith(str(b).lower()) if a is not None else False,
+            "isnull": lambda a, b: (a is None) == b,
+        }
+
+        parts = expr.split("__")
+
+        # Определяем lookup (contains, exact, in, id__in, ...)
+        if parts[-1] in LOOKUPS:
+            lookup = parts[-1]
+            attr_parts = parts[:-1]
+        else:
+            lookup = "exact"
+            attr_parts = parts
+
+        current = obj
+
+        # Получаем info о полях модели
+        m2m_fields = {f.name for f in obj._meta.many_to_many}
+
+        for i, attr in enumerate(attr_parts):
+
+            # ---- M2M overlay через _prefetched_objects_cache ----
+            if attr in m2m_fields and hasattr(obj, "_prefetched_objects_cache"):
+                if attr in obj._prefetched_objects_cache:
+                    current = obj._prefetched_objects_cache[attr]   # кешированный queryset
+                else:
+                    current = getattr(obj, attr).all()              # обычный queryset из БД
+
+            # обычные поля / related поля 
+            else:
+                current = getattr(current, attr, None)
+
+            if current is None:
+                break
+
+            # если это M2M queryset 
+            if isinstance(current, QuerySet):
+                # Если следующее поле — "id"
+                if i < len(attr_parts) - 1 and attr_parts[i + 1] == "id":
+                    ids = list(current.values_list("id", flat=True))
+
+                    func = LOOKUPS.get(lookup, LOOKUPS["exact"])
+
+                    if lookup == "exact":
+                        return value in ids
+
+                    if lookup == "in":
+                        return any(v in ids for v in value)
+
+                    # другие lookup'ы для id нам обычно не нужны
+                    return False
+
+                # Если lookup применяется к самому M2M (teachers__exact=[])
+                if lookup in ("exact", "in"):
+                    ids = list(current.values_list("id", flat=True))
+                    return LOOKUPS[lookup](ids, value)
+
+        # ---- простой lookup ----
+        func = LOOKUPS.get(lookup, LOOKUPS["exact"])
+        return func(current, value)
+    
+
+class DraftOverlayEngine:
+    def __init__(self, model, storage: RedisDraftStorage):
+        self.model = model
+        self.storage = storage
+
+        changes = storage.list_changes()
+
+        self.updated = changes["updated"]
+        self.created = changes["created"]
+        self.deleted = set(changes["deleted"])
+
+        # кеш метаданных модели
+        self.m2m_fields = {
+            f.name: f for f in model._meta.many_to_many
+        }
+
+    def build_created(self, pk, data):
+        obj = self.model(
+            id=None,
+            **{
+                f"{k}_id": v
+                for k, v in data.items()
+                if k not in self.m2m_fields
+            }
+        )
+
+        for field in self.m2m_fields:
+            if field in data:
+                getattr(obj, field).set(data[field])
+
+        return obj
+
+    def created_objects(self):
+        for pk, data in self.created.items():
+            yield self.build_created(pk, data)
+
+    def apply_update(self, obj):
+        data = self.updated.get(obj.id, {})
+
+        if not hasattr(obj, "_prefetched_objects_cache"):
+            obj._prefetched_objects_cache = {}
+
+        for field, value in data.items():
+
+            if field in self.m2m_fields:
+                rel_model = self.m2m_fields[field].remote_field.model
+
+                obj._prefetched_objects_cache[field] = (
+                    rel_model.objects.filter(id__in=value)
+                )
+
+            else:
+                setattr(obj, f"{field}_id", value)
+
+        return obj
+
+
+    def apply_queryset(self, iterable, filters: DraftFilters):
+
+        # если это QuerySet — используем iterator()
+        if hasattr(iterable, "iterator"):
+            base_iter = iterable.iterator()
+        else:
+            base_iter = iterable
+
+        for obj in base_iter:
+
+            if obj.id in self.deleted:
+                continue
+
+            if obj.id in self.updated:
+                obj = self.apply_update(obj)
+
+            if filters.matches(obj):
+                yield obj
+
+        for obj in self.created_objects():
+            if filters.matches(obj):
+                yield obj
+
 
 class DraftLessonQuerySet(QuerySet):
     """
@@ -15,6 +233,7 @@ class DraftLessonQuerySet(QuerySet):
         super().__init__(*args,**kwargs)
         self.storage = storage
         self.scenario_id = scenario_id
+        self.m2m_fields = {f.name: f for f in self.model._meta.many_to_many}
         self._draft_filters = []
         if scenario_id:
             self.query.add_q(Q(scenario_id=scenario_id))
@@ -35,28 +254,38 @@ class DraftLessonQuerySet(QuerySet):
         clone = super()._clone(**kwargs)
         clone.storage = self.storage
         clone.scenario_id = self.scenario_id
-        clone.updated = self.updated
-        clone.created = self.created
-        clone.deleted = self.deleted
+        clone.updated = self.updated.copy()
+        clone.created = self.created.copy()
+        clone.deleted = self.deleted.copy()
         clone._draft_filters = self._draft_filters.copy()
         return clone
     
     # ---------------------------------------
     # Поиск и получение объектов
     # ---------------------------------------
-    
     def get(self, *args, **kwargs):
-        if "id" in kwargs:
-            key = int( kwargs["id"])
-            if key in self.deleted:
-                raise Lesson.DoesNotExist()
-            if key in self.created:
-                return self._build_created_instance(key, self.created[key])
-            if key in self.updated:
-                lesson = self.model._default_manager.get(*args, **kwargs)
-                return self._apply_update(lesson)
-            
-            return self.model._default_manager.get(*args, **kwargs)
+        qs = self.filter(*args, **kwargs)
+
+        engine = DraftOverlayEngine(self.model, self.storage)
+        filters = DraftFilters(qs._draft_filters)
+
+        iterator = engine.apply_queryset(
+            super().filter(*args, **kwargs).iterator(),
+            filters
+        )
+
+        try:
+            obj = next(iterator)
+        except StopIteration:
+            raise self.model.DoesNotExist()
+
+        try:
+            next(iterator)
+            raise self.model.MultipleObjectsReturned()
+        except StopIteration:
+            pass
+
+        return obj
     
     
     def first(self):
@@ -137,194 +366,17 @@ class DraftLessonQuerySet(QuerySet):
 
 
     def iterator(self, *args, **kwargs):
-        if 'chunk_size' not in kwargs:
-            kwargs['chunk_size'] = 500
-        # Существующие объекты
-        for lesson in super().iterator(*args, **kwargs):
-            lid = lesson.id
-            obj = None
-            if lid in self.deleted:
-                continue
-            elif lid in self.updated:
-                obj = self._apply_update(lesson)
-            else:
-                obj = lesson        
+        base_qs = super().iterator(*args, **kwargs)
 
-            if self._matches_all(obj):
-                yield obj
-            else:
-                continue
-        # Новые объекты
-        for lid, data in self.created.items():
-            obj = self._build_created_instance(lid, data)
-            if self._matches_all(obj):
-                yield obj
-            else:
-                continue   
+        if not self.storage:
+            yield from base_qs
+            return
 
-    # ---------------------------------------
-    # Мерж БД и Redis
-    # ---------------------------------------
+        engine = DraftOverlayEngine(self.model,self.storage)
+        filters = DraftFilters(self._draft_filters)
 
-    def _build_created_instance(self, data):
-        """
-        Преобразует словарь из Redis в объект Lesson с draft-proxy для M2M.
-        """
-        # Создаём базовый объект без сохранения
-        obj = Lesson(
-            id=None,
-            scenario_id=self.scenario_id,
-            **{f"{k}_id": v for k, v in data.items() if k not in ("teachers", "study_groups")}
-        )
-
-        # M2M proxy
-        for field in ("teachers", "study_groups"):
-            if field in data:
-                m2m_manager = getattr(obj, field)
-                m2m_manager.set(data[field])
-        return obj
-      
-
-    def _apply_update(self, obj):
-        """
-        Применяет обновлённые поля к объекту.
-        """
-        updated_fields = self.updated.get(obj.id, {})
-        for field, value in updated_fields.items():
-            if field in ("teachers", "study_groups"):
-                # M2M пока не работает
-                model = getattr(obj, field).model
-                proxy = DraftRelationProxy(model, value)
-                setattr(obj, f"_draft_{field}", proxy)
-            else:
-                setattr(obj, f"{field}_id", value)
-        return obj
+        yield from engine.apply_queryset(base_qs,filters)
 
 
-    def _matches_all(self, obj):
-        """
-        Проверяет, проходит ли объект все фильтры и exclude.
-        """
-        for ftype, q_objects, lookups in self._draft_filters:
-            passed = True
 
-            # Q-объекты
-            for q in q_objects:
-                if not self._evaluate_q(obj, q):
-                    passed = False
-                    break
-
-            # обычные lookups
-            for expr, value in lookups.items():
-                if not self._evaluate_expr(obj, expr, value):
-                    passed = False
-                    break
-
-            if ftype == "exclude":
-                passed = not passed
-
-            if not passed:
-                return False
-        return True
-
-
-    def _evaluate_q(self, obj, q):
-        """
-        Рекурсивно оценивает Q-объект на python-объекте.
-        """
-        result = None
-        for child in q.children:
-            if isinstance(child, Q):
-                val = self._evaluate_q(obj, child)
-            else:
-                expr, value = child
-                val = self._evaluate_expr(obj, expr, value)
-            if result is None:
-                result = val
-            elif q.connector == Q.AND:
-                result = result and val
-            else:  # OR
-                result = result or val
-
-        if q.negated:
-            result = not result
-        return result
-
-
-    def _evaluate_expr(self, obj, expr, value):
-        """
-        Оценивает lookup expr на объекте, поддерживает related__field__lookup.
-        """
-        LOOKUPS = {
-            "exact": lambda a, b: a == b,
-            "iexact": lambda a, b: str(a).lower() == str(b).lower(),
-            "contains": lambda a, b: b in a if a is not None else False,
-            "icontains": lambda a, b: str(b).lower() in str(a).lower() if a is not None else False,
-            #"in": lambda a, b: a in b,
-            "in": lambda a, b: a in b if hasattr(b, '__contains__') else False,
-            "gt": lambda a, b: a > b,
-            "gte": lambda a, b: a >= b,
-            "lt": lambda a, b: a < b,
-            "lte": lambda a, b: a <= b,
-            "startswith": lambda a, b: str(a).startswith(b) if a is not None else False,
-            "istartswith": lambda a, b: str(a).lower().startswith(str(b).lower()) if a is not None else False,
-            "endswith": lambda a, b: str(a).endswith(b) if a is not None else False,
-            "iendswith": lambda a, b: str(a).lower().endswith(str(b).lower()) if a is not None else False,
-            "isnull": lambda a, b: (a is None) == b,
-        }
-        parts = expr.split("__")
-        if parts[-1] in LOOKUPS:
-            lookup = parts[-1]
-            attr_parts = parts[:-1]
-        else:
-            lookup = "exact"
-            attr_parts = parts
-
-        current = obj
-        #for attr in attr_parts:
-        #    if hasattr(current, f"_draft_{attr}"):
-        #        current = getattr(current, f"_draft_{attr}")
-        #    else:
-        #        current = getattr(current, attr, None)
-        #    if current is None:
-        #        break
-        for i, attr in enumerate(attr_parts):
-            # 1. Проверяем наличие прокси-данных из Redis
-            if hasattr(current, f"_draft_{attr}"):
-                current = getattr(current, f"_draft_{attr}")
-            else:
-                # 2. Получаем обычный атрибут (например, 'teachers')
-                current = getattr(current, attr, None)
-
-            if current is None:
-                break
-        # ---------------------- M2M Пока не работает ----------------------
-        #if isinstance(current, ManyToManyField):
-        #    if lookup in ("exact", "in"):
-        #        func = lambda a, b: getattr(b, "id", b) in a._ids if lookup == "in" else getattr(b, "id", b) in a._ids
-        #    else:
-        #         current = list(current)
-        # ------------------------------------------------------------------
-        # Если это менеджер (в БД) или наш DraftRelationProxy (в Redis)
-            if hasattr(current, 'all') or hasattr(current, '_ids'):
-                # Если путь продолжается (например, teachers__id)
-                if i < len(attr_parts) - 1 and attr_parts[i+1] == 'id':
-                    # Получаем все ID (из базы или прокси)
-                    if hasattr(current, '_ids'): # Это наш прокси
-                        ids = current._ids
-                    else: # Это обычный Django Manager
-                        ids = list(current.values_list('id', flat=True))
-                    
-                    # Применяем фильтр к списку ID
-                    func = LOOKUPS[lookup]
-                    if lookup == 'exact': 
-                        return value in ids
-                    if lookup == 'in': # teachers__id__in=[23, 24]
-                        return any(v in ids for v in value)
-                    return False
-                
-        if lookup not in LOOKUPS:
-            lookup, value = "exact", value
-        func = LOOKUPS[lookup]
-        result = func(current, value)
-        return result
+       
