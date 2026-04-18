@@ -1,0 +1,58 @@
+.ksu-select-container {
+    width: 100%;
+}
+
+/* Поле ввода (Control) */
+.ksu-select__control {
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
+    min-height: 45px !important;
+    cursor: pointer !important;
+    box-shadow: none !important;
+    transition: var(--transition) !important;
+}
+
+.ksu-select__control:hover {
+    border-color: var(--p-blue) !important;
+}
+
+.ksu-select__control--is-focused {
+    border-color: var(--p-blue) !important;
+    border-width: 2px !important;
+}
+
+/* Выпадающее меню */
+.ksu-select__menu {
+    border-radius: var(--radius-md) !important;
+    border: 2px solid var(--p-blue) !important;
+    overflow: hidden;
+    z-index: 1000 !important;
+}
+
+/* Элементы списка (Options) */
+.ksu-select__option {
+    font-weight: 600 !important;
+    padding: 10px 15px !important;
+    cursor: pointer !important;
+    font-size: 0.95rem;
+}
+
+.ksu-select__option--is-focused {
+    background-color: var(--p-blue-light) !important;
+    color: var(--p-blue) !important;
+}
+
+.ksu-select__option--is-selected {
+    background-color: var(--p-blue) !important;
+    color: white !important;
+}
+
+/* Текст внутри */
+.ksu-select__single-value {
+    color: var(--text-main) !important;
+    font-weight: 600;
+}
+
+.ksu-select__placeholder {
+    color: var(--text-muted) !important;
+}

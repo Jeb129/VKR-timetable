@@ -80,3 +80,10 @@ export interface ConstraintError {
     message: string;
     data: any
 }
+export interface ScheduleScenario {
+    id: number;
+    name: string;
+    is_active: boolean;
+    created_at: string;
+    semester?: number;
+}

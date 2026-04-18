@@ -1,11 +1,14 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { type SelectOption } from "@/types/ui";
+import SearchSelect from "@/components/UI/SearchSelect";
+import { useNavigate,useParams } from "react-router-dom";
 import { dbService } from "@/services/crud";
 import type { MappedEvent } from "@/types/schedule";
 import { DAYS,type Lesson, type Timeslot } from "@/types/schedule";
 import "@/styles/Editor.css";
 
 const ScheduleEditorPage = () => {
+    const { scenarioId } = useParams();
     const navigate = useNavigate();
 
     // Справочники
@@ -17,7 +20,7 @@ const ScheduleEditorPage = () => {
     // Фильтры
     const [selectedScenarioId, setSelectedScenarioId] = useState<number | null>(null);
     const [filterType, setFilterType] = useState<"group" | "teacher">("group");
-    const [targetId, setTargetId] = useState<string>("");
+    const [targetId, setTargetId] = useState<string | number>("");
     
     const [currentWeek, setCurrentWeek] = useState<number>(1);
     const [lessonErrors, setLessonErrors] = useState<Record<number, string[]>>({});
@@ -25,6 +28,12 @@ const ScheduleEditorPage = () => {
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [loading, setLoading] = useState(false);
     const [isChecking, setIsChecking] = useState(false);
+
+    const targetOptions: SelectOption[] = useMemo(() => {
+        if (filterType === "group") return groups.map(g => ({ value: g.id, label: g.name }));
+        if (filterType === "teacher") return teachers.map(t => ({ value: t.id, label: t.name }));
+        return [];
+    }, [filterType, groups, teachers]);
 
     useEffect(() => {
         const init = async () => {
@@ -44,13 +53,12 @@ const ScheduleEditorPage = () => {
 
     // Загрузка черновика из Redis
     const loadDraft = async () => {
-        if (!selectedScenarioId || !targetId) return;
+        if (!scenarioId || !targetId) return;
         setLoading(true);
         try {
             const params = { [filterType === "group" ? "group_id" : "teacher_id"]: targetId };
-            const response = await dbService.list(`scenario/${selectedScenarioId}/draft`, params);
+            const response = await dbService.list(`scenario/${scenarioId}/draft`, params);
             setLessons(response.lessons || []);
-            // накопленные ошибки, записываем сюда
         } catch (err) {
             console.error(err);
         } finally {
@@ -58,7 +66,7 @@ const ScheduleEditorPage = () => {
         }
     };
 
-    useEffect(() => { loadDraft(); }, [selectedScenarioId, targetId, filterType]);
+    useEffect(() => { loadDraft(); }, [scenarioId, targetId, filterType]);
 
     // Drag and Drop
     const onDragStart = (e: React.DragEvent, lessonId: number) => {
@@ -151,6 +159,7 @@ const ScheduleEditorPage = () => {
                         <button className={`btn ${currentWeek === 2 ? 'btn-primary' : 'btn-outline'}`} onClick={() => setCurrentWeek(2)}>Знаменатель</button>
                     </div>
                     <button className="btn btn-green" onClick={handleCommit} disabled={!selectedScenarioId}>Опубликовать</button>
+                    <button className="btn nav-btn" onClick={() => navigate("/ScheduleEditor")}>К версиям</button>
                     <button className="btn nav-btn" onClick={() => navigate("/profile")}>В профиль</button>
                 </div>
             </nav>
@@ -161,13 +170,6 @@ const ScheduleEditorPage = () => {
                     {/* ПАНЕЛЬ ФИЛЬТРОВ  */}
                     <div className="card flex-row gap-2 align-end" style={{padding: '15px'}}>
                         <div className="flex-col f-1">
-                            <label className="filter-label">Версия</label>
-                            <select className="styled-select" onChange={e => setSelectedScenarioId(Number(e.target.value))}>
-                                <option value="">Выберите версию...</option>
-                                {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                        </div>
-                        <div className="flex-col f-1">
                             <label className="filter-label">Тип объекта</label>
                             <select className="styled-select" value={filterType} onChange={e => {setFilterType(e.target.value as any); setTargetId("");}}>
                                 <option value="group">Группа</option>
@@ -176,12 +178,11 @@ const ScheduleEditorPage = () => {
                         </div>
                         <div className="flex-col f-2">
                             <label className="filter-label">Объект</label>
-                            <select className="styled-select" value={targetId} onChange={e => setTargetId(e.target.value)}>
-                                <option value="">Выберите из списка...</option>
-                                {(filterType === "group" ? groups : teachers).map(item => (
-                                    <option key={item.id} value={item.id}>{item.name}</option>
-                                ))}
-                            </select>
+                            <SearchSelect 
+                                options={targetOptions}
+                                value={targetId}
+                                onChange={setTargetId}
+                            />
                         </div>
                     </div>
 
