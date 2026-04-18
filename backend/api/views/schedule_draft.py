@@ -7,7 +7,7 @@ from django.shortcuts import get_object_or_404
 from api.models import Lesson, ScheduleScenario
 from api.serializers import LessonSerializer
 from api.serializers.schedule import ConstraintErrorSerializer
-from api.services.constraunt.manager import ConstraintManager
+from api.services.constraunt.manager import ScheduleManager
 from api.services.redis.storage import RedisDraftStorage
 from api.services.schedule.draft.context import draft_context
 from config.utils import normalize_diff
@@ -40,7 +40,7 @@ class DraftScenarioView(APIView):
         storage = RedisDraftStorage(scenario_id, request.user.id)
 
         # Готовый метод в commit_scenario
-        errors= ConstraintManager().load().prepare_draft_lesson(
+        errors= ScheduleManager().load().update_lesson_draft(
             scenario_id=scenario_id,
             lesson_id=lesson_id,
             data=normalize_diff(Lesson,request.data),
@@ -57,7 +57,7 @@ class DraftScenarioView(APIView):
         storage = RedisDraftStorage(scenario_id, request.user.id)
         new_id = storage.create_lesson(data=normalize_diff(Lesson,request.data))
         
-        errors= ConstraintManager().load().check_lesson_draft(
+        errors= ScheduleManager().load().check_lesson_draft(
             scenario_id=scenario_id,
             lesson_id=new_id,
             storage=storage
