@@ -94,6 +94,7 @@ def test_created_lessons_are_returned(redis_client):
     storage = RedisDraftStorage(scenario.id, user_id=1,redis=redis_client)
     t1, _ = Timeslot.objects.get_or_create(day=1,week_num=1,order_number=1,time_start="08:30", time_end="10:00")
     c1, _ = Classroom.objects.get_or_create(num="101",name="аудитория",capacity=30)
+    storage.clear_created()
     storage.create_lesson({
         "timeslot": 1,
         "classroom": 1,
@@ -140,13 +141,13 @@ def test_m2m_override(redis_client):
     lesson.study_groups.add(group1)
 
     storage = RedisDraftStorage(scenario.id, user_id=1,redis=redis_client)
-    storage.update_lesson(lesson.id, {"groups": [group1.id, group2.id]})
+    storage.update_lesson(lesson.id, {"study_groups": [group1.id, group2.id]})
 
     with draft_context(scenario, storage):
         draft = Lesson.objects.get(id=lesson.id)
-        assert draft.study_groups.values_list("id",flat=True) == [group1.id, group2.id]
+        assert list(draft.study_groups.values_list("id",flat=True)) == [group1.id, group2.id]
         # Проверяем, что реальные связи не менялись
-        assert list(lesson.study_groups.all()) == [group1]
+    assert list(lesson.study_groups.all()) == [group1]
 
 
 @pytest.mark.django_db
