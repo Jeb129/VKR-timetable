@@ -4,12 +4,110 @@ from typing import List
 from api.models import Constraint, Lesson
 from api.services.constraunt.constraints import registry
 from api.services.constraunt.meta import ConstraintError
+from api.services.redis.storage import RedisDraftStorage
 from api.services.schedule.draft.context import draft_context
-
 
 logger = logging.getLogger("constraints")
 
-class ConstraintManager:
+class ScheduleManager_2:
+    """Класс, управляющий расписанием и проверками"""
+
+    def check_lesson_scenario(func):
+        """Проверяет, что редактируемое занятие принадлежит текущему  сценарию"""
+        def decorator(self,lesson_id,*args,**kwargs):
+            lesson = Lesson._default_manager.get(id=lesson_id)
+            if lesson.scenario_id != self.scenario_id:
+                raise ValueError("Занятие не является частью текущего сценария")
+            return func(self,lesson_id,*args,**kwargs)
+        return decorator
+
+
+    
+    def __init__(self,scenario_id,user):
+        self.constraints: List[Constraint] = []
+        self.methods = {}
+
+        self.scenario_id=scenario_id
+        self.user=user
+        self.storage = RedisDraftStorage(scenario_id=scenario_id,user_id=user.id)
+
+
+    def init_constraints(self):
+        """Загружает ограничения и сопоставляет с реализованными функциями."""
+        logger.info("Проверка реализации ограничений")
+
+        for c in Constraint.objects.all():
+            func = registry.get(c.name)
+            if func is None:
+                logger.warning("Метод проверки ограничения '%s' не найден.",c.name)
+                continue
+
+            self.constraints.append(c)
+            self.methods[c.name] = func
+            logger.debug("Успешная инициализация ограничения %s", c.name)
+        return self
+    
+    def check_lesson(self, lesson):
+        """Проверяет занятие в сценарии по всем ограничениям"""
+        errors = []
+        for c in self.constraints:
+            func = self.methods.get(c.name)
+            if func is None:
+                continue
+            try:
+                logger.debug("Проверка ограничения %s", c.name)
+                errors.append(func(lesson, weight=c.weight))
+            except Exception as err:
+                logger.error("Ошибка при проверке ограничения для занятия %s",lesson.id)
+                logger.debug(err.with_traceback())
+                errors.append(ConstraintError(
+                    name=c.name,
+                    message="Ошибка при проверке",
+                    data=err
+                ))
+        return errors
+
+
+    def check_scenario(self):
+        """Проверяет все занятия в сценарии"""
+        errors = []
+        for lesson in Lesson.objects.filter(scenario_id = self.scenario_id):
+            errors.extend(self.check_lesson(lesson))
+        return errors
+
+    def check_lesson_draft(self, lesson_id):
+        """Проверяет занятия в черновом контексте."""
+        with draft_context(self.scenario_id, self.storage):
+            lesson = Lesson.objects.get(id=lesson_id)
+            return self.check_lesson(lesson)
+
+    def check_scenario_draft(self):
+        """Проверяет весь сценарий в черновом контексте."""
+        with draft_context(self.scenario_id, self.storage):
+            return self.check_scenario(self.scenario_id)
+
+
+    @check_lesson_scenario
+    def update_lesson_draft(self,lesson_id, diff_data):
+        """Вносит изменения в черновик расписания"""
+        if diff_data:
+            self.storage.update_lesson(lesson_id=lesson_id,diff=diff_data)
+        return self.check_lesson_draft(self.scenario_id, lesson_id, self.storage)
+    
+    @check_lesson_scenario
+    def delete_lesson_draft(self, lesson_id):
+        self.storage.delete_lesson(lesson_id=lesson_id)
+    
+    def create_lesson_draft(self,data):
+        return self.storage.create_lesson(data=data)
+
+    
+    def commit_scenario(self):
+        self.storage.commit_changes()
+
+
+
+class ScheduleManager:
     """Класс для управления проверкой ограничений"""
 
     def __init__(self):
@@ -41,8 +139,14 @@ class ConstraintManager:
             try:
                 logger.debug("Проверка ограничения %s", c.name)
                 errors.append(func(lesson, weight=c.weight))
-            except:
-                pass
+            except Exception as err:
+                logger.error("Ошибка при проверке ограничения для занятия %s",lesson.id)
+                logger.debug(err.with_traceback())
+                errors.append(ConstraintError(
+                    name=c.name,
+                    message="Ошибка при проверке",
+                    data=err
+                ))
         return errors
     
     def check_scenario(self, scenario_id):
@@ -63,12 +167,11 @@ class ConstraintManager:
         with draft_context(scenario_id, storage):
             return self.check_scenario(scenario_id)
 
-    def prepare_draft_lesson(self, scenario_id, lesson_id, data, storage):
-        """
-        Сохраняет изменения занятия в Redis, подмешивает и проверяет.
-        """
+    def update_lesson_draft(self, scenario_id, lesson_id, data, storage):
+        """Сохраняет изменения занятия в Redis, подмешивает и проверяет."""
         # Записываем diff
-        storage.update_lesson(lesson_id, data)
+        if data:
+            storage.update_lesson(lesson_id, data)
 
         # Проверка
         errors = self.check_lesson_draft(scenario_id, lesson_id, storage)
