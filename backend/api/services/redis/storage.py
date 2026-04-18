@@ -2,11 +2,7 @@ import json
 from typing import Any, Dict, List
 from uuid import uuid4
 
-from django.db import transaction
 from django_redis import get_redis_connection
-
-from api.models import Lesson
-from api.services.schedule.draft.proxy import DraftRelationProxy
 
 
 class RedisDraftStorage:
@@ -143,6 +139,26 @@ class RedisDraftStorage:
 
     def clear_all(self):
         self.redis.delete(self.key)
+    
+    def clear_object(self,lesson_id):
+        updated = self.get_updated()
+        created = self.get_created()
+        deleted = self.get_deleted()
+
+        if lesson_id in updated:
+            updated.pop(lesson_id)
+            self._save_json_field(self.FIELD_UPDATED, updated)
+            return
+        if lesson_id in created:
+            created.pop(lesson_id)
+            self._save_json_field(self.FIELD_CREATED, created)
+            return
+        if lesson_id in deleted:
+            deleted.remove(lesson_id)
+            self._save_json_field(self.FIELD_DELETED, deleted)
+            return
+
+
 
     # -------------------------------------------------------------------------
     # Вспомогательные функции

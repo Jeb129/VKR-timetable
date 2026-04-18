@@ -5,11 +5,13 @@ from api.models import Constraint, Lesson
 from api.services.constraunt.constraints import registry
 from api.services.constraunt.meta import ConstraintError
 from api.services.redis.storage import RedisDraftStorage
+from api.services.schedule.draft.commit import commit_lesson, commit_scenario
 from api.services.schedule.draft.context import draft_context
+from authentification.models import CustomUser
 
 logger = logging.getLogger("constraints")
 
-class ScheduleManager_2:
+class ScheduleManager:
     """Класс, управляющий расписанием и проверками"""
 
     def check_lesson_scenario(func):
@@ -23,7 +25,7 @@ class ScheduleManager_2:
 
 
     
-    def __init__(self,scenario_id,user):
+    def __init__(self,scenario_id: int,user: CustomUser):
         self.constraints: List[Constraint] = []
         self.methods = {}
 
@@ -86,6 +88,10 @@ class ScheduleManager_2:
         with draft_context(self.scenario_id, self.storage):
             return self.check_scenario(self.scenario_id)
 
+    @check_lesson_scenario
+    def get_lessons_draft(self,**kwargs):
+        with draft_context(self.scenario_id, self.storage):
+            return Lesson.objects.filter(kwargs)
 
     @check_lesson_scenario
     def update_lesson_draft(self,lesson_id, diff_data):
@@ -95,19 +101,29 @@ class ScheduleManager_2:
         return self.check_lesson_draft(self.scenario_id, lesson_id, self.storage)
     
     @check_lesson_scenario
-    def delete_lesson_draft(self, lesson_id):
-        self.storage.delete_lesson(lesson_id=lesson_id)
+    def delete_lessons_draft(self, lesson_id=None):
+        if lesson_id is not None:
+            self.storage.delete_lesson(lesson_id=lesson_id)
+        else:
+            self.storage.clear_all()
     
     def create_lesson_draft(self,data):
         return self.storage.create_lesson(data=data)
 
     
-    def commit_scenario(self):
-        self.storage.commit_changes()
+    def apply_lessons(self, lesson_id=None):
+        if lesson_id is None:
+            commit_scenario(self.storage)
+        else:
+            commit_lesson(self.storage,lesson_id)
+        
+
+    def has_draft(self):
+        return self.storage.has_any_changes()
 
 
 
-class ScheduleManager:
+class ScheduleManager_old:
     """Класс для управления проверкой ограничений"""
 
     def __init__(self):
