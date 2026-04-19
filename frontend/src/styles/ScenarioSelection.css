@@ -1,0 +1,24 @@
+.scenario-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 1.5rem;
+}
+
+.scenario-card {
+    transition: var(--transition);
+    display: flex;
+    flex-direction: column;
+    min-height: 180px;
+}
+
+/* Отступ для кнопки создания от заголовка */
+.create-btn-margin {
+    margin-left: 3rem;
+}
+
+/* Стили для кнопок управления внутри карточки */
+.card-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 1.5rem;
+}

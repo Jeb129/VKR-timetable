@@ -2,11 +2,12 @@ import logging
 from typing import List
 from rest_framework import status, viewsets
 from rest_framework.views import Response
+from rest_framework.decorators import action
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from datetime import datetime
 from rest_framework.permissions import AllowAny
-from api.models import Timeslot, ScheduleScenario
+from api.models import Timeslot, ScheduleScenario, Lesson
 from api.serializers.schedule import ScheduleScenarioSerializer
 from api.serializers import MappedEventSerializer, TimeslotSerializer
 from api.services.schedule.mapper import (
@@ -25,10 +26,52 @@ class TimeslotViewSet(viewsets.ReadOnlyModelViewSet):
     permission_classes = [AllowAny]
 
 
-class ScheduleScenarioViewSet(viewsets.ReadOnlyModelViewSet):
+class ScheduleScenarioViewSet(viewsets.ModelViewSet):
     queryset = ScheduleScenario.objects.all().order_by("-created_at")
     serializer_class = ScheduleScenarioSerializer
     permission_classes = [AllowAny]
+
+    @action(detail=True, methods=['post'])
+    def copy(self, request, pk=None):
+        """
+        метод для глубокого копирования сценария вместе с уроками
+        URL: /api/scenarios/{id}/copy/
+        """
+        try:
+            original_scenario = self.get_object()
+            
+            # Создаем новый объект сценария на основе старого
+            new_scenario = ScheduleScenario.objects.create(
+                name=f"{original_scenario.name} (Копия)",
+                semester=original_scenario.semester,
+                is_active=False # Копия всегда создается неактивной
+            )
+
+            # Получаем все уроки оригинала
+            lessons = Lesson.objects.filter(scenario=original_scenario)
+            
+            for lesson in lessons:
+                # Сохраняем связи ManyToMany перед обнулением PK
+                teachers = list(lesson.teachers.all())
+                groups = list(lesson.study_groups.all())
+
+                # Клонируем объект урока
+                lesson.pk = None 
+                lesson.scenario = new_scenario
+                lesson.save()
+
+                # Восстанавливаем связи для нового объекта
+                lesson.teachers.set(teachers)
+                lesson.study_groups.set(groups)
+
+            logger.info(f"Сценарий {original_scenario.id} успешно скопирован в {new_scenario.id}")
+            
+            serializer = self.get_serializer(new_scenario)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"Ошибка при копировании сценария: {str(e)}")
+            return Response({"error": "Не удалось скопировать сценарий"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
 class ScheduleView(ListAPIView):
