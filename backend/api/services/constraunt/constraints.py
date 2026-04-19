@@ -38,8 +38,8 @@ def teacher_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
     penalties = []
 
     for conf in conflicts:
-        common_teachers = conf.teachers.filter(id__in=teacher_ids)
-        max_teacher_weight = max(t.weight for t in common_teachers)
+        common_teachers = list(conf.teachers.filter(id__in=teacher_ids))
+        max_teacher_weight = max(t.constraint_weight for t in common_teachers)
 
         penalties.append(weight * max_teacher_weight)
 
@@ -55,7 +55,7 @@ def teacher_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
     return ConstraintError(
         name="teacher_no_overlap",
         penalty=final_penalty,
-        message="Преподаватель занят в это время",
+        message="Один / несколько из преподавателей заняты в это время",
         data=conflict_entries,
     )
 
@@ -68,7 +68,7 @@ def group_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
     conflicts = (
         Lesson.objects.filter(scenario__id=lesson.scenario.id)
         .filter(timeslot=slot)
-        .filter(groups__id__in=groups_ids)
+        .filter(study_groups__id__in=groups_ids)
         .exclude(id=lesson.id)  # type: ignore
         .distinct()
     )
@@ -110,11 +110,11 @@ def room_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
     )
     if not conflicts.exists():
         return ConstraintError(name="room_no_overlap")
-
+    # errors = {{"lesson": c} for c in conflicts}
     return ConstraintError(
         name="room_no_overlap",
         penalty=weight,
-        message="Аудитория занята в это время",
+        message=f"Аудитория занята в это время",
         data=list(conflicts),
     )
 
@@ -132,18 +132,10 @@ def room_has_enough_seats(lesson: Lesson, *, weight) -> ConstraintError:
     if total_students <= total_students:
         return ConstraintError(name="classroom_capacity")
 
-    overflow = total_students - capacity
-
     return ConstraintError(
         name="classroom_capacity",
-        penalty=weight * overflow,
+        penalty=weight * total_students / capacity,
         message=f"Аудиторияя {classroom} не может вместить {total_students} чел. (вместимость аудитории {capacity} чел.)",
-        data={
-            "classroom": classroom,
-            "capacity": capacity,
-            "total_students": total_students,
-            "overflow": overflow,
-        },
     )
 
 
@@ -184,9 +176,6 @@ def room_meets_equipment_requirements(lesson: Lesson, *, weight) -> ConstraintEr
     if not missing_ids:
         return ConstraintError(
             name="equipment_required",
-            penalty=0,
-            message="OK",
-            data=None,
         )
 
     missing = [e for e in required if e.id in missing_ids]
@@ -199,7 +188,6 @@ def room_meets_equipment_requirements(lesson: Lesson, *, weight) -> ConstraintEr
         penalty=penalty,
         message="В аудитории отсутствует необходимое оборудование",
         data={
-            "lesson": lesson,
             "missing_equipment": missing,
         },
     )
@@ -240,7 +228,6 @@ def matches_teacher_room_preference(lesson: Lesson, *, weight) -> ConstraintErro
                 violations.append(
                     {
                         "teacher": t,
-                        "preference": p,
                         "preferred_classroom": preferred_classroom,
                     }
                 )

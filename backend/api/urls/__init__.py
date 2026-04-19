@@ -1,7 +1,7 @@
 # backend/api/urls.py
 from django.urls import path, include
 from api.urls.database_set import router
-from api.views.test_view import TestDraftScenarioView
+from api.views.t_view import TestDraftScenarioView
 
 
 urlpatterns = [

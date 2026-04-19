@@ -1,5 +1,7 @@
 from rest_framework import status, viewsets
 from rest_framework.response import Response
+from rest_framework.request import Request
+
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 
@@ -29,10 +31,10 @@ class DraftLessonViewSet(viewsets.ViewSet):
         elif teacher_id:
             lessons = manager.get_lessons_draft(teachers__id=int(teacher_id))
 
-        return Response({
-            "lessons": LessonSerializer(lessons, many=True).data,
-            "has_draft": manager.has_draft(),
-        },status=status.HTTP_200_OK)
+        return Response(
+                LessonSerializer(lessons, many=True).data,
+                status=status.HTTP_200_OK
+            )
 
 
     def retrieve(self, request,scenario_id, pk=None):
@@ -42,9 +44,8 @@ class DraftLessonViewSet(viewsets.ViewSet):
 
         lesson = manager.get_lessons_draft(id=pk).first()
         if with_errors:
-            errors = manager.init_constraints().update_lesson_draft(
+            errors = manager.init_constraints().check_lesson_draft(
                 lesson_id=pk,
-                data=normalize_diff(Lesson,request.data),
             )
             return Response(
                 {
@@ -70,19 +71,20 @@ class DraftLessonViewSet(viewsets.ViewSet):
         },status=status.HTTP_201_CREATED)
 
 
-    def partial_update(self, request,scenario_id, pk=None):
+    def partial_update(self, request ,scenario_id, pk=None):
         """PATCH /draft/lessons/<id>/ — обновить черновик"""
         # Готовый метод в commit_scenario
         errors = ScheduleManager(scenario_id=scenario_id,user=request.user).init_constraints().update_lesson_draft(
             lesson_id=pk,
-            data=normalize_diff(Lesson,request.data),
+            diff_data=normalize_diff(Lesson,request.data),
         )
+
  
         #фильтрация ошибок с 0 штрафом
         real_errors = [e for e in errors if e.penalty > 0]
+        # print(ConstraintErrorSerializer(real_errors, many = True).data)
         return Response({
-            # "errors": len(errors),
-            "errors": ConstraintErrorSerializer(real_errors, many = True).data,
+            "errors":ConstraintErrorSerializer(real_errors, many = True).data,
         })
 
 

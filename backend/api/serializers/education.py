@@ -58,7 +58,7 @@ class LessonSerializer(serializers.ModelSerializer):
     # Текстовые названия из связанных моделей
     discipline_name = serializers.ReadOnlyField(source="discipline.name")
     type_name = serializers.ReadOnlyField(source="lesson_type.name")
-    classroom_name = serializers.ReadOnlyField(source="classroom.num")
+    classroom_name = serializers.ReadOnlyField(source="classroom.name")
 
     # Номер пары и день для сортировки
     order = serializers.ReadOnlyField(source="timeslot.order_number")

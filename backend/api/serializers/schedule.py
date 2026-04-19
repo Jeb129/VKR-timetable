@@ -3,6 +3,7 @@ from django.db import models
 from django.forms.models import model_to_dict
 
 from api.models import Lesson, ScheduleAdjustment, Booking, ScheduleScenario
+from api.serializers.education import LessonSerializer
 from api.services.constraunt.meta import ConstraintError
 from api.services.schedule.mapper import MappedEvent
 
@@ -65,10 +66,12 @@ class ConstraintErrorSerializer(serializers.Serializer):
             return [self._serialize(v) for v in value]
 
         # Примитивы
-        return value
+        return str(value)
 
     def _serialize_model(self, instance):
         # Сереализуем через model_to_dict т.к. в ошибке вряд ли нужен полноценный объект.
         # Потом можно будет заменить на полноценное применение сериальзатором
         fields = [f.name for f in instance._meta.concrete_fields]
+        if isinstance(instance, Lesson):
+            return LessonSerializer(instance).data
         return model_to_dict(instance, fields=fields)

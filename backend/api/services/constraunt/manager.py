@@ -60,8 +60,8 @@ class ScheduleManager:
                 logger.debug("Проверка ограничения %s", c.name)
                 errors.append(func(lesson, weight=c.weight))
             except Exception as err:
-                logger.error("Ошибка при проверке ограничения для занятия %s",lesson.id)
-                logger.debug(err.with_traceback())
+                logger.error("Ошибка при проверке ограничения %s для занятия %s", c.name, lesson.id)
+                # logger.debug(err.with_traceback())
                 errors.append(ConstraintError(
                     name=c.name,
                     message="Ошибка при проверке",
@@ -81,6 +81,7 @@ class ScheduleManager:
         """Проверяет занятия в черновом контексте."""
         with draft_context(self.scenario_id, self.storage):
             lesson = Lesson.objects.get(id=lesson_id)
+            
             return self.check_lesson(lesson)
 
     def check_scenario_draft(self):
@@ -88,17 +89,16 @@ class ScheduleManager:
         with draft_context(self.scenario_id, self.storage):
             return self.check_scenario(self.scenario_id)
 
-    @check_lesson_scenario
-    def get_lessons_draft(self,**kwargs):
+    def get_lessons_draft(self,*args,**kwargs):
         with draft_context(self.scenario_id, self.storage):
-            return Lesson.objects.filter(kwargs)
+            return Lesson.objects.filter(*args,**kwargs)
 
     @check_lesson_scenario
     def update_lesson_draft(self,lesson_id, diff_data):
         """Вносит изменения в черновик расписания"""
         if diff_data:
             self.storage.update_lesson(lesson_id=lesson_id,diff=diff_data)
-        return self.check_lesson_draft(self.scenario_id, lesson_id, self.storage)
+        return self.check_lesson_draft(lesson_id)
     
     @check_lesson_scenario
     def delete_lessons_draft(self, lesson_id=None):

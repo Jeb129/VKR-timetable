@@ -147,8 +147,8 @@ class DraftOverlayEngine:
 
         changes = storage.list_changes()
 
-        self.updated = changes["updated"]
-        self.created = changes["created"]
+        self.updated: dict = changes["updated"]
+        self.created: dict = changes["created"]
         self.deleted = set(changes["deleted"])
 
         # кеш метаданных модели
@@ -156,7 +156,9 @@ class DraftOverlayEngine:
             f.name: f for f in model._meta.many_to_many
         }
 
-    def build_created(self, pk, data):
+    def build_created(self, pk, data = None):
+        if data is None:
+            data = self.created.get(pk)
         obj = self.model(
             id=None,
             **{
@@ -263,29 +265,54 @@ class DraftLessonQuerySet(QuerySet):
     # ---------------------------------------
     # Поиск и получение объектов
     # ---------------------------------------
-    def get(self, *args, **kwargs):
-        qs = self.filter(*args, **kwargs)
 
-        engine = DraftOverlayEngine(self.model, self.storage)
-        filters = DraftFilters(qs._draft_filters)
-
-        iterator = engine.apply_queryset(
-            super().filter(*args, **kwargs).iterator(),
-            filters
-        )
-
-        try:
-            obj = next(iterator)
-        except StopIteration:
+    def get(self,*args, **kwargs):
+        if "id" not in kwargs:
             raise self.model.DoesNotExist()
 
-        try:
-            next(iterator)
-            raise self.model.MultipleObjectsReturned()
-        except StopIteration:
-            pass
+        key = int(kwargs["id"])
 
-        return obj
+        engine = DraftOverlayEngine(self.model, self.storage)
+
+        # deleted
+        if key in engine.deleted:
+            raise self.model.DoesNotExist()
+
+        # updated
+        if key in engine.updated:
+            obj = self.model._default_manager.get(*args, **kwargs)
+            return engine.apply_update(obj)
+        
+        # created
+        if key in engine.created:
+            return engine.build_created(key)
+        
+        return self.model._default_manager.get(*args, **kwargs)
+        
+
+    # def get(self, *args, **kwargs):
+    #     qs = self.filter(*args, **kwargs)
+
+    #     engine = DraftOverlayEngine(self.model, self.storage)
+    #     filters = DraftFilters(qs._draft_filters)
+
+    #     iterator = engine.apply_queryset(
+    #         qs.iterator(),
+    #         filters
+    #     )
+
+    #     try:
+    #         obj = next(iterator)
+    #     except StopIteration:
+    #         raise self.model.DoesNotExist()
+
+    #     try:
+    #         next(iterator)
+    #         raise self.model.MultipleObjectsReturned()
+    #     except StopIteration:
+    #         pass
+
+    #     return obj
     
     
     def first(self):

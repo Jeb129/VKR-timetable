@@ -54,7 +54,7 @@ export interface Lesson {
     end: string;
     order: number;
     day: number;
-    teacher_list: string[];
+    teachers_list: string[];
     groups_list: string[];
 }
 export interface ScheduleEvent {
