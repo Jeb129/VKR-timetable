@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "corsheaders",
     # local
     "api",
+    'notification',
     "authentification",
 ]
 
@@ -187,6 +188,14 @@ REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 #     f"redis://{f':{REDIS_PASSWORD}@' if REDIS_PASSWORD else ''}"
 #     f"{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 # )
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv('EMAIL_HOST')
+EMAIL_PORT = os.getenv('EMAIL_PORT')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL') == 'True'
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 
 CACHES = {
     "default": {

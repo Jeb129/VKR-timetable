@@ -7,6 +7,7 @@ import SchedulePage from "./pages/Schedule/SchedulePage";
 import BookingPage from "./pages/Booking/BookingPage";
 import ModerationPage from "./pages/Booking/ModerationPage";
 import ScheduleEditorPage from "./pages/Editor/ScheduleEditorPage";
+import ScenarioSelectionPage from "./pages/Editor/ScenarioSelectionPage";
 
 import './App.css'
 
@@ -21,7 +22,8 @@ const App = () =>
       <Route path="/profile" element={<ProtectedRoute><UserProfilePage /></ProtectedRoute>} />
       <Route path="/Booking" element={<ProtectedRoute><BookingPage/></ProtectedRoute>}/>
       <Route path="/Moderation" element={<ProtectedRoute><ModerationPage/></ProtectedRoute>}/>
-      <Route path="/ScheduleEditor" element={<ProtectedRoute><ScheduleEditorPage/></ProtectedRoute>}/>
+      <Route path="/ScheduleEditor" element={<ProtectedRoute><ScenarioSelectionPage /></ProtectedRoute>} />
+      <Route path="/ScheduleEditor/:scenarioId" element={<ProtectedRoute><ScheduleEditorPage/></ProtectedRoute>}/>
     </Routes>
   </>
 export default App
