@@ -3,9 +3,12 @@ import { type SelectOption } from "@/types/ui";
 import SearchSelect from "@/components/UI/SearchSelect";
 import { useNavigate,useParams } from "react-router-dom";
 import { dbService } from "@/services/crud";
-import type { MappedEvent } from "@/types/schedule";
 import { DAYS,type Lesson, type Timeslot } from "@/types/schedule";
 import "@/styles/Editor.css";
+import { scheduleDraftService } from "@/services/schedule_editor";
+import LessonErrorItem from "@/components/schedule_editor/LessonError";
+import type { ConstraintError, LessonError } from "@/types/constraint";
+import { LessonCard } from "@/components/schedule_editor/LessonCard";
 
 const ScheduleEditorPage = () => {
     const { scenarioId } = useParams();
@@ -23,8 +26,10 @@ const ScheduleEditorPage = () => {
     const [targetId, setTargetId] = useState<string | number>("");
     
     const [currentWeek, setCurrentWeek] = useState<number>(1);
-    const [lessonErrors, setLessonErrors] = useState<Record<number, string[]>>({});
+
+    const [lessonErrors, setLessonErrors] = useState<LessonError[]>([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [loading, setLoading] = useState(false);
     const [isChecking, setIsChecking] = useState(false);
@@ -56,9 +61,12 @@ const ScheduleEditorPage = () => {
         if (!scenarioId || !targetId) return;
         setLoading(true);
         try {
-            const params = { [filterType === "group" ? "group_id" : "teacher_id"]: targetId };
-            const response = await dbService.list(`scenario/${scenarioId}/draft`, params);
-            setLessons(response.lessons || []);
+            const data = filterType === "group" ? 
+                await scheduleDraftService.getGroupLessons(selectedScenarioId,Number(targetId)) :
+                await scheduleDraftService.getTeacherLessons(selectedScenarioId,Number(targetId))
+
+            setLessons(data || []);
+            // накопленные ошибки, записываем сюда
         } catch (err) {
             console.error(err);
         } finally {
@@ -93,49 +101,25 @@ const ScheduleEditorPage = () => {
         setIsChecking(true);
 
         try {
-            const response = await dbService.updateDraft(selectedScenarioId, lessonId, {
-                timeslot: targetTimeslotId
-            });
-            //console.log("ОШИБКИ ОТ СЕРВЕРА:", response.errors);
-            
-            if (response.errors && response.errors.length > 0) {
-                // Сохраняем только сообщения
-                const errorMessages = response.errors.map((e: any) => e.message);
-                setLessonErrors(prev => ({ ...prev, [lessonId]: errorMessages }));
-                setIsSidebarOpen(true); // Открываем сайдбар если есть реальный конфликт
-            } else {
-                // Если ошибок нет - чистим старые ошибки для этого занятия
-                setLessonErrors(prev => {
-                    const newErrors = { ...prev };
-                    delete newErrors[lessonId];
-                    return newErrors;
-                });
+            const data = await scheduleDraftService.moveLesson(selectedScenarioId, lessonId, targetTimeslotId )
+            const newErrors = lessonErrors.filter(e => e.lesson.id !== lessonId)
+            console.log(newErrors)
+            if (data.length > 0) {
+                const lesson = lessons.find(e => e.id === lessonId)
+                if (lesson)
+                    newErrors.push({
+                        lesson: lesson,
+                        errors: data 
+                    })
             }
-            // 3. Синхронизируем с Redis (бэк может вернуть дополнительные правки)
-            loadDraft(); 
+            setLessonErrors(newErrors)
         } catch (err) {
             console.error("Ошибка перемещения");
-            loadDraft(); // Возвращаем как было при ошибке сети
         }
         finally {
         setIsChecking(false); // Выключаем в любом случае
         }
     };
-
-    // Собираем все ошибки в один список для сайдбара
-    const allConflicts = Object.entries(lessonErrors).flatMap(([id, errs]) => {
-        const lesson = lessons.find(l => l.id === Number(id));
-        const disciplineName = lesson ? lesson.discipline_name : `Занятие #${id}`;
-
-        // Фильтруем "OK", если они вдруг просочились с бэка
-        return errs
-            .filter(msg => msg !== "OK") 
-            .map(msg => ({
-                lessonId: Number(id),
-                disciplineName: disciplineName,
-                text: msg
-            }));
-    });
 
 
     const handleCommit = async () => {
@@ -216,11 +200,7 @@ const ScheduleEditorPage = () => {
                                                              draggable onDragStart={e => onDragStart(e, lesson.id)}
                                                              onClick={() => navigate(`/admin/edit-lesson/${lesson.id}`)}>
                                                             {hasError && <div className="error-icon">!</div>}
-                                                            <div className="subject-short">{lesson.discipline_name}</div>
-                                                            <div className="info-short">
-                                                                <span>{lesson.classroom_name}</span>
-                                                                <span className="type-tag">{lesson.type_name}</span>
-                                                            </div>
+                                                            <LessonCard lesson={lesson}/>
                                                         </div>
                                                     ) : (
                                                         slot && <div className="empty-slot-plus">+</div>
@@ -255,19 +235,13 @@ const ScheduleEditorPage = () => {
                     )}
 
                     <div className="flex-col scroll-y f-1">
-                        {allConflicts.length > 0 ? (
-                            allConflicts.map((err, i) => (
-                                <div key={i} className="error-item fade-in">
-                                    {/* Теперь тут название предмета */}
-                                    <div className="error-title">{err.disciplineName}</div>
-                                    <div className="error-text">{err.text}</div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="p-4 text-center text-muted">
-                                {isChecking ? 'Выполняется анализ...' : 'Конфликтов не обнаружено'}
-                            </div>
-                        )}
+                       {lessonErrors.map((val,i) => 
+                            <LessonErrorItem 
+                                key={i} 
+                                lesson={val.lesson} 
+                                errors={val.errors ?? []}
+                                />
+                       )}
                     </div>
                 </div>
             </div>

@@ -1,0 +1,32 @@
+.constraint-error {
+  border-left: 4px solid var(--p-red);
+  background: var(--p-blue-light);
+  border-radius: var(--radius-md);
+}
+
+.constraint-error.soft {
+  border-left: 4px solid var(--p-orange);
+}
+
+.constraint-error-title {
+  font-weight: 600;
+}
+
+.constraint-error-list {
+  padding-left: 1rem;
+}
+
+.constraint-error-item {
+  padding: 0.5rem;
+  border-radius: var(--radius-md);
+  background: var(--white);
+  border: 1px solid var(--border-color);
+}
+
+.lesson-error-card {
+  transition: var(--transition);
+}
+
+.lesson-error-card:hover {
+  box-shadow: var(--shadow-sm);
+}

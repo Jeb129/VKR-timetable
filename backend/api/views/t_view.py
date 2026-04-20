@@ -8,7 +8,7 @@ from django.shortcuts import get_object_or_404
 from api.models import Lesson, ScheduleScenario
 # from api.serializers.education import LessonSerializer
 from api.services.redis.storage import RedisDraftStorage
-from api.services.constraunt.manager import ConstraintManager
+from api.services.constraunt.manager import ScheduleManager
 from api.services.schedule.draft.context import draft_context
 from config.utils import normalize_diff
 
@@ -31,7 +31,7 @@ class TestDraftScenarioView(APIView):
         #     # print(draft.count())
 
         #     data = LessonSerializer(draft, many=True).data
-        data = ConstraintManager.load().prepare_draft_lesson(
+        data = ScheduleManager.load().prepare_draft_lesson(
             scenario_id=1,
             lesson_id=1,
             data=normalize_diff(Lesson,request.data),
@@ -50,7 +50,7 @@ class TestDraftScenarioView(APIView):
         storage = RedisDraftStorage(scenario_id, 0)
 
         # Готовый метод в ConstraintManager
-        errors= ConstraintManager.load().prepare_draft_lesson(
+        errors= ScheduleManager().load().update_lesson_draft(
             scenario_id=scenario_id,
             lesson_id=lesson_id,
             data=normalize_diff(Lesson,request.data),

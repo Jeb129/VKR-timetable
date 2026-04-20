@@ -2,11 +2,7 @@ import json
 from typing import Any, Dict, List
 from uuid import uuid4
 
-from django.db import transaction
 from django_redis import get_redis_connection
-
-from api.models import Lesson
-from api.services.schedule.draft.proxy import DraftRelationProxy
 
 
 class RedisDraftStorage:
@@ -127,86 +123,6 @@ class RedisDraftStorage:
             deleted.append(lesson_id)
             self._save_json_field(self.FIELD_DELETED, deleted)
 
-    def commit_changes(self):
-        """
-        Применяет все черновые изменения к БД:
-        - удаляет помеченные Lesson
-        - обновляет изменённые Lesson
-        - создаёт новые Lesson
-        - обновляет M2M
-        - очищает Redis
-        """
-        changes = self.list_changes()
-        updated = changes["updated"]
-        created = changes["created"]
-        deleted = changes["deleted"]
-
-        result_objects = []
-
-        with transaction.atomic():
-            # ----------------------------
-            # 1. Удаление
-            # ----------------------------
-            if deleted:
-                Lesson.objects.filter(id__in=deleted).delete()
-
-            # ----------------------------
-            # 2. Обновление существующих
-            # ----------------------------
-            for lid, diff in updated.items():
-                try:
-                    obj = Lesson.objects.get(id=lid)
-                except Lesson.DoesNotExist:
-                    continue
-
-                simple_fields = {
-                    k: v
-                    for k, v in diff.items()
-                    if k not in ("teachers", "study_groups")
-                }
-                if simple_fields:
-                    for field, value in simple_fields.items():
-                        setattr(obj, f"{field}__id", value)
-                    obj.save(update_fields=list(simple_fields.keys()))
-
-                # M2M
-                for m2m_field in ("teachers", "study_groups"):
-                    if m2m_field in diff:
-                        ids = diff[m2m_field]
-                        if isinstance(ids, DraftRelationProxy):
-                            ids = list(ids._ids)
-                        getattr(obj, m2m_field).set(ids)
-
-                result_objects.append(obj)
-
-                # ----------------------------
-                # 3. Создание новых
-                # ----------------------------
-                for data in created.values():
-                    obj = Lesson.objects.create(
-                        scenario_id=self.scenario_id,
-                        **{
-                            k: v
-                            for k, v in data.items()
-                            if k not in ("teachers", "study_groups")
-                        },
-                    )
-
-                    for m2m_field in ("teachers", "study_groups"):
-                        if m2m_field in data:
-                            ids = data[m2m_field]
-                            if isinstance(ids, DraftRelationProxy):
-                                ids = list(ids._ids)
-                            getattr(obj, m2m_field).set(ids)
-
-                    result_objects.append(obj)
-
-                # ----------------------------
-                # 4. Очистка Redis
-                # ----------------------------
-                self.clear_all()
-
-        return result_objects
 
     # -------------------------------------------------------------------------
     # Очистка
@@ -223,6 +139,26 @@ class RedisDraftStorage:
 
     def clear_all(self):
         self.redis.delete(self.key)
+    
+    def clear_object(self,lesson_id):
+        updated = self.get_updated()
+        created = self.get_created()
+        deleted = self.get_deleted()
+
+        if lesson_id in updated:
+            updated.pop(lesson_id)
+            self._save_json_field(self.FIELD_UPDATED, updated)
+            return
+        if lesson_id in created:
+            created.pop(lesson_id)
+            self._save_json_field(self.FIELD_CREATED, created)
+            return
+        if lesson_id in deleted:
+            deleted.remove(lesson_id)
+            self._save_json_field(self.FIELD_DELETED, deleted)
+            return
+
+
 
     # -------------------------------------------------------------------------
     # Вспомогательные функции
