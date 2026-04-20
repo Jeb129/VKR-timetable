@@ -21,7 +21,6 @@ const ScheduleEditorPage = () => {
     const [teachers, setTeachers] = useState<any[]>([]);
     
     // Фильтры
-    const [selectedScenarioId, setSelectedScenarioId] = useState<number | null>(null);
     const [filterType, setFilterType] = useState<"group" | "teacher">("group");
     const [targetId, setTargetId] = useState<string | number>("");
     
@@ -62,8 +61,8 @@ const ScheduleEditorPage = () => {
         setLoading(true);
         try {
             const data = filterType === "group" ? 
-                await scheduleDraftService.getGroupLessons(selectedScenarioId,Number(targetId)) :
-                await scheduleDraftService.getTeacherLessons(selectedScenarioId,Number(targetId))
+                await scheduleDraftService.getGroupLessons(Number(scenarioId),Number(targetId)) :
+                await scheduleDraftService.getTeacherLessons(Number(scenarioId),Number(targetId))
 
             setLessons(data || []);
             // накопленные ошибки, записываем сюда
@@ -83,7 +82,6 @@ const ScheduleEditorPage = () => {
 
     const onDrop = async (e: React.DragEvent, targetTimeslotId: number) => {
         e.preventDefault();
-        if (!selectedScenarioId) return;
 
         const lessonId = Number(e.dataTransfer.getData("lessonId"));
         
@@ -101,7 +99,7 @@ const ScheduleEditorPage = () => {
         setIsChecking(true);
 
         try {
-            const data = await scheduleDraftService.moveLesson(selectedScenarioId, lessonId, targetTimeslotId )
+            const data = await scheduleDraftService.moveLesson(Number(scenarioId), lessonId, targetTimeslotId )
             const newErrors = lessonErrors.filter(e => e.lesson.id !== lessonId)
             console.log(newErrors)
             if (data.length > 0) {
@@ -123,9 +121,9 @@ const ScheduleEditorPage = () => {
 
 
     const handleCommit = async () => {
-        if (!selectedScenarioId) return;
+        if (!Number(scenarioId)) return;
         try {
-            await dbService.commitDraft(selectedScenarioId);
+            await dbService.commitDraft(Number(scenarioId));
             alert("Опубликовано!");
             loadDraft();
         } catch (err) { alert("Ошибка публикации"); }
@@ -142,7 +140,7 @@ const ScheduleEditorPage = () => {
                         <button className={`btn ${currentWeek === 1 ? 'btn-primary' : 'btn-outline'}`} onClick={() => setCurrentWeek(1)}>Числитель</button>
                         <button className={`btn ${currentWeek === 2 ? 'btn-primary' : 'btn-outline'}`} onClick={() => setCurrentWeek(2)}>Знаменатель</button>
                     </div>
-                    <button className="btn btn-green" onClick={handleCommit} disabled={!selectedScenarioId}>Опубликовать</button>
+                    <button className="btn btn-green" onClick={handleCommit} disabled={!Number(scenarioId)}>Опубликовать</button>
                     <button className="btn nav-btn" onClick={() => navigate("/ScheduleEditor")}>К версиям</button>
                     <button className="btn nav-btn" onClick={() => navigate("/profile")}>В профиль</button>
                 </div>
