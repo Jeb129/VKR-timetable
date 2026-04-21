@@ -37,10 +37,10 @@ class InstituteAdmin(admin.ModelAdmin):
 
 @admin.register(StudyProgram)
 class StudyProgramAdmin(admin.ModelAdmin):
-    list_display = ("short_name", "institute")
+    list_display = ("institute","code","name")
     list_filter = ("institute",)
     inlines = [StudyGroupInline]  # Создаем группы прямо в программе
-    search_fields = ("name", "short_name")
+    search_fields = ("code","name", "short_name")
 
 
 @admin.register(StudyGroup)
@@ -55,6 +55,7 @@ class StudyGroupAdmin(admin.ModelAdmin):
 class TeacherAdmin(admin.ModelAdmin):
     list_display = ("name","post", "constraint_weight", "user")
     search_fields = ("name",)
+    ordering = ("name",)
 
 
 @admin.register(AcademicLoad)

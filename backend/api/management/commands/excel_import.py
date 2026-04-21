@@ -59,13 +59,13 @@ class Command(BaseCommand):
             print()
             
             # teachers = {((str(p[9]).strip(), str(p[10]).strip()) if p[9] else None) for p in preloaded}
-            teachers = {(p[0],p[9],p[10]) for p in preloaded}
+            teachers_raw = {(p[0],p[9],p[10]) for p in preloaded}
             study_programs = {(p[0],p[1], p[2]) for p in preloaded}
-            study_groups = {(p[1], p[11],p[12], p[13], p[14], p[15],p[16]) for p in preloaded}
+            study_groups_raw = {(p[1], p[11],p[12], p[13], p[14], p[15],p[16]) for p in preloaded}
             load = {(p[4],p[5],p[6],p[7],p[8]) for p in preloaded}
 
             counter = defaultdict(int)
-            for (i, n, p) in teachers:
+            for (i, n, p) in teachers_raw:
                 if n.__class__ is float: continue 
                 counter[n] += 1
                 if counter[n] > 1: continue
@@ -103,7 +103,7 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.ERROR(f"Ошмбка при создании направления {c} {n}:\n{err}"))
 
             
-            for (sp,y,num,sub_num,lf,ls,sc) in study_groups:
+            for (sp,y,num,sub_num,lf,ls,sc) in study_groups_raw:
                 
                 sp = str(sp)
                 sp = sp[:-1] if c.endswith(".") else sp
