@@ -45,13 +45,18 @@ class StudyProgram(models.Model):
 
 class Discipline(models.Model):
     name = models.CharField(max_length=255)
+    allow_merge_teachers = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
 
 
 class LessonType(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=50)
+    short_name = models.CharField(max_length=20)
+    allow_merge_teachers = models.BooleanField(default=False)
+    allow_merge_subgroups = models.BooleanField(default=False)
+    allow_merge_groups = models.BooleanField(default=False)
 
     def __str__(self):
         return self.name
@@ -103,7 +108,7 @@ class Teacher(models.Model):
     )
 
     class Meta:
-        ordering = ["institute"]
+        ordering = ["name","institute"]
         verbose_name = "преподаватель"
         verbose_name_plural = "преподаватели"
 

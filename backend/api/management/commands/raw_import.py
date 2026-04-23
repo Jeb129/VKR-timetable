@@ -6,6 +6,8 @@ import sys
 from django.conf import settings
 from django.core.management.base import BaseCommand
 from django.db import transaction
+from django.forms.models import model_to_dict
+
 
 
 from api.models import *
@@ -76,17 +78,38 @@ def parse_semester(admission_year: int, sem_raw: str):
 
 
 class Command(BaseCommand):
+    def add_arguments(self, parser):
+        parser.add_argument("im_ebanko", type=bool, help="Мне безразличны последствия загрузки кривого файла в базу\nЯ подтверждаю что сделал копию / готов депнуть БД / использую эту функцию в первый и последний раз\n\nЛучше воспользуйся excel_import")
 
     def handle(self, *args, **kwargs):
+        
+        bypass = kwargs["im_ebanko"]
+        if not bypass:
+            self.stdout.write(self.style.ERROR("Подтверди свою готовность к последствиям\nПодробности в help"))
+            return
+        
+        self.stdout.write(self.style.NOTICE(f"Ну чтож, бог тебе в помощь..."))
 
         excel_path = settings.BASE_DIR / "../../Nagruzka.xlsx"
         if not excel_path.exists():
             self.stdout.write(self.style.ERROR("Файл не найден"))
             return
-
+        self.stdout.write(f"Чтение файла....")
         data = import_excel(excel_path)
         self.stdout.write(f"Прочитано строк: {len(data)}")
+
+        # Счетчики
+        skipped_counter = 0
+        error_counter = 0
         success_counter = 0
+
+        nullsb_counter = 0
+        no_nullsb_counter = 0
+        wtf_counter = 0
+
+
+
+
         # КЭШИ ДЛЯ ОДНОГО ПРОХОДА
         programs = {}     # code -> {code, name, institute}
         teachers = {}     # fio -> {name, post}
@@ -95,13 +118,22 @@ class Command(BaseCommand):
         groups = {}       # (code, year, base_group) -> {...}
         academic_load_raw = [] # список dict для дальнейшей загрузки
 
+        created_programs=0
+        created_teachers = 0
+        created_disciplines = 0
+        created_groups = 0
+        created_loads = 0
+        dublicated_loads = 0
+
         for idx, row in enumerate(data, start=3):
             # sys.stdout.write(f"\rОбработка строки {idx}...")
             # sys.stdout.flush()
             # фильтры из твоего кода
             if row[18] not in ["Лаб", "Лек", "Пр"]:
+                skipped_counter +=1
                 continue
             if row[8] < 2021:
+                skipped_counter +=1
                 continue
 
             # ---- ПОЛЯ ----
@@ -123,6 +155,7 @@ class Command(BaseCommand):
                 self.stdout.write(
                     self.style.WARNING(f"Строка {idx}: не заполнено имя преподавателя")
                 )
+                skipped_counter +=1
                 continue
 
 
@@ -138,32 +171,26 @@ class Command(BaseCommand):
             sem_raw = safe_str(row[14])
             sem = parse_semester(admission_year, sem_raw)
 
-            # print('id:', idx, "data:", 
-            #       institute_raw,
-            #       study_program_code,
-            #       study_program_name,
-            #       discipline_name,
-            #       lesson_type_name,
-            #       control_type,
-            #       hours,
-            #       weeks,
-            #       teacher_name,
-            #       teacher_post,
-            #       admission_year,
-            #       group_num,
-            #       sub_group_num,
-            #       learning_form,
-            #       learning_stage,
-            #       students_count)
-
             if not sem:
+                self.stdout.write(self.style.WARNING(f"Строка {idx}: не удалось найти семестр: {sem_raw}"))
+                skipped_counter +=1
                 continue  # не создаём нагрузку, если семестр не вычислен
             
             with transaction.atomic():
                 try:
                     # ---- ДИСЦИПЛИНА + ВИД ----
-                    discipline, _ = Discipline.objects.get_or_create(name=discipline_name)
-                    lt, _ = LessonType.objects.get_or_create(name=lesson_type_name)
+                    discipline, created = Discipline.objects.get_or_create(name=discipline_name)
+                    if created:
+                        created_disciplines += 1
+
+                    lt= LessonType.objects.filter(short_name=lesson_type_name).first()
+
+                    if not lt:
+                        self.stdout.write(
+                            self.style.WARNING(f"Строка {idx}: не найден вид занятия {lesson_type_name}")
+                        )
+                        skipped_counter +=1
+                        continue
 
                     # ---- НАПРАВЛЕНИЕ ----
                     if study_program_code not in programs:
@@ -173,15 +200,18 @@ class Command(BaseCommand):
                             self.stdout.write(
                                 self.style.WARNING(f"Строка {idx}: не найден институт {institute_raw}")
                             )
+                            skipped_counter +=1
                             continue
                             
-                        prog, _ = StudyProgram.objects.get_or_create(
+                        prog, created = StudyProgram.objects.get_or_create(
                             institute=inst_obj,
                             code=study_program_code,
                             defaults={"name": study_program_name},
 
                         )
                         programs[study_program_code] = prog
+                        if created:
+                            created_programs += 1
                     else:
                         prog = programs[study_program_code]
 
@@ -189,20 +219,20 @@ class Command(BaseCommand):
                     # ---- ПРЕПОДАВАТЕЛЬ ----
                     # ключ = Фамилия И.О.
                     if teacher_name not in teachers:
-                        t_obj, _ = Teacher.objects.get_or_create(
+                        t_obj, created = Teacher.objects.get_or_create(
                             name=teacher_name,
                             defaults={"post": teacher_post},
                         )
                         teachers[teacher_name] = t_obj
+                        if created:
+                            created_teachers += 1
                     else:
                         t_obj = teachers[teacher_name]
                     
                     # ---- ГРУППА ----
-                    # ключ = базовая группа + код направления + год приёма
-
-                    
                     if sub_group_num is None:
                             # Если нет номера подгруппы - сохраняем для постобработки
+
                             group_key = (study_program_code, 
                                  admission_year,
                                  group_num,
@@ -227,12 +257,14 @@ class Command(BaseCommand):
                                     lesson_type=lt,
                                     teacher=t_obj,
                                     study_group=g_obj,
+                                    control_type=control_type,
                                     whole_hours=hours,
                                     whole_weeks=weeks,     
                                 )
                             )
-                    else:
-                        g_obj, _ = StudyGroup.objects.get_or_create(
+                            nullsb_counter += 1
+                    elif sub_group_num is not None:
+                        g_obj, created = StudyGroup.objects.get_or_create(
                             stud_program=prog,
                             admission_year=admission_year,
                             group_num=group_num,
@@ -241,28 +273,49 @@ class Command(BaseCommand):
                             students_count=students_count,
                             sub_group_num=int(sub_group_num)
                         )
+                        if created:
+                            created_groups += 1
                         # ---- СОЗДАЁМ НАКРУЗКУ ----
-                        AcademicLoad.objects.get_or_create(
+                        _, created = AcademicLoad.objects.get_or_create(
                                 semester=sem,
                                 discipline=discipline,
                                 lesson_type=lt,
                                 teacher=t_obj,
                                 study_group=g_obj,
+                                control_type=control_type,
                                 whole_hours=hours,
                                 whole_weeks=weeks,
+                        )
+                        if created:
+                            created_loads += 1
+                        else:
+                            self.stdout.write(
+                                self.style.WARNING(f"Строка {idx}: Запись нагрузки уже существует")
+                            )
+                            dublicated_loads += 1
+                        no_nullsb_counter += 1
+                    else:
+                        wtf_counter += 1
+                        self.stdout.write(
+                            self.style.WARNING(f"Строка {idx}: Хер пойми почему пропущена\nКлюч группы: {group_key}")
                         )
                     success_counter+=1
                 except Exception as err:
                     self.stdout.write(self.style.ERROR(f"Ошибка строки {idx}: {err}"))
-
-        self.stdout.write(self.style.SUCCESS(f"Успешно обработано строк {success_counter}"))
-                
+                    error_counter += 1
 
         # Постобработка групп без номера подгруппы и их академической нагрузки
+
+        self.stdout.write(self.style.SUCCESS("Первичная обработка файла завершена"))
+        self.stdout.write(self.style.HTTP_INFO(f"Постобработка {len(academic_load_raw)} записей нагрузки для {len(groups.items())} предзагруженных групп..."))
+
+        post_created = 0
 
         for idx, (key,raw_group) in enumerate(groups.items()):
             try:
                 with transaction.atomic():
+                    self.stdout.write(self.style.WARNING(f"Постобработка группы {key}"))
+
                     subs = list(StudyGroup.objects.filter(
                                 admission_year = raw_group.admission_year,
                                 stud_program = raw_group.stud_program,
@@ -274,7 +327,8 @@ class Command(BaseCommand):
                     count = len(subs)
                     if count == 0:
                         # Если нет аналогичных групп с номерами подгрупп - создаем группу
-                        group, _ = StudyGroup.objects.get_or_create(
+                        self.stdout.write(self.style.HTTP_INFO(f"Не найдены подгруппы, создаем цельную группу..."))
+                        group, created = StudyGroup.objects.get_or_create(
                             admission_year = raw_group.admission_year,
                             stud_program = raw_group.stud_program,
                             learning_form = raw_group.learning_form,
@@ -282,24 +336,73 @@ class Command(BaseCommand):
                             students_count = raw_group.students_count,
                             group_num=raw_group.group_num,
                         )
+                        if created:
+                            created_groups += 1
                         subs.append(group)
+                        count += 1
 
-                        
-                    academic_loads = [a for a in academic_load_raw if a.study_group == raw_group]
+                    academic_loads = [a for a in academic_load_raw if (
+                        a.study_group.admission_year == raw_group.admission_year and
+                        a.study_group.stud_program == raw_group.stud_program and
+                        a.study_group.learning_form == raw_group.learning_form and
+                        a.study_group.learning_stage == raw_group.learning_stage and
+                        a.study_group.group_num == raw_group.group_num
+                        )]
+                    self.stdout.write(self.style.HTTP_INFO(f"Создание {len(academic_loads)} записей нагрузки для каждой из {count} групп"))
+
+
+                    
                     for i in range(count):
                         # Создаем нагрузку для каждой подгруппы
                         for raw_load in academic_loads:
-                            AcademicLoad.objects.get_or_create(
-                            semester=raw_load.semester,
-                            discipline=raw_load.discipline,
-                            lesson_type=raw_load.lesson_type,
-                            teacher=raw_load.teacher,
-                            study_group=subs[i],
-                            whole_hours =raw_load.whole_hours ,
-                            whole_weeks =raw_load.whole_weeks,
-                        )
+                            _, created = AcademicLoad.objects.get_or_create(
+                                semester=raw_load.semester,
+                                discipline=raw_load.discipline,
+                                lesson_type=raw_load.lesson_type,
+                                teacher=raw_load.teacher,
+                                study_group=subs[i],
+                                whole_hours =raw_load.whole_hours,
+                                whole_weeks =raw_load.whole_weeks
+                                )
+                            if created:
+                                created_loads += 1
+                            else:
+                                dublicated_loads += 1
+                                self.stdout.write(
+                                    self.style.WARNING(f"Запись нагрузки уже существует {model_to_dict(raw_load)}")
+                                )
+                            post_created += 1
+                        
                         # Соединяем группы в подгруппы
                         for j in range(i+1,count):
                             subs[i].sub_groups.add(subs[j])
             except Exception as err:
+                    error_counter+=1
                     self.stdout.write(self.style.ERROR(f"Ошибка постобработки группы {key} {raw_group}: {err}"))
+
+
+        self.stdout.write(self.style.SUCCESS(
+            f"Успешно обработано строк {success_counter}\n"+
+            f"Создано направлений подгатовки: {created_programs}\n" + 
+            f"Сщздано учебных групп: {created_groups}\n" + 
+            f"Создано преподавателей: {created_teachers}\n" + 
+            f"Создано записей нагрузки: {created_loads}, пропущены как дубликаты: {dublicated_loads}\n"
+            ))
+        
+        self.stdout.write(
+            self.style.HTTP_INFO(
+            f"Создание нагрузки\n"+
+            f"Блок sub_goup_num is None: {nullsb_counter}\n" + 
+            f"Блок sub_goup_num is not None {no_nullsb_counter}\n" + 
+            f"Блок sub_goup_num хер пойми что {wtf_counter}\n" +
+            f"Обработано записей при постобработке: {post_created}"
+            )
+        )
+
+        self.stdout.write(self.style.WARNING(f"Пропущенно строк: {skipped_counter}"))
+        self.stdout.write(self.style.ERROR(f"Строк с ошибками: {error_counter}"))
+
+        # for r in academic_load_raw:
+        #     print(r)
+        
+            

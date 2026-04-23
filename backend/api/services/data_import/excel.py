@@ -38,7 +38,7 @@ class ExcelValidator:
 def export_excel(path, data, structure):
     columns = pd.MultiIndex.from_tuples(structure)
     df = pd.DataFrame(data, columns=columns)
-    df.to_excel(path, index=False)
+    df.to_excel(path, index=True)
 
 
 def import_excel(path, structure = None):

@@ -36,7 +36,8 @@ class Classroom(models.Model):
     equipment = models.ManyToManyField(
         "Equipment", blank=True, related_name="classrooms"
     )
-
+    allow_parallel = models.BooleanField(default=False)
+    is_unlimited = models.BooleanField(default=False)
     def __str__(self):
         if self.building is None:
             return self.name

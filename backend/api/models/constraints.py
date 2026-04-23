@@ -22,6 +22,7 @@ class AcademicLoad(models.Model):
     """Объединенная модель нагрузки (задание для генератора)"""
 
     # Семестр привязывает академическую нагрузку к конкретному временному промежутку
+    merge_key = models.UUIDField(null=True)
     semester = models.ForeignKey(Semester, on_delete=models.SET_NULL, null=True)
     discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE)
     lesson_type = models.ForeignKey(LessonType, on_delete=models.CASCADE)
@@ -29,6 +30,7 @@ class AcademicLoad(models.Model):
     study_group = models.ForeignKey(
         StudyGroup, on_delete=models.CASCADE, related_name="loads"
     )
+    control_type = models.CharField(null=True,max_length=20)
     whole_hours = models.PositiveIntegerField()
     whole_weeks = models.PositiveIntegerField()
 
