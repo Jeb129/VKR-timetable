@@ -2,16 +2,19 @@ import { useAuth } from "@/context/AuthContext";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
 import { dbService } from "@/services/crud"; 
+import { privateApi } from "@/services/axios";
 import type { Lesson } from "@/types/schedule"; 
 import type { BookingRequest } from "@/types/booking";
 import "@/styles/Profile.css";
 
 const UserProfilePage = () => {
-    const { user, logout } = useAuth();
+    const { user, logout, refreshUser  } = useAuth();
     const navigate = useNavigate();
     const [myLessons, setMyLessons] = useState<Lesson[]>([]);
     const [myBookings, setMyBookings] = useState<BookingRequest[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isVerifying, setIsVerifying] = useState(false);
+    const [verifyError, setVerifyError] = useState<string | null>(null);
 
     useEffect(() => {
         if (user) {
@@ -41,6 +44,20 @@ const UserProfilePage = () => {
             loadProfileData();
         }
     }, [user]);
+
+    const handleMoodleVerify = async () => {
+        setIsVerifying(true);
+        setVerifyError(null);
+        try {
+            await privateApi.post("/auth/moodle-verify/"); 
+            // Обновляем данные пользователя в глобальном стейте
+            await refreshUser();
+        } catch (err: any) {
+            setVerifyError(err.response?.data?.error || "Ошибка подтверждения");
+        } finally {
+            setIsVerifying(false);
+        }
+    };
 
     if (!user) return <Navigate to="/login" replace />;
     // Функция для определения цвета и текста статуса
@@ -81,17 +98,40 @@ const UserProfilePage = () => {
                         </div>
 
                         <div className="info-group flex-col">
-                            <label className="filter-label info-label">Роль</label>
+                            <label className="filter-label info-label">Роль в системе</label>
                             <span className="info-value text-primary" style={{ fontWeight: 800 }}>
-                                {user ? "Администратор" : "Преподаватель / Студент"}
+                                {user.internal_user ? "Сотрудник / Студент КГУ" : "Внешний пользователь"}
                             </span>
+                        </div>
+
+                        {/* БЛОК ПОДТВЕРЖДЕНИЯ MOODLE */}
+                        <div className="info-group flex-col mt-2 pt-2">
+                            <label className="filter-label info-label">Статус подтверждения</label>
+                            {user.internal_user ? (
+                                <span className="text-green" style={{ fontWeight: 700 }}>Аккаунт подтвержден</span>
+                            ) : (
+                                <div className="flex-col gap-1">
+                                    <button 
+                                        className="btn btn-primary w-100" 
+                                        onClick={handleMoodleVerify}
+                                        disabled={isVerifying}
+                                    >
+                                        {isVerifying ? "Проверка..." : "Подтвердить через Moodle"}
+                                    </button>
+                                    {verifyError && (
+                                        <span className="text-red mt-1" style={{ fontSize: '13px', textAlign: 'center' }}>
+                                            {verifyError}
+                                        </span>
+                                    )}
+                                </div>
+                            )}
                         </div>
                     </div>
 
                     <div className="card slide-up" style={{ borderColor: 'var(--p-orange)' }}>
                         <h3 className="text-orange">Действия</h3>
                             <div className="action-buttons">
-                                <button className="btn btn-orange" onClick={() => navigate("/schedule")}>
+                                <button className="btn btn-orange" onClick={() => navigate("/TeacherAdjustment")}>
                                     Перенести занятие
                                 </button>
                                 <button className="btn btn-green" onClick={() => navigate("/booking")}>

@@ -233,7 +233,7 @@ def get_group_schedule(
 def get_teacher_schedule(
     *, teacher_id: int, date_from: datetime, date_to: datetime
 ) -> List[MappedEvent]:
-    lessons_qs = Lesson.objects.filter(teachers__id__in=teacher_id)
+    lessons_qs = Lesson.objects.filter(teachers__id=teacher_id)
     return map_lessons(date_from=date_from, date_to=date_to, lessons=lessons_qs)
 
 

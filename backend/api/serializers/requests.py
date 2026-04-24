@@ -105,9 +105,24 @@ class BookingSerializer(serializers.ModelSerializer):
 
 
 class ScheduleAdjustmentSerializer(serializers.ModelSerializer):
+    # текстовые поля для удобства админа
+    user_name = serializers.ReadOnlyField(source="user.username")
+    lesson_name = serializers.ReadOnlyField(source="lesson.discipline.name")
+    teacher_name = serializers.ReadOnlyField(source="user.teacher.name")
+    # Информация о новом слоте
+    new_time = serializers.ReadOnlyField(source="timeslot.time_start")
+    new_order = serializers.ReadOnlyField(source="timeslot.order_number")
+    # Информация о старом слоте 
+    old_time = serializers.ReadOnlyField(source="lesson.timeslot.time_start")
+    old_day = serializers.ReadOnlyField(source="lesson.timeslot.day")
     class Meta:
         model = ScheduleAdjustment
-        fields = "__all__"
+        fields = [
+            "id", "user", "user_name", "teacher_name", "lesson", "lesson_name",
+            "date", "timeslot", "new_time", "new_order", "old_time", "old_day",
+            "description", "status", "admin_comment"
+        ]
+        read_only_fields = ["id", "user"]
 
 
 class ClassroomPreferenceSerializer(serializers.ModelSerializer):
