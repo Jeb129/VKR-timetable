@@ -40,6 +40,7 @@ class AcademicLoadSerializer(serializers.ModelSerializer):
     class Meta:
         model = AcademicLoad
         fields = "__all__"
+        read_only_fields=["id"]
 
 
 class TeacherSerializer(serializers.ModelSerializer):

@@ -70,7 +70,7 @@ def parse_semester(admission_year: int, sem_raw: str):
     except:
         return None
 
-    start_year = admission_year + (sem_num - 1) // 2
+    start_year = admission_year + (sem_num) // 2
     month = 3 if sem_num % 2 == 0 else 10
 
     dt = f"{start_year}-{month:02d}-01"
@@ -103,16 +103,11 @@ class Command(BaseCommand):
         error_counter = 0
         success_counter = 0
 
-        nullsb_counter = 0
-        no_nullsb_counter = 0
-        wtf_counter = 0
-
-
-
-
         # КЭШИ ДЛЯ ОДНОГО ПРОХОДА
         programs = {}     # code -> {code, name, institute}
         teachers = {}     # fio -> {name, post}
+        disciplines = {}
+        lesson_types = {}
 
 
         groups = {}       # (code, year, base_group) -> {...}
@@ -140,6 +135,9 @@ class Command(BaseCommand):
             institute_raw = safe_str(row[9])
             study_program_code = clean_direction_code(row[4])
             study_program_name = safe_str(row[5])
+            study_program_short_name = safe_str(row[5])
+
+            
 
             discipline_name = safe_str(row[12])
             if discipline_name is None:
@@ -161,7 +159,7 @@ class Command(BaseCommand):
 
             teacher_post = safe_str(row[36])  # но не участвует в ключе
 
-            admission_year = row[8]
+            admission_year = 2000 + int(safe_str(row[15]).split(sep="-")[0])
             group_num = safe_str(row[15]).split(sep="-")[2]
             sub_group_num = safe_str(row[11]).split("п/г ")[1][0] if "п/г" in str(row[11]) else None
             learning_form = safe_str(row[54])
@@ -169,7 +167,18 @@ class Command(BaseCommand):
             students_count = row[16]
 
             sem_raw = safe_str(row[14])
+
             sem = parse_semester(admission_year, sem_raw)
+
+            _, sem_num = sem_raw.split("/")
+            sem_num = int(sem_num)
+
+            start_year = admission_year + (sem_num) // 2
+            # 22-ИС бо 1 6 семестр - Весна 2025
+            month = 3 if sem_num % 2 == 0 else 10
+
+            if start_year == admission_year and month == 3:
+                self.stdout.write(self.style.NOTICE(f"Строка {idx}: Год поступления {admission_year} Курс/семестр {sem_raw}\n Год {start_year} Месяц {month} Выбранный семестр {sem.name}"))
 
             if not sem:
                 self.stdout.write(self.style.WARNING(f"Строка {idx}: не удалось найти семестр: {sem_raw}"))
@@ -179,9 +188,11 @@ class Command(BaseCommand):
             with transaction.atomic():
                 try:
                     # ---- ДИСЦИПЛИНА + ВИД ----
-                    discipline, created = Discipline.objects.get_or_create(name=discipline_name)
-                    if created:
-                        created_disciplines += 1
+                    if discipline_name not in disciplines:
+                        discipline_obj, created = Discipline.objects.get_or_create(name=discipline_name)
+                        if created:
+                            created_disciplines += 1
+                        discipline_name
 
                     lt= LessonType.objects.filter(short_name=lesson_type_name).first()
 
@@ -241,7 +252,7 @@ class Command(BaseCommand):
                                  sub_group_num)
                             
                             g_obj = StudyGroup(
-                                stud_program=prog,
+                                study_program=prog,
                                 admission_year=admission_year,
                                 group_num=group_num,
                                 learning_form=learning_form,
@@ -253,7 +264,7 @@ class Command(BaseCommand):
                             academic_load_raw.append(
                                 AcademicLoad(
                                     semester=sem,
-                                    discipline=discipline,
+                                    discipline=discipline_obj,
                                     lesson_type=lt,
                                     teacher=t_obj,
                                     study_group=g_obj,
@@ -262,10 +273,9 @@ class Command(BaseCommand):
                                     whole_weeks=weeks,     
                                 )
                             )
-                            nullsb_counter += 1
                     elif sub_group_num is not None:
                         g_obj, created = StudyGroup.objects.get_or_create(
-                            stud_program=prog,
+                            study_program=prog,
                             admission_year=admission_year,
                             group_num=group_num,
                             learning_form=learning_form,
@@ -278,7 +288,7 @@ class Command(BaseCommand):
                         # ---- СОЗДАЁМ НАКРУЗКУ ----
                         _, created = AcademicLoad.objects.get_or_create(
                                 semester=sem,
-                                discipline=discipline,
+                                discipline=discipline_obj,
                                 lesson_type=lt,
                                 teacher=t_obj,
                                 study_group=g_obj,
@@ -293,9 +303,7 @@ class Command(BaseCommand):
                                 self.style.WARNING(f"Строка {idx}: Запись нагрузки уже существует")
                             )
                             dublicated_loads += 1
-                        no_nullsb_counter += 1
                     else:
-                        wtf_counter += 1
                         self.stdout.write(
                             self.style.WARNING(f"Строка {idx}: Хер пойми почему пропущена\nКлюч группы: {group_key}")
                         )
@@ -318,7 +326,7 @@ class Command(BaseCommand):
 
                     subs = list(StudyGroup.objects.filter(
                                 admission_year = raw_group.admission_year,
-                                stud_program = raw_group.stud_program,
+                                study_program = raw_group.study_program,
                                 learning_form = raw_group.learning_form,
                                 learning_stage = raw_group.learning_stage,
                                 group_num=raw_group.group_num,
@@ -330,7 +338,7 @@ class Command(BaseCommand):
                         self.stdout.write(self.style.HTTP_INFO(f"Не найдены подгруппы, создаем цельную группу..."))
                         group, created = StudyGroup.objects.get_or_create(
                             admission_year = raw_group.admission_year,
-                            stud_program = raw_group.stud_program,
+                            study_program = raw_group.study_program,
                             learning_form = raw_group.learning_form,
                             learning_stage = raw_group.learning_stage,
                             students_count = raw_group.students_count,
@@ -343,7 +351,7 @@ class Command(BaseCommand):
 
                     academic_loads = [a for a in academic_load_raw if (
                         a.study_group.admission_year == raw_group.admission_year and
-                        a.study_group.stud_program == raw_group.stud_program and
+                        a.study_group.study_program == raw_group.study_program and
                         a.study_group.learning_form == raw_group.learning_form and
                         a.study_group.learning_stage == raw_group.learning_stage and
                         a.study_group.group_num == raw_group.group_num
@@ -392,9 +400,6 @@ class Command(BaseCommand):
         self.stdout.write(
             self.style.HTTP_INFO(
             f"Создание нагрузки\n"+
-            f"Блок sub_goup_num is None: {nullsb_counter}\n" + 
-            f"Блок sub_goup_num is not None {no_nullsb_counter}\n" + 
-            f"Блок sub_goup_num хер пойми что {wtf_counter}\n" +
             f"Обработано записей при постобработке: {post_created}"
             )
         )

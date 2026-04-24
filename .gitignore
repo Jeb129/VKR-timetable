@@ -90,3 +90,4 @@ redis/.env
 # Windows
 # ----------------------------
 *.tmp
+data_exports/

@@ -33,7 +33,7 @@ class StudyProgram(models.Model):
         verbose_name_plural = "направления подготовки"
 
     def __str__(self):
-        return self.short_name
+        return self.code
 
     def save(self, *args, **kwargs):
         if not self.short_name:
@@ -53,7 +53,7 @@ class Discipline(models.Model):
 
 class LessonType(models.Model):
     name = models.CharField(max_length=50)
-    short_name = models.CharField(max_length=20)
+    short_name = models.CharField(max_length=20,blank=True,null=True)
     allow_merge_teachers = models.BooleanField(default=False)
     allow_merge_subgroups = models.BooleanField(default=False)
     allow_merge_groups = models.BooleanField(default=False)
@@ -64,7 +64,7 @@ class LessonType(models.Model):
 
 class StudyGroup(models.Model):
     admission_year = models.PositiveIntegerField(verbose_name="Год поступления")
-    stud_program = models.ForeignKey(
+    study_program = models.ForeignKey(
         StudyProgram, on_delete=models.CASCADE, verbose_name="Направление подготовки"
     )
     learning_form = models.CharField(max_length=20, verbose_name="Форма обучения")
@@ -86,7 +86,7 @@ class StudyGroup(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        self.name = f"{str(self.admission_year)[-2:]}-{self.stud_program.short_name}{self.learning_stage.lower()[0]}{self.learning_form.lower()[0]}-{self.group_num}{f" п/г {self.sub_group_num}" if self.sub_group_num else ""}"
+        self.name = f"{str(self.admission_year)[-2:]}-{self.study_program.short_name}{self.learning_stage.lower()[0]}{self.learning_form.lower()[0]}-{self.group_num}{f" п/г {self.sub_group_num}" if self.sub_group_num else ""}"
         super().save(*args, **kwargs)
 
 
