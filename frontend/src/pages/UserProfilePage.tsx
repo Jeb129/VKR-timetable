@@ -131,7 +131,7 @@ const UserProfilePage = () => {
                     <div className="card slide-up" style={{ borderColor: 'var(--p-orange)' }}>
                         <h3 className="text-orange">Действия</h3>
                             <div className="action-buttons">
-                                <button className="btn btn-orange" onClick={() => navigate("/schedule")}>
+                                <button className="btn btn-orange" onClick={() => navigate("/TeacherAdjustment")}>
                                     Перенести занятие
                                 </button>
                                 <button className="btn btn-green" onClick={() => navigate("/booking")}>
