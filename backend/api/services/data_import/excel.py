@@ -15,6 +15,7 @@ class ExcelValidator:
         self.df = df
         self.errors = []
         self.strcture = strcture
+        return self.validate()
 
     def validate(self):
         self._validate_columns()

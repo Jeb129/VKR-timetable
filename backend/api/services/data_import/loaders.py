@@ -83,7 +83,6 @@ def import_loading(data):
             msg = "Строка : Не заполнен институт"
             logger.debug(msg)
             skipped_counter += 1
-            yield msg
             continue
 
         if not study_program_code:
@@ -400,13 +399,14 @@ def import_loading(data):
             f"Создано преподавателей: {teachers_created_counter}\n" + 
             f"Создано записей нагрузки: {load_created_counter}\n"
             )
-        exists_msg = {
+        exists_msg = (
             f"Найдено существующих направлений подгатовки: {programs_exists_counter}\n" + 
             f"Найдено существующих  учебных групп: {groups_exists_counter}\n" + 
             f"Найдено существующих  преподавателей: {teachers_exists_counter}\n" + 
             f"Найдено существующих  записей нагрузки: {load_exists_counter}\n"
-        }
-        return info_msg,created_msg,exists_msg
+        )
+
+        return info_msg, created_msg, exists_msg
 
 def export_loading(queryset = None):
     now = timezone.now()

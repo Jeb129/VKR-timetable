@@ -9,7 +9,6 @@ from django.db import transaction
 from django.forms.models import model_to_dict
 
 
-
 from api.models import *
 from api.services.data_import.excel import import_excel
 from api.services.schedule.mapper import get_semester_by_date
@@ -36,26 +35,6 @@ def normalize_teacher_name(name):
         return None
     return re.sub(r"\s+", " ", s)
 
-
-def extract_group_parts(raw):
-    """
-    Пример:
-    '22-ИСбо-1 п/г 2' → ('22-ИСбо-1', '2')
-    '22-ИСбо-1' → ('22-ИСбо-1', None)
-    """
-    s = safe_str(raw)
-    if not s:
-        return None, None
-
-    # subgroup?
-    sub_match = re.search(r"п/г\s*(\d+)", s)
-    subgroup = sub_match.group(1) if sub_match else None
-
-    base = s.split("п/г")[0].strip()
-
-    return base, subgroup
-
-
 def parse_semester(admission_year: int, sem_raw: str):
     """
     sem_raw: '3/2', '4/7' – последний номер это семестр
@@ -76,6 +55,67 @@ def parse_semester(admission_year: int, sem_raw: str):
     dt = f"{start_year}-{month:02d}-01"
     return get_semester_by_date(dt)
 
+
+def create_welldone_data(data):
+    result = []
+    for idx, row in enumerate(data):
+        try:
+            institute_short_name = safe_str(row[9])
+            study_program_code = clean_direction_code(row[4])
+            study_program_name = safe_str(row[5])
+            study_program_short_name = safe_str(row[5])
+
+            discipline_name = safe_str(row[12])
+            if discipline_name is None:
+                discipline_name = safe_str(row[11])
+            d_allow_merge_teachers = None
+
+            lesson_type_name = None
+            lesson_type_short_name = safe_str(row[18])
+
+            semester_order= row[8]
+            control_type = safe_str(row[20])
+            weeks = row[17]
+            hours = row[19]
+
+            teacher_institute_short_name = None
+            teacher_name = normalize_teacher_name(row[35])
+            teacher_post = safe_str(row[36])
+
+            admission_year = 2000 + int(safe_str(row[15]).split(sep="-")[0])
+            group_num = safe_str(row[15]).split(sep="-")[2]
+            sub_group_num = safe_str(row[11]).split("п/г ")[1][0] if "п/г" in str(row[11]) else None
+            learning_form = safe_str(row[54])
+            learning_stage = safe_str(row[53])
+            students_count = row[16]
+
+            result.append([
+                institute_short_name,
+                study_program_code,
+                study_program_name,
+                study_program_short_name,
+                discipline_name,
+                d_allow_merge_teachers,
+                lesson_type_name,
+                lesson_type_short_name,
+                semester_order,
+                control_type,
+                weeks,
+                hours,
+                teacher_institute_short_name,
+                teacher_name,
+                teacher_post,
+                admission_year,
+                group_num,
+                sub_group_num,
+                learning_form,
+                learning_stage,
+                students_count,
+            ])
+        except:
+            continue
+    
+    return result
 
 class Command(BaseCommand):
     def add_arguments(self, parser):
@@ -409,5 +449,3 @@ class Command(BaseCommand):
 
         # for r in academic_load_raw:
         #     print(r)
-        
-            

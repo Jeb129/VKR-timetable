@@ -69,6 +69,11 @@ CONFIG = {
             "level": "DEBUG",
             "propagate": False,
         },
+        "data_import":{
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
     },
 }
 
