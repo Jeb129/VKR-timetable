@@ -15,8 +15,7 @@ class Command(BaseCommand):
         # path = options["path"]
         now = timezone.localtime(timezone.now())
         path = (
-            settings.BASE_DIR
-            / "data_exports"
+            settings.DATA_FILES_DIR
             / f"manage_Нагрузка_{now.strftime("%Y-%m-%d_%H-%M-%S")}.xlsx"
         )
         export_loading(path)

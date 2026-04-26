@@ -1,5 +1,6 @@
 """Методы для чтения изаписи excel файлов"""
 from io import BytesIO
+from pathlib import Path
 
 import pandas as pd
 
@@ -7,7 +8,7 @@ def export_excel(target, data, structure):
     columns = pd.MultiIndex.from_tuples(structure)
     df = pd.DataFrame(data, columns=columns)
     # CASE 1: обычный путь (старое поведение)
-    if isinstance(target, str):
+    if isinstance(target, str) or isinstance(target, Path):
         df.to_excel(target, index=True)
         return
 

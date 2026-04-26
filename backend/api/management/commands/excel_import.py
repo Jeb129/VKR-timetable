@@ -1,3 +1,5 @@
+import os
+
 from django.conf import settings
 from django.core.management.base import BaseCommand
 
@@ -5,11 +7,13 @@ from api.services.data_import.excel import import_excel
 from api.services.data_import.loaders import AcademicLoadReader
 from api.services.data_import.structure import ACADEMIC_LOAD_STRUCTURE
 
+DATA_FILES_DIR = os.getenv("DATA_FILES_DIR")
 
 class Command(BaseCommand):
     help = "Заполняет данные из сырого файла нагрузки. Да помилует господь ваши души\n!!!!!!!ИСПОЛЬЗОВАТЬ ТОЛЬКО ДЛЯ ТЕСТ(!!!!!!!"
     def handle(self, *args, **kwargs):
-        excel_path = settings.BASE_DIR / "../../Nagruzka.xlsx"
+        
+        excel_path = settings.DATA_FILES_DIR / "import.xlsx"
         if not excel_path.exists():
             self.stdout.write(self.style.ERROR("Файл не найден"))
             return
