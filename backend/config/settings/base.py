@@ -22,8 +22,9 @@ setup_logging()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-LOG_DIR = os.getenv("LOG_DIR", BASE_DIR / "logs")
-DATA_FILES_DIR = os.getenv("DATA_FILES_DIR", BASE_DIR / "data_files")
+DATA_FILES_DIR = Path(os.getenv("DATA_FILES_DIR",BASE_DIR/"data_files")).resolve()
+LOG_DIR = Path(os.getenv("LOG_DIR",BASE_DIR/"logs")).resolve()
+
 
 
 # Quick-start development settings - unsuitable for production
