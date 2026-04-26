@@ -1,4 +1,5 @@
 import logging
+import colorlog
 import os
 from logging.config import dictConfig
 from pathlib import Path
@@ -11,9 +12,24 @@ FORMATTERS = {
     "default": {
         "format": "[%(asctime)s] [%(levelname)s] %(name)s: %(message)s",
     },
+    "colored": {
+        "()": "colorlog.ColoredFormatter",
+        "format": "%(log_color)s[%(asctime)s] [%(levelname)s] %(name)s: %(message)s%(reset)s",
+        "log_colors": {
+            "DEBUG": "cyan",
+            "INFO": "green",
+            "WARNING": "yellow",
+            "ERROR": "red",
+            "CRITICAL": "bold_red",
+        }
+    }
 }
 
 HANDLERS = {
+    "colored-console": {
+        "class": "logging.StreamHandler",
+        "formatter": "colored",
+    },
     "console": {
         "class": "logging.StreamHandler",
         "formatter": "default",
@@ -70,7 +86,7 @@ CONFIG = {
             "propagate": False,
         },
         "data_import":{
-            "handlers": ["console"],
+            "handlers": ["colored-console"],
             "level": "DEBUG",
             "propagate": False,
         },
