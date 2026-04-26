@@ -1,15 +1,9 @@
-import os, sys
-from django.core.management.base import BaseCommand
 from django.conf import settings
+from django.core.management.base import BaseCommand
 
-from api.management.commands.raw_import import create_welldone_data
-from api.models import *
 from api.services.data_import.excel import import_excel
-
-from collections import defaultdict
-
-from api.services.data_import.loaders import import_loading
-from api.services.schedule.mapper import get_semester_by_date
+from api.services.data_import.loaders import AcademicLoadReader
+from api.services.data_import.structure import ACADEMIC_LOAD_STRUCTURE
 
 
 class Command(BaseCommand):
@@ -20,14 +14,40 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR("Файл не найден"))
             return
         self.stdout.write(f"Чтение файла....")
-        data = import_excel(excel_path)
+        data = import_excel(excel_path,ACADEMIC_LOAD_STRUCTURE)
         self.stdout.write(f"Прочитано строк: {len(data)}")
-        data = create_welldone_data(data)
 
-        info,created,exists = import_loading(data)
-        self.stdout.write(self.style.HTTP_INFO(info))
-        self.stdout.write(self.style.SUCCESS(created))
-        self.stdout.write(self.style.WARNING(exists))
+        # for field in data[15525]:
+        #     print(field,field.__class__.__name__)
+
+        load_stream = AcademicLoadReader(data)
+
+        for msg in load_stream:
+            match msg.level:
+                case "WARNING":
+                    self.stdout.write(self.style.WARNING(msg))
+                case "ERROR":
+                    self.stdout.write(self.style.HTTP_NOT_FOUND(msg))
+                case "CRITICAL":
+                    self.stdout.write(self.style.NOTICE(msg))
+
+
+        self.stdout.write()
+        self.stdout.write(self.style.SUCCESS(f"Успешно обработано строк {load_stream.success_counter}"))
+        self.stdout.write(self.style.WARNING(f"Пропущено строк {load_stream.skipped_counter}"))
+        self.stdout.write(self.style.ERROR(f"Строк с ошибками {load_stream.error_counter}"))
+                        
+        self.stdout.write()
+        self.stdout.write(self.style.HTTP_INFO(f"Создано направлений подгатовки: {load_stream.programs_created_counter}"))
+        self.stdout.write(self.style.HTTP_INFO(f"Сщздано учебных групп: {load_stream.groups_created_counter}"))
+        self.stdout.write(self.style.HTTP_INFO(f"Создано преподавателей: {load_stream.teachers_created_counter}"))
+        self.stdout.write(self.style.HTTP_INFO(f"Создано записей нагрузки: {load_stream.load_created_counter}"))
+        
+        self.stdout.write()
+        self.stdout.write(self.style.HTTP_INFO(f"Найдено существующих направлений подгатовки: {load_stream.programs_exists_counter}"))
+        self.stdout.write(self.style.HTTP_INFO(f"Найдено существующих учебных групп: {load_stream.groups_exists_counter}"))
+        self.stdout.write(self.style.HTTP_INFO(f"Найдено существующих преподавателей: {load_stream.teachers_exists_counter}"))
+        self.stdout.write(self.style.HTTP_INFO(f"Найдено существующих записей нагрузки: {load_stream.load_exists_counter}"))
 
 
 

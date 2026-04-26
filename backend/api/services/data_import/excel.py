@@ -1,40 +1,5 @@
 """Методы для чтения изаписи excel файлов"""
-from typing import List
-
 import pandas as pd
-
-
-class ExcelValidationError(Exception):
-    def __init__(self, errors):
-        self.errors = errors
-        super().__init__("Ошмбка проверки структуры файла")
-
-
-class ExcelValidator:
-    def __init__(self, df: pd.DataFrame, strcture: List):
-        self.df = df
-        self.errors = []
-        self.strcture = strcture
-        return self.validate()
-
-    def validate(self):
-        self._validate_columns()
-
-        return self.errors
-    
-    def _validate_columns(self):
-        actual = {str(c).strip().lower(): c for c in self.df.columns}
-
-        # отсутствующие
-        for key, original_name in self.strcture.items():
-            if key not in actual:
-                self.errors.append({
-                    "type": "missing_column",
-                    "column": original_name,
-                    "message": f"Отсутствует колонка '{original_name}'"
-                })
-
-
 
 def export_excel(path, data, structure):
     columns = pd.MultiIndex.from_tuples(structure)
@@ -43,12 +8,29 @@ def export_excel(path, data, structure):
 
 
 def import_excel(path, structure = None):
-    df = pd.read_excel(path)
+    df = pd.read_excel(path,dtype=str,header=[0,1],)
+    # Проверяем наличие пустой строки между заголовком и данными
+    # Если есть - удаляем
+    if df.iloc[0].isna().all():
+        df = df.iloc[1:]
 
-    if structure is not None:
-        err = ExcelValidator(df,structure)
-        if err:
-            raise ExcelValidationError(err)
-        
-    # return df.to_dict(orient="records")
-    return df.values.tolist()
+    # Удаляем колонки индекса
+    def is_index_col(col):
+        # MultiIndex случай
+        if isinstance(col, tuple):
+            return any(
+                "Unnamed: 0" in str(part) for part in col
+            )
+        # fallback для single index
+        return "Unnamed: 0" in str(col)
+
+    # ищем индекс-колонку
+    index_cols = [c for c in df.columns if is_index_col(c)]
+
+    if index_cols:
+        df = df.drop(columns=index_cols)
+    # Проверяем, что состав колонок совпадает
+    if structure is not None and list(df.columns) != structure:
+        raise ValueError("Структура колонок не соответствует экспортируемой структуре")
+    
+    return df.to_numpy()

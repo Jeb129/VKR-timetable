@@ -62,7 +62,7 @@ class TeacherAdmin(admin.ModelAdmin):
 
 @admin.register(AcademicLoad)
 class AcademicLoadAdmin(admin.ModelAdmin):
-    readonly_fields = ["id"]
+    readonly_fields = ["id","semester_order"]
     list_display = ("semester","study_group", "discipline", "lesson_type","teacher", "whole_hours")
     list_filter = ("semester","study_group__study_program__institute", "teacher")
     search_fields = ("id","study_group__study_program__code","study_group__name", "discipline__name", "teacher__name")
@@ -70,6 +70,10 @@ class AcademicLoadAdmin(admin.ModelAdmin):
     autocomplete_fields = ["study_group", "teacher", "discipline"]
     # ordering = ["semester__date_start","study_group__name","discipline__name"]
     ordering = ["id"]
+
+    @admin.display(description="Номер семестра")
+    def semester_order(self, obj):
+        return obj.semester_order
 
 
 
