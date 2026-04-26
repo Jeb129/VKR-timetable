@@ -344,7 +344,7 @@ class AcademicLoadReader:
                     yield error(idx,err.__class__.__name__,err)
 
 
-def export_loading(path,queryset = None):
+def export_loading(target,queryset = None):
     if queryset is None:
         queryset = AcademicLoad.objects
     qs = queryset.select_related(
@@ -409,4 +409,4 @@ def export_loading(path,queryset = None):
 
         data.append(row)
 
-    export_excel(path, data, ACADEMIC_LOAD_STRUCTURE)
+    export_excel(target, data, ACADEMIC_LOAD_STRUCTURE)

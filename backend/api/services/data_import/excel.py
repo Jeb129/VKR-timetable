@@ -1,14 +1,30 @@
 """Методы для чтения изаписи excel файлов"""
+from io import BytesIO
+
 import pandas as pd
 
-def export_excel(path, data, structure):
+def export_excel(target, data, structure):
     columns = pd.MultiIndex.from_tuples(structure)
     df = pd.DataFrame(data, columns=columns)
-    df.to_excel(path, index=True)
+    # CASE 1: обычный путь (старое поведение)
+    if isinstance(target, str):
+        df.to_excel(target, index=True)
+        return
+
+    # CASE 2: file-like объект (BytesIO, UploadFile и т.п.)
+    buffer = BytesIO()
+
+    with pd.ExcelWriter(buffer, engine="xlsxwriter") as writer:
+        df.to_excel(writer, index=True)
+
+    buffer.seek(0)
+
+    # пишем в переданный поток
+    target.write(buffer.read())
 
 
-def import_excel(path, structure = None):
-    df = pd.read_excel(path,dtype=str,header=[0,1],)
+def import_excel(source, structure = None):
+    df = pd.read_excel(source,dtype=str,header=[0,1],)
     # Проверяем наличие пустой строки между заголовком и данными
     # Если есть - удаляем
     if df.iloc[0].isna().all():
