@@ -1,7 +1,10 @@
 export interface User {
     id: number,
     username: string,
-    email: string
+    email: string,
+    is_staff: boolean,
+    internal_user: boolean; 
+    moodle_id?: number | null;
 }
 
 export interface RegisterRequest {

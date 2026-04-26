@@ -12,6 +12,9 @@ class CustomUser(AbstractUser):
     USERNAME_FIELD = "email"
     internal_user =  models.BooleanField(default=False,  null=False, blank=True)
 
+    # ID из moodle которое вытягивается при подтверждении аккаунта
+    moodle_id = models.IntegerField(null=True, blank=True, verbose_name="ID в Moodle")
+
     # Поля, которые будут спрашивать при создании суперпользователя
     # username остается, но он не используется как логин
     REQUIRED_FIELDS = ["username"]
