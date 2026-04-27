@@ -7,40 +7,21 @@ from django.shortcuts import get_object_or_404
 
 from api.models import Lesson, ScheduleScenario
 # from api.serializers.education import LessonSerializer
+from api.services.data_import.loaders import export_loading
 from api.services.redis.storage import RedisDraftStorage
 from api.services.constraunt.manager import ScheduleManager
 from api.services.schedule.draft.context import draft_context
 from config.utils import normalize_diff
+from api.models import AcademicLoad
 
 class TestDraftScenarioView(APIView):
     def get(self, request):
         data = None
         
-        storage = RedisDraftStorage(1,0)
-        # storage.update_lesson(1,{
-        #     "classroom":2,
-        # })
-        # data = storage.list_changes()
-        # with draft_context(1, storage) as manager:
-        #     # draft = Lesson.objects.filter(classroom__id=1)
-        #     # draft = Lesson.objects.filter(classroom_id=1)
-        #     draft = Lesson.objects.filter(classroom__id=2).filter(timeslot__day=3)
-        #     # data = []
-        #     # for d in Lesson.objects.all():
-        #     #     data.append(LessonSerializer(d).data)
-        #     # print(draft.count())
+        export_loading()
+        # export_loading(AcademicLoad.objects.filter(id=22266))
 
-        #     data = LessonSerializer(draft, many=True).data
-        data = ScheduleManager.load().prepare_draft_lesson(
-            scenario_id=1,
-            lesson_id=1,
-            data=normalize_diff(Lesson,request.data),
-            storage=storage
-        )
-
-        # orig =LessonSerializer(Lesson.objects.get(id=1)).data    
-
-        return Response({"draft":data},status=status.HTTP_200_OK)
+        return Response(status=status.HTTP_200_OK)
     
     def put(self, request,):
         scenario_id = 1

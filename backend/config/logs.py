@@ -2,18 +2,37 @@ import logging
 import os
 from logging.config import dictConfig
 from pathlib import Path
+from django.conf import settings
+
 
 # from config.settings.base import LOG_DIR
 # BASE_DIR = Path(__file__).resolve().parent.parent.parent
-LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
+# LOG_DIR = Path(__file__).resolve().parent.parent / "logs"
+# LOG_DIR = settings.LOG_DIR
+LOG_DIR = settings.LOG_DIR
 
 FORMATTERS = {
     "default": {
         "format": "[%(asctime)s] [%(levelname)s] %(name)s: %(message)s",
     },
+    "colored": {
+        "()": "colorlog.ColoredFormatter",
+        "format": "%(log_color)s[%(asctime)s] [%(levelname)s] %(name)s: %(message)s%(reset)s",
+        "log_colors": {
+            "DEBUG": "cyan",
+            "INFO": "green",
+            "WARNING": "yellow",
+            "ERROR": "red",
+            "CRITICAL": "bold_red",
+        }
+    }
 }
 
 HANDLERS = {
+    "colored-console": {
+        "class": "logging.StreamHandler",
+        "formatter": "colored",
+    },
     "console": {
         "class": "logging.StreamHandler",
         "formatter": "default",
@@ -66,6 +85,11 @@ CONFIG = {
         },
         "system": {
             "handlers": ["console", "system-file"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
+        "data_import":{
+            "handlers": ["colored-console"],
             "level": "DEBUG",
             "propagate": False,
         },
@@ -143,3 +167,4 @@ class SessionLogger:
 def setup_logging():
     os.makedirs(LOG_DIR, exist_ok=True)
     dictConfig(CONFIG)
+setup_logging()
