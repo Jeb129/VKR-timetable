@@ -29,5 +29,5 @@ from .schedule import (
 from .academic_load import (
     AcademicLoad,
     Lesson,
-    PlannedLesson
+    PlannedLesson 
 )
