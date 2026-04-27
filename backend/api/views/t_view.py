@@ -1,0 +1,46 @@
+#ИУи можено писать всякую хрень которую надо тестить, но лень поднимать фронт
+
+from rest_framework import status
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from django.shortcuts import get_object_or_404
+
+from api.models import Lesson, ScheduleScenario
+# from api.serializers.education import LessonSerializer
+from api.services.data_import.loaders import export_loading
+from api.services.redis.storage import RedisDraftStorage
+from api.services.constraunt.manager import ScheduleManager
+from api.services.schedule.draft.context import draft_context
+from config.utils import normalize_diff
+from api.models import AcademicLoad
+
+class TestDraftScenarioView(APIView):
+    def get(self, request):
+        data = None
+        
+        export_loading()
+        # export_loading(AcademicLoad.objects.filter(id=22266))
+
+        return Response(status=status.HTTP_200_OK)
+    
+    def put(self, request,):
+        scenario_id = 1
+        lesson_id = 1
+        # lesson_id = self.request.query_params.get("lesson_id")
+        get_object_or_404(ScheduleScenario, id=scenario_id)
+        storage = RedisDraftStorage(scenario_id, 0)
+
+        # Готовый метод в ConstraintManager
+        errors= ScheduleManager().load().update_lesson_draft(
+            scenario_id=scenario_id,
+            lesson_id=lesson_id,
+            data=normalize_diff(Lesson,request.data),
+            storage=storage
+        )
+
+        return Response({
+            "errors": [e for e in errors],
+        })
+    def post(self, request):
+        RedisDraftStorage(1,1).clear_all()
+        return Response(status=status.HTTP_200_OK)

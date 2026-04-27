@@ -1,4 +1,6 @@
 import { useState, useEffect, useMemo } from "react";
+import { type SelectOption } from "@/types/ui";
+import SearchSelect from "@/components/UI/SearchSelect";
 import { useNavigate } from "react-router-dom";
 import { dbService } from "@/services/crud";
 import { type MappedEvent, DAYS } from "@/types/schedule";
@@ -20,6 +22,13 @@ const SchedulePage = () => {
     
     const [events, setEvents] = useState<MappedEvent[]>([]);
     const [loading, setLoading] = useState(false);
+
+    const targetOptions: SelectOption[] = useMemo(() => {
+        if (filterType === "classroom") return classrooms.map(r => ({ value: r.id, label: r.num }));
+        if (filterType === "group") return groups.map(g => ({ value: g.id, label: g.name }));
+        if (filterType === "teacher") return teachers.map(t => ({ value: t.id, label: t.name }));
+        return [];
+    }, [filterType, classrooms, groups, teachers]);
 
     // 1. Загрузка всех справочников при старте
     useEffect(() => {
@@ -137,16 +146,11 @@ const SchedulePage = () => {
 
                 <div className="filter-group f-2">
                     <label className="filter-label">Объект</label>
-                    <select 
-                        className="styled-select" 
+                    <SearchSelect 
+                        options={targetOptions}
                         value={targetId}
-                        onChange={(e) => setTargetId(e.target.value)}
-                    >
-                        <option value="">Выберите из списка...</option>
-                        {filterType === "classroom" && classrooms.map(r => <option key={r.id} value={r.id}>{r.num}</option>)}
-                        {filterType === "group" && groups.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
-                        {filterType === "teacher" && teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                    </select>
+                        onChange={setTargetId}
+                    />
                 </div>
 
                 <div className="filter-group" style={{ maxWidth: '200px' }}>

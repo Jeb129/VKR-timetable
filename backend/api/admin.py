@@ -1,9 +1,11 @@
+from re import search
+
 from django.contrib import admin
 
 from api.models import (AcademicLoad, Building, BuildingPriority, Classroom,
                         Constraint, Discipline, Institute, Lesson, LessonType,
                         ScheduleScenario, StudyGroup, StudyProgram, Teacher,
-                        Timeslot)
+                        Timeslot,Semester)
 
 #  ИНЛАЙНЫ (Позволяют создавать связанные объекты на одной странице)
 
@@ -37,32 +39,42 @@ class InstituteAdmin(admin.ModelAdmin):
 
 @admin.register(StudyProgram)
 class StudyProgramAdmin(admin.ModelAdmin):
-    list_display = ("short_name", "institute")
+    list_display = ("institute","code","name")
     list_filter = ("institute",)
     inlines = [StudyGroupInline]  # Создаем группы прямо в программе
-    search_fields = ("name", "short_name")
+    search_fields = ("code","name", "short_name")
 
 
 @admin.register(StudyGroup)
 class StudyGroupAdmin(admin.ModelAdmin):
-    list_display = ("name", "stud_program", "students_count", "admission_year")
+    list_display = ("name", "study_program", "students_count", "admission_year")
     search_fields = ("name",)
-    list_filter = ("stud_program__institute", "admission_year")
-    autocomplete_fields = ["stud_program"]  # Поиск программы по названию
+    list_filter = ("study_program__institute", "admission_year")
+    autocomplete_fields = ["study_program"]  # Поиск программы по названию
 
 
 @admin.register(Teacher)
 class TeacherAdmin(admin.ModelAdmin):
     list_display = ("name","post", "constraint_weight", "user")
     search_fields = ("name",)
+    ordering = ("name",)
 
 
 @admin.register(AcademicLoad)
 class AcademicLoadAdmin(admin.ModelAdmin):
-    list_display = ("study_group", "discipline", "teacher", "whole_hours")
-    list_filter = ("study_group__stud_program__institute", "teacher")
+    readonly_fields = ["id","semester_order"]
+    list_display = ("semester","study_group", "discipline", "lesson_type","teacher", "whole_hours")
+    list_filter = ("semester","study_group__study_program__institute", "teacher")
+    search_fields = ("id","study_group__study_program__code","study_group__name", "discipline__name", "teacher__name")
     # Это сделает выбор группы и препода удобным (через поиск)
     autocomplete_fields = ["study_group", "teacher", "discipline"]
+    # ordering = ["semester__date_start","study_group__name","discipline__name"]
+    ordering = ["id"]
+
+    @admin.display(description="Номер семестра")
+    def semester_order(self, obj):
+        return obj.semester_order
+
 
 
 @admin.register(Lesson)
@@ -79,9 +91,16 @@ class TimeslotAdmin(admin.ModelAdmin):
     list_filter = ("day", "week_num")
     ordering = ("week_num", "day", "order_number")
 
+@admin.register(Semester)
+class SemesterAdmin(admin.ModelAdmin):
+    list_display = ("name", "date_start", "date_end")
+    search_fields = ("name",)
+    ordering = ("date_start",)
+
 
 admin.site.register(Discipline, search_fields=["name"])
 admin.site.register(LessonType)
 admin.site.register(ScheduleScenario)
 admin.site.register(BuildingPriority)
 admin.site.register(Constraint)
+# admin.site.register(Semester)

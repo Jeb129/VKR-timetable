@@ -1,0 +1,75 @@
+/* LessonCard.css */
+
+.lesson-card {
+  padding: 1rem;
+  border-radius: var(--radius-lg);
+  background: var(--white);
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-color);
+  transition: var(--transition);
+}
+
+.lesson-card:hover {
+  box-shadow: 0 6px 18px rgba(44, 58, 179, 0.08);
+}
+
+.lesson-card-title {
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--p-blue);
+}
+
+.lesson-card-sub {
+  font-size: 0.9rem;
+  color: var(--text-muted);
+  margin-top: 0.25rem;
+}
+
+.lesson-card-meta {
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+.lesson-divider {
+  width: 100%;
+  height: 1px;
+  background: var(--border-color);
+  margin: 0.75rem 0;
+  opacity: 0.6;
+}
+
+/* Список преподавателей */
+.teacher-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+/* Список групп — компактный inline текст */
+.group-list {
+  font-size: 0.9rem;
+  color: var(--text-main);
+}
+
+/* Ограничиваем высоту карточки */
+.lesson-card.limited {
+  max-height: 220px; /* Можно подрегулировать */
+  overflow: hidden;
+  position: relative;
+}
+
+/* Плавный градиент снизу, если внутри есть скрытый контент */
+.lesson-card.limited::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  height: 30px;
+  background: linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0),
+    var(--white)
+  );
+  pointer-events: none;
+}

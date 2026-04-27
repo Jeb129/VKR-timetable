@@ -15,7 +15,7 @@ from api.models import (
     enums,
     AcademicLoad,
 )
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timedelta, timezone, time
 
 logger = logging.getLogger("schedule")
 sql_logger = logging.getLogger("sql")
@@ -207,8 +207,8 @@ def map_bookings(
     bookings = Booking.objects.filter(
         status=enums.RequestStatus.VERIFIED,
         classroom__id=classroom_id,
-        date_start__gte=date_from,
-        date_start__lte=date_to,
+        date_start__lt=date_to,
+        date_end__gt=date_from,
     )
     sql_logger.debug("map_bookings()\n%s", bookings.query)
 
@@ -233,7 +233,7 @@ def get_group_schedule(
 def get_teacher_schedule(
     *, teacher_id: int, date_from: datetime, date_to: datetime
 ) -> List[MappedEvent]:
-    lessons_qs = Lesson.objects.filter(teachers__id__in=teacher_id)
+    lessons_qs = Lesson.objects.filter(teachers__id=teacher_id)
     return map_lessons(date_from=date_from, date_to=date_to, lessons=lessons_qs)
 
 
@@ -243,7 +243,7 @@ def get_classroom_schedule(
     lessons_qs = Lesson.objects.filter(classroom__id=classroom_id)
     result: List[MappedEvent] = []
     bookings = map_bookings(
-        date_from=date_from, date_to=date_to, classroom_id=classroom_id
+        date_from=datetime.combine(date_from,time.min), date_to=datetime.combine(date_to,time.max), classroom_id=classroom_id
     )
     if bookings:
         result.extend(bookings)

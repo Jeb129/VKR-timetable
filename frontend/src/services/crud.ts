@@ -42,6 +42,20 @@ const get = async (model: string, id: number) => {
     return response.data
 }
 
+// Метод для одобрения (POST /api/model/id/approve/)
+const approveRequest = async (model: string, id: number) => {
+    const response = await privateApi.post(`/api/${model}/${id}/approve/`);
+    return response.data;
+}
+
+// Метод для отклонения (POST /api/model/id/reject/)
+const rejectRequest = async (model: string, id: number, comment: string) => {
+    const response = await privateApi.post(`/api/${model}/${id}/reject/`, {
+        admin_comment: comment
+    });
+    return response.data;
+}
+
 export const dbService = {
     update,
     get,
@@ -49,5 +63,7 @@ export const dbService = {
     create,
     search,
     updateDraft,
-    commitDraft
+    commitDraft,
+    approveRequest,
+    rejectRequest
 }

@@ -6,22 +6,8 @@
     margin: 0 auto;
 }
 
-.moderation-card {
-    border-left: 6px solid var(--p-blue);
-    transition: var(--transition);
-}
-
 .moderation-card:hover {
     transform: translateX(5px);
-}
-
-.badge-user {
-    background: var(--p-blue-light);
-    color: var(--p-blue);
-    padding: 0.4rem 1rem;
-    border-radius: 100px;
-    font-size: 0.85rem;
-    font-weight: 700;
 }
 
 .time-range-text {
@@ -50,4 +36,28 @@
 
 .moderation-card.is-rejecting {
     border-left-color: var(--p-red);
+}
+
+.moderation-card {
+    border-left: 8px solid var(--p-blue);
+    transition: var(--transition);
+}
+
+.badge-user {
+    background-color: var(--p-blue-light);
+    color: var(--p-blue);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.time-range-text {
+    color: var(--text-main);
+}
+
+.reason-text {
+    border: 1px solid var(--border-color);
+    font-size: 14px;
+    color: var(--text-main);
 }

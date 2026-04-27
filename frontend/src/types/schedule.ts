@@ -54,7 +54,7 @@ export interface Lesson {
     end: string;
     order: number;
     day: number;
-    teacher_list: string[];
+    teachers_list: string[];
     groups_list: string[];
 }
 export interface ScheduleEvent {
@@ -79,4 +79,19 @@ export interface ConstraintError {
     penalty: number;
     message: string;
     data: any
+}
+export interface ScheduleScenario {
+    id: number;
+    name: string;
+    is_active: boolean;
+    created_at: string;
+    semester?: number;
+}
+
+export interface Scenario {
+    id: number;
+    name: string;
+    is_active: boolean;
+    created_at: string;
+    semester?: number;
 }

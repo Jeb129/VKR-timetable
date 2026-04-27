@@ -14,15 +14,15 @@ from datetime import timedelta
 from pathlib import Path
 
 from dotenv import load_dotenv
-from config.logs import setup_logging
-
 
 load_dotenv()
-setup_logging()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
-LOG_DIR = BASE_DIR / "logs"
+DATA_FILES_DIR = Path(os.getenv("DATA_FILES_DIR",BASE_DIR/"data_files")).resolve()
+LOG_DIR = Path(os.getenv("LOG_DIR",BASE_DIR/"logs")).resolve()
+
+
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/6.0/howto/deployment/checklist/
@@ -50,6 +50,7 @@ INSTALLED_APPS = [
     "corsheaders",
     # local
     "api",
+    'notification',
     "authentification",
 ]
 
@@ -125,7 +126,7 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = "ru-ru"
 
-TIME_ZONE = "UTC"
+TIME_ZONE = "Europe/Moscow"
 
 USE_I18N = True
 
@@ -187,6 +188,14 @@ REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 #     f"redis://{f':{REDIS_PASSWORD}@' if REDIS_PASSWORD else ''}"
 #     f"{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 # )
+
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv('EMAIL_HOST')
+EMAIL_PORT = os.getenv('EMAIL_PORT')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
+EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL') == 'True'
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 
 CACHES = {
     "default": {

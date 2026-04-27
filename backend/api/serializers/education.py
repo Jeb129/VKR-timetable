@@ -40,12 +40,13 @@ class AcademicLoadSerializer(serializers.ModelSerializer):
     class Meta:
         model = AcademicLoad
         fields = "__all__"
+        read_only_fields=["id"]
 
 
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:
         model = Teacher
-        fields = ["id", "name", "weight", "user"]
+        fields = "__all__"
 
 
 class TimeslotSerializer(serializers.ModelSerializer):
@@ -58,7 +59,7 @@ class LessonSerializer(serializers.ModelSerializer):
     # Текстовые названия из связанных моделей
     discipline_name = serializers.ReadOnlyField(source="discipline.name")
     type_name = serializers.ReadOnlyField(source="lesson_type.name")
-    classroom_name = serializers.ReadOnlyField(source="classroom.num")
+    classroom_name = serializers.ReadOnlyField(source="classroom.name")
 
     # Номер пары и день для сортировки
     order = serializers.ReadOnlyField(source="timeslot.order_number")

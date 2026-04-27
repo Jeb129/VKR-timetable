@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 
 # ИСПРАВЛЕННЫЕ ИМПОРТЫ: вытягиваем модели из новых файлов
-from api.models import Timeslot, Constraint,Semester, Institute
+from api.models import *
 
 
 class Command(BaseCommand):
@@ -25,7 +25,7 @@ class Command(BaseCommand):
             for day in days:
                 for idx, (start, end) in enumerate(pairs, 1):
                     # Используем get_or_create, чтобы не дублировать при повторном запуске
-                    obj, created = Timeslot.objects.get_or_create(
+                    _, created = Timeslot.objects.get_or_create(
                         day=day,
                         week_num=week,
                         order_number=idx,
@@ -35,44 +35,50 @@ class Command(BaseCommand):
                         ts_count += 1
         sems = [
             ("Осень 2019","2019-09-01","2019-12-31"),
-            ("Весна 2020","2020-02-01","2020-05-31"),
+            ("Весна 2020","2020-02-01","2020-06-30"),
             ("Осень 2020","2020-09-01","2020-12-31"),
-            ("Весна 2021","2021-02-01","2021-05-31"),
+            ("Весна 2021","2021-02-01","2021-06-30"),
             ("Осень 2021","2021-09-01","2021-12-31"),
-            ("Весна 2022","2022-02-01","2022-05-31"),
+            ("Весна 2022","2022-02-01","2022-06-30"),
             ("Осень 2022","2022-09-01","2022-12-31"),
-            ("Весна 2023","2023-02-01","2023-05-31"),
+            ("Весна 2023","2023-02-01","2023-06-30"),
             ("Осень 2023","2023-09-01","2023-12-31"),
-            ("Весна 2024","2024-02-01","2024-05-31"),
+            ("Весна 2024","2024-02-01","2024-06-30"),
             ("Осень 2024","2024-09-01","2024-12-31"),
-            ("Весна 2025","2025-02-01","2025-05-31"),
+            ("Весна 2025","2025-02-01","2025-06-30"),
             ("Осень 2025","2025-09-01","2025-12-31"),
-            ("Весна 2026","2026-02-01","2026-05-31"),
+            ("Весна 2026","2026-02-01","2026-06-30"),
             ("Осень 2026","2026-09-01","2026-12-31"),
-            ("Весна 2027","2027-02-01","2027-05-31"), 
+            ("Весна 2027","2027-02-01","2027-06-30"), 
         ]
+        s_count = 0
         for (n,s,e) in sems:
-            Semester.objects.get_or_create(
+            _, created = Semester.objects.get_or_create(
                 name=n,
                 date_start=s,
                 date_end=e
             )
+            if created:
+                s_count += 1
         
         institutes = [
             ("Институт педагогики и психологии","ИПП"),
             ("Иститут гуманитарных наук и социальных технологий", "ИГНИСТ"),
             ("Институт Высшая ИТ-школа", "ИВИТШ"),
             ("Институт физико-математических и естественных наук", "ИФМЕН"),
-            ("Юридический институт имени А. Некрасова", "ЮИН"),
+            ("Юридический институт имени А. Ю. Новикова", "ЮИН"),
             ("Институт промышленных технологий и дизайна", "ИПТД"),
             ("Институт управления экономики и финаснсов", "ИУЭФ"),
             ("Институт культуры и искусств", "ИКИ")
         ]
+        i_count = 0
         for (n, sn) in institutes:
-            Institute.objects.get_or_create(
+            _, created = Institute.objects.get_or_create(
                 name=n,
                 short_name=sn
             )
+            if created:
+                i_count += 1
         # 2. Заполняем ограничения (Constraints)
         # Формат: (Описание, Вес, Техническое имя)
         constraints = [
@@ -103,15 +109,39 @@ class Command(BaseCommand):
 
         c_count = 0
         for description, weight, name in constraints:
-            obj, created = Constraint.objects.get_or_create(
+            _, created = Constraint.objects.get_or_create(
                 name=name,  # name теперь уникальное поле
                 defaults={"weight": weight, "description": description},
             )
             if created:
                 c_count += 1
 
+        lt_count = 0
+        lesson_types = [
+            ("Лекция","Лек",False,True,True),
+            ("Практическое занятие","Пр",True,True,False),
+            ("Лабораторная работа","Лаб",False,False,False)
+
+        ]
+        for name, short_name,allow_merge_teachers,allow_merge_subgroups,allow_merge_groups in lesson_types:
+            _, created = LessonType.objects.get_or_create(
+                name=name,  # name теперь уникальное поле
+                short_name=short_name,
+                allow_merge_teachers=allow_merge_teachers,
+                allow_merge_subgroups=allow_merge_subgroups,
+                allow_merge_groups=allow_merge_groups
+            )
+            if created:
+                lt_count += 1
+
         self.stdout.write(
             self.style.SUCCESS(
-                f"Создано: {ts_count} таймслотов и {c_count} ограничений!"
+                f"Создано: \n" +
+                f"{ts_count} таймслотов!\n" +
+                f"{s_count} семестров\n" +
+                f"{i_count} институтов\n" +
+                f"{c_count} ограничений!\n" +
+                f"{lt_count} типов занятий!\n"
+
             )
         )

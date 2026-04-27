@@ -1,8 +1,7 @@
 from django.db.models import Manager
-from django.db.models.sql import Query
 
 from api.models import Lesson
-from api.services.schedule.draft.queryset import DraftLessonQuerySet, DraftLessonQuerySet
+from api.services.schedule.draft.queryset import DraftLessonQuerySet
 
 class DraftLessonManager(Manager):
     def __init__(self, storage, scenario_id, base_manager, *args, **kwargs):

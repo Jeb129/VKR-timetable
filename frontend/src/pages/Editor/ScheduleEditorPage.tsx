@@ -1,11 +1,17 @@
-import { useState, useEffect, useRef } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useRef, useMemo } from "react";
+import { type SelectOption } from "@/types/ui";
+import SearchSelect from "@/components/UI/SearchSelect";
+import { useNavigate,useParams } from "react-router-dom";
 import { dbService } from "@/services/crud";
-import type { MappedEvent } from "@/types/schedule";
 import { DAYS,type Lesson, type Timeslot } from "@/types/schedule";
 import "@/styles/Editor.css";
+import { scheduleDraftService } from "@/services/schedule_editor";
+import LessonErrorItem from "@/components/schedule_editor/LessonError";
+import type { ConstraintError, LessonError } from "@/types/constraint";
+import { LessonCard } from "@/components/schedule_editor/LessonCard";
 
 const ScheduleEditorPage = () => {
+    const { scenarioId } = useParams();
     const navigate = useNavigate();
 
     // Справочники
@@ -15,15 +21,23 @@ const ScheduleEditorPage = () => {
     const [teachers, setTeachers] = useState<any[]>([]);
     
     // Фильтры
-    const [selectedScenarioId, setSelectedScenarioId] = useState<number | null>(null);
     const [filterType, setFilterType] = useState<"group" | "teacher">("group");
-    const [targetId, setTargetId] = useState<string>("");
+    const [targetId, setTargetId] = useState<string | number>("");
     
     const [currentWeek, setCurrentWeek] = useState<number>(1);
-    const [lessonErrors, setLessonErrors] = useState<Record<number, string[]>>({});
+
+    const [lessonErrors, setLessonErrors] = useState<LessonError[]>([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+
     const [lessons, setLessons] = useState<Lesson[]>([]);
     const [loading, setLoading] = useState(false);
+    const [isChecking, setIsChecking] = useState(false);
+
+    const targetOptions: SelectOption[] = useMemo(() => {
+        if (filterType === "group") return groups.map(g => ({ value: g.id, label: g.name }));
+        if (filterType === "teacher") return teachers.map(t => ({ value: t.id, label: t.name }));
+        return [];
+    }, [filterType, groups, teachers]);
 
     useEffect(() => {
         const init = async () => {
@@ -43,12 +57,14 @@ const ScheduleEditorPage = () => {
 
     // Загрузка черновика из Redis
     const loadDraft = async () => {
-        if (!selectedScenarioId || !targetId) return;
+        if (!scenarioId || !targetId) return;
         setLoading(true);
         try {
-            const params = { [filterType === "group" ? "group_id" : "teacher_id"]: targetId };
-            const response = await dbService.list(`scenario/${selectedScenarioId}/draft`, params);
-            setLessons(response.lessons || []);
+            const data = filterType === "group" ? 
+                await scheduleDraftService.getGroupLessons(Number(scenarioId),Number(targetId)) :
+                await scheduleDraftService.getTeacherLessons(Number(scenarioId),Number(targetId))
+
+            setLessons(data || []);
             // накопленные ошибки, записываем сюда
         } catch (err) {
             console.error(err);
@@ -57,7 +73,7 @@ const ScheduleEditorPage = () => {
         }
     };
 
-    useEffect(() => { loadDraft(); }, [selectedScenarioId, targetId, filterType]);
+    useEffect(() => { loadDraft(); }, [scenarioId, targetId, filterType]);
 
     // Drag and Drop
     const onDragStart = (e: React.DragEvent, lessonId: number) => {
@@ -66,7 +82,6 @@ const ScheduleEditorPage = () => {
 
     const onDrop = async (e: React.DragEvent, targetTimeslotId: number) => {
         e.preventDefault();
-        if (!selectedScenarioId) return;
 
         const lessonId = Number(e.dataTransfer.getData("lessonId"));
         
@@ -80,39 +95,35 @@ const ScheduleEditorPage = () => {
             ? { ...l, timeslot: targetTimeslotId, day: targetSlot.day, order: targetSlot.order_number } 
             : l
         ));
+        // Включаем статус проверки
+        setIsChecking(true);
 
         try {
-            const response = await dbService.updateDraft(selectedScenarioId, lessonId, {
-                timeslot: targetTimeslotId
-            });
-
-            if (response.errors && response.errors.length > 0) {
-                setLessonErrors(prev => ({ ...prev, [lessonId]: response.errors }));
-            } else {
-                setLessonErrors(prev => {
-                    const newErrors = { ...prev };
-                    delete newErrors[lessonId];
-                    return newErrors;
-                });
+            const data = await scheduleDraftService.moveLesson(Number(scenarioId), lessonId, targetTimeslotId )
+            const newErrors = lessonErrors.filter(e => e.lesson.id !== lessonId)
+            console.log(newErrors)
+            if (data.length > 0) {
+                const lesson = lessons.find(e => e.id === lessonId)
+                if (lesson)
+                    newErrors.push({
+                        lesson: lesson,
+                        errors: data 
+                    })
             }
-            // 3. Синхронизируем с Redis (бэк может вернуть дополнительные правки)
-            loadDraft(); 
+            setLessonErrors(newErrors)
         } catch (err) {
             console.error("Ошибка перемещения");
-            loadDraft(); // Возвращаем как было при ошибке сети
+        }
+        finally {
+        setIsChecking(false); // Выключаем в любом случае
         }
     };
 
-    // Собираем все ошибки в один список для сайдбара
-    const allConflicts = Object.entries(lessonErrors).flatMap(([id, errs]) => 
-        errs.map(text => ({ lessonId: Number(id), text }))
-    );
-
 
     const handleCommit = async () => {
-        if (!selectedScenarioId) return;
+        if (!Number(scenarioId)) return;
         try {
-            await dbService.commitDraft(selectedScenarioId);
+            await dbService.commitDraft(Number(scenarioId));
             alert("Опубликовано!");
             loadDraft();
         } catch (err) { alert("Ошибка публикации"); }
@@ -129,7 +140,8 @@ const ScheduleEditorPage = () => {
                         <button className={`btn ${currentWeek === 1 ? 'btn-primary' : 'btn-outline'}`} onClick={() => setCurrentWeek(1)}>Числитель</button>
                         <button className={`btn ${currentWeek === 2 ? 'btn-primary' : 'btn-outline'}`} onClick={() => setCurrentWeek(2)}>Знаменатель</button>
                     </div>
-                    <button className="btn btn-green" onClick={handleCommit} disabled={!selectedScenarioId}>Опубликовать</button>
+                    <button className="btn btn-green" onClick={handleCommit} disabled={!Number(scenarioId)}>Опубликовать</button>
+                    <button className="btn nav-btn" onClick={() => navigate("/ScheduleEditor")}>К версиям</button>
                     <button className="btn nav-btn" onClick={() => navigate("/profile")}>В профиль</button>
                 </div>
             </nav>
@@ -140,13 +152,6 @@ const ScheduleEditorPage = () => {
                     {/* ПАНЕЛЬ ФИЛЬТРОВ  */}
                     <div className="card flex-row gap-2 align-end" style={{padding: '15px'}}>
                         <div className="flex-col f-1">
-                            <label className="filter-label">Версия</label>
-                            <select className="styled-select" onChange={e => setSelectedScenarioId(Number(e.target.value))}>
-                                <option value="">Выберите версию...</option>
-                                {scenarios.map(s => <option key={s.id} value={s.id}>{s.name}</option>)}
-                            </select>
-                        </div>
-                        <div className="flex-col f-1">
                             <label className="filter-label">Тип объекта</label>
                             <select className="styled-select" value={filterType} onChange={e => {setFilterType(e.target.value as any); setTargetId("");}}>
                                 <option value="group">Группа</option>
@@ -155,12 +160,11 @@ const ScheduleEditorPage = () => {
                         </div>
                         <div className="flex-col f-2">
                             <label className="filter-label">Объект</label>
-                            <select className="styled-select" value={targetId} onChange={e => setTargetId(e.target.value)}>
-                                <option value="">Выберите из списка...</option>
-                                {(filterType === "group" ? groups : teachers).map(item => (
-                                    <option key={item.id} value={item.id}>{item.name}</option>
-                                ))}
-                            </select>
+                            <SearchSelect 
+                                options={targetOptions}
+                                value={targetId}
+                                onChange={setTargetId}
+                            />
                         </div>
                     </div>
 
@@ -194,11 +198,7 @@ const ScheduleEditorPage = () => {
                                                              draggable onDragStart={e => onDragStart(e, lesson.id)}
                                                              onClick={() => navigate(`/admin/edit-lesson/${lesson.id}`)}>
                                                             {hasError && <div className="error-icon">!</div>}
-                                                            <div className="subject-short">{lesson.discipline_name}</div>
-                                                            <div className="info-short">
-                                                                <span>{lesson.classroom_name}</span>
-                                                                <span className="type-tag">{lesson.type_name}</span>
-                                                            </div>
+                                                            <LessonCard lesson={lesson}/>
                                                         </div>
                                                     ) : (
                                                         slot && <div className="empty-slot-plus">+</div>
@@ -215,6 +215,7 @@ const ScheduleEditorPage = () => {
 
                 {/* САЙДБАР С ЯЗЫЧКОМ */}
                 <div className={`error-sidebar ${isSidebarOpen ? '' : 'closed'}`}>
+                    {/* Язычок-закладка */}
                     <div className="sidebar-trigger-tab" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
                         {isSidebarOpen ? '▶' : '⚠️'}
                     </div>
@@ -224,17 +225,21 @@ const ScheduleEditorPage = () => {
                         <button className="close-sidebar-btn" onClick={() => setIsSidebarOpen(false)}>×</button>
                     </div>
 
+                    {/* Текст о проверке (вместо точки) */}
+                    {isChecking && (
+                        <div className="checking-banner fade-in">
+                            Проверка ограничений...
+                        </div>
+                    )}
+
                     <div className="flex-col scroll-y f-1">
-                        {allConflicts.length > 0 ? (
-                            allConflicts.map((err, i) => (
-                                <div key={i} className="error-item">
-                                    <div className="error-title">Занятие #{err.lessonId}</div>
-                                    <div className="error-text">{err.text}</div>
-                                </div>
-                            ))
-                        ) : (
-                            <div className="p-4 text-center text-muted">Конфликтов нет</div>
-                        )}
+                       {lessonErrors.map((val,i) => 
+                            <LessonErrorItem 
+                                key={i} 
+                                lesson={val.lesson} 
+                                errors={val.errors ?? []}
+                                />
+                       )}
                     </div>
                 </div>
             </div>
