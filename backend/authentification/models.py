@@ -11,6 +11,9 @@ class CustomUser(AbstractUser):
     # Django будет использовать email как логин
     USERNAME_FIELD = "email"
     internal_user =  models.BooleanField(default=False,  null=False, blank=True)
+    is_email_verified =  models.BooleanField(default=False,  null=False, blank=True)
+    is_schedule_moderator =  models.BooleanField(default=False,  null=False, blank=True)
+    is_booking_moderator =  models.BooleanField(default=False,  null=False, blank=True)
 
     # ID из moodle которое вытягивается при подтверждении аккаунта
     moodle_id = models.IntegerField(null=True, blank=True, verbose_name="ID в Moodle")
