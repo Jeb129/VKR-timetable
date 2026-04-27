@@ -1,8 +1,5 @@
 from django.db import models
 
-from api.models.buildings import Classroom
-from api.models.education_subjects import Discipline, LessonType, StudyGroup,Teacher
-
 
 class Semester(models.Model):
     """Для отображения расписания в календаре"""
@@ -49,24 +46,3 @@ class Timeslot(models.Model):
 
     def __str__(self):
         return f"День {self.day} | Пара {self.order_number}"
-
-
-class Lesson(models.Model):
-    """Финальное расписание (Таблица ключей)"""
-
-    scenario = models.ForeignKey(
-        "ScheduleScenario", on_delete=models.CASCADE, related_name="lessons"
-    )
-    discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE)
-    lesson_type = models.ForeignKey(LessonType, on_delete=models.CASCADE)
-    timeslot = models.ForeignKey(
-        Timeslot, on_delete=models.SET_NULL, null=True, blank=True
-    )
-    classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE)
-    teachers = models.ManyToManyField(Teacher)
-
-    # Ограничение: В одном занятии нельзя объединять несколько
-    study_groups = models.ManyToManyField(StudyGroup)
-
-    def __str__(self) -> str:
-        return f"{self.lesson_type} {self.discipline}"
