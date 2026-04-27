@@ -1,5 +1,5 @@
 from contextlib import contextmanager
-from api.models.schedule import Lesson
+from api.models import Lesson
 from api.services.schedule.draft.manager import DraftLessonManager
 
 

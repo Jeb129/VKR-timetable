@@ -1,7 +1,7 @@
 from typing import Dict, Any, List
 from django.db import transaction
 
-from api.models.schedule import Lesson
+from api.models import Lesson
 from api.services.redis.storage import RedisDraftStorage
 
 
