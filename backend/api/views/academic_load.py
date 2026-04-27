@@ -42,7 +42,7 @@ class ExcelAPIView(APIView):
                     "success": load_stream.success_counter,
                     "skipped": load_stream.skipped_counter,
                     "errors": load_stream.error_counter,
-                    "messages": ValidationMeassageSerializer(messages, many=True),
+                    "messages": ValidationMeassageSerializer(messages, many=True).data,
                     "created": {
                         "study_programs": load_stream.programs_created_counter,
                         "disciplines": load_stream.discipline_created_counter,
