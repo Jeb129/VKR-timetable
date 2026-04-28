@@ -65,7 +65,7 @@ def create_welldone_data(data):
             institute_short_name = safe_str(row[9])
             study_program_code = clean_direction_code(row[4])
             study_program_name = safe_str(row[5])
-            study_program_short_name = safe_str(row[5])
+            study_program_short_name = safe_str(row[15]).split(sep="-")[1][:-2]
 
             discipline_name = safe_str(row[12])
             if discipline_name is None:
