@@ -3,8 +3,8 @@ from datetime import date
 import pytest
 
 from api.models import *
-from api.services.redis.storage import RedisDraftStorage
-from api.services.schedule.draft.context import draft_context
+from api.services.drafts.storage import ScheduleDraftStorage
+from api.services.drafts.context import draft_context
 
 
 def init_scenario():
@@ -60,7 +60,7 @@ def test_updated_lesson_fields_are_overridden(redis_client):
     scenario = init_scenario()
     lesson = init_lesson(scenario)
 
-    storage = RedisDraftStorage(scenario.id, user_id=1, redis=redis_client)
+    storage = ScheduleDraftStorage(scenario.id, user_id=1, redis=redis_client)
     storage.update_lesson(lesson.id, {"timeslot": None})
     with draft_context(scenario, storage) as manager:
         draft = Lesson.objects.get(id=lesson.id)
@@ -75,7 +75,7 @@ def test_deleted_lesson_not_visible(redis_client):
     scenario = init_scenario()
     lesson = init_lesson(scenario)
 
-    storage = RedisDraftStorage(scenario.id, user_id=1, redis=redis_client)
+    storage = ScheduleDraftStorage(scenario.id, user_id=1, redis=redis_client)
     storage.delete_lesson(lesson.id)
 
     with draft_context(scenario, storage):
@@ -90,7 +90,7 @@ def test_created_lessons_are_returned(redis_client):
     """
     scenario = ScheduleScenario.objects.create(name="Test Scenario")
 
-    storage = RedisDraftStorage(scenario.id, user_id=1, redis=redis_client)
+    storage = ScheduleDraftStorage(scenario.id, user_id=1, redis=redis_client)
     t1, _ = Timeslot.objects.get_or_create(
         day=1, week_num=1, order_number=1, time_start="08:30", time_end="10:00"
     )
@@ -119,7 +119,7 @@ def test_manager_restored_after_context(redis_client):
     """
     scenario = init_scenario()
 
-    storage = RedisDraftStorage(scenario.id, user_id=1, redis=redis_client)
+    storage = ScheduleDraftStorage(scenario.id, user_id=1, redis=redis_client)
 
     original_manager = Lesson.objects.__class__
 
@@ -143,7 +143,7 @@ def test_m2m_override(redis_client):
 
     lesson.study_groups.add(group1)
 
-    storage = RedisDraftStorage(scenario.id, user_id=1, redis=redis_client)
+    storage = ScheduleDraftStorage(scenario.id, user_id=1, redis=redis_client)
     storage.update_lesson(lesson.id, {"study_groups": [group1.id, group2.id]})
 
     with draft_context(scenario, storage):
@@ -164,7 +164,7 @@ def test_outside_context_no_changes(redis_client):
     scenario = init_scenario()
     lesson = init_lesson(scenario)
 
-    storage = RedisDraftStorage(scenario.id, user_id=1, redis=redis_client)
+    storage = ScheduleDraftStorage(scenario.id, user_id=1, redis=redis_client)
     storage.update_lesson(lesson.id, {"timeslot": 123})  # такого timeslot нет
 
     # ВНЕ контекста — никаких изменений
