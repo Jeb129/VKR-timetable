@@ -114,7 +114,7 @@ const TeacherAdjustmentPage = () => {
     return (
         <div className="flex-col bg-main min-h-screen">
             <nav className="navbar">
-                <div className="logo-white" onClick={() => navigate("/schedule")}>КГУ • ПЕРЕНОС</div>
+                <div className="logo-white" onClick={() => navigate("/")}>КГУ • ПЕРЕНОС</div>
                 <div className="flex-row gap-2 align-center">
                     <label className="text-white" style={{fontSize: '14px'}}>Выбор недели:</label>
                     <input 
