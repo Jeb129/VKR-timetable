@@ -5,6 +5,7 @@ from typing import List, Set
 
 @dataclass
 class PlannedLessonDraft:
+    semester: object
     discipline: object
     lesson_type: object
 
@@ -50,6 +51,8 @@ def make_group_key(load):
             (
                 sg.study_program_id,
                 sg.admission_year,
+                sg.learning_form,
+                sg.learning_stage,
                 sg.group_num,
             )
         )
@@ -58,12 +61,15 @@ def make_group_key(load):
     return ("subgroup", sg.id)
 
 def make_teacher_key(load):
+    if load.discipline.allow_merge_teachers and load.lesson_type.allow_merge_teachers:
+        return None
     return load.teacher_id
 
 def make_final_key(load):
     return (
         make_base_key(load),
         make_group_key(load),
+        make_teacher_key(load)
     )
 
 def generate_planned_lessons(loads):
@@ -81,11 +87,16 @@ def generate_planned_lessons(loads):
         base_key, group_key = key
         any_load = load_group[0]
 
+        lessons_count = any_load.whole_hours / 2
+        weeks = lessons_count / any_load.whole_weeks
+        weeks_2 = math.ceil(weeks*2)
+        whole_weeks =  math.ceil(any_load.whole_hours / weeks_2)
+
         draft = PlannedLessonDraft(
             discipline=any_load.discipline,
             lesson_type=any_load.lesson_type,
-            hours_per_two_weeks=any_load.whole_hours * 2 /max(1,any_load.whole_weeks),
-            weeks_total=any_load.whole_weeks,
+            hours_per_two_weeks=weeks_2,
+            weeks_total=whole_weeks,
         )
 
         for l in load_group:
