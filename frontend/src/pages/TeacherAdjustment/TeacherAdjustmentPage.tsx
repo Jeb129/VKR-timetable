@@ -23,7 +23,7 @@ const TeacherAdjustmentPage = () => {
     // Данные для сетки
     const [timeslots, setTimeslots] = useState<Timeslot[]>([]);
     const [events, setEvents] = useState<MappedEvent[]>([]);
-    const [loading, setLoading] = useState(false);
+    // const [loading, setLoading] = useState(false);
 
     // Управление датой (выбор недели)
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -53,7 +53,7 @@ const TeacherAdjustmentPage = () => {
     const loadSchedule = async () => {
         if (!user?.internal_user) return;
 
-        setLoading(true);
+        // setLoading(true);
         try {
             // Запрашиваем справочник слотов
             const tsData = await dbService.list("timeslots");
@@ -68,7 +68,7 @@ const TeacherAdjustmentPage = () => {
         } catch (err) {
             console.error("Ошибка загрузки расписания");
         } finally {
-            setLoading(false);
+            // setLoading(false);
         }
     };
 

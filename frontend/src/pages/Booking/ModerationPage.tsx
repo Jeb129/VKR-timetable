@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { dbService } from "@/services/crud";
-import type { BookingRequest } from "@/types/booking";
+// import type { BookingRequest } from "@/types/booking";
 import "@/styles/Moderation.css"; 
 
 const ModerationPage = () => {
     const navigate = useNavigate();
-    const [requests, setRequests] = useState<BookingRequest[]>([]);
+    // const [requests, setRequests] = useState<BookingRequest[]>([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
 
@@ -18,7 +18,7 @@ const ModerationPage = () => {
     const [rejectingId, setRejectingId] = useState<number | null>(null);
     const [adminComment, setAdminComment] = useState("");
 
-    const getApiPath = () => tab === "bookings" ? "bookings" : "schedule/adjustments";
+    // const getApiPath = () => tab === "bookings" ? "bookings" : "schedule/adjustments";
 
     const loadRequests = async () => {
         setLoading(true);

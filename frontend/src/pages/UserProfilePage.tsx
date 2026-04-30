@@ -12,7 +12,7 @@ const UserProfilePage = () => {
     const navigate = useNavigate();
     const [myLessons, setMyLessons] = useState<Lesson[]>([]);
     const [myBookings, setMyBookings] = useState<BookingRequest[]>([]);
-    const [loading, setLoading] = useState(true);
+    // const [loading, setLoading] = useState(true);
     const [isVerifying, setIsVerifying] = useState(false);
     const [verifyError, setVerifyError] = useState<string | null>(null);
 
@@ -38,7 +38,7 @@ const UserProfilePage = () => {
                 } catch (err) {
                     console.error("Ошибка при загрузке данных профиля:", err);
                 } finally {
-                    setLoading(false);
+                    // setLoading(false);
                 }
             };
             loadProfileData();

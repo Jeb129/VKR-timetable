@@ -1,4 +1,3 @@
-import type React from "react";
 import type { Lesson } from "./schedule";
 
 export interface ConstraintError {

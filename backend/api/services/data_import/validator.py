@@ -1,5 +1,4 @@
 import re
-import logging
 from dataclasses import dataclass
 
 CODE_REGEX = re.compile(r"^\d+\.\d+\.\d+$")

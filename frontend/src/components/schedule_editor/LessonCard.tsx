@@ -1,6 +1,5 @@
 import type { Lesson } from "@/types/schedule";
 import "@/styles/LessonCard.css";
-import { WEEK_DAYS } from "@/types/enums";
 
 interface LessonCardProps {
   lesson: Lesson;
