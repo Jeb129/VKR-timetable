@@ -15,20 +15,6 @@ const HomePage = () => {
             show: true
         },
         {
-            title: "Бронирование",
-            desc: "Заявка на свободное время в аудиториях для проведения мероприятий.",
-            path: "/Booking",
-            color: "var(--p-green)",
-            show: true
-        },
-        {
-            title: "Перенос занятий",
-            desc: "Инструмент для преподавателей по разовому изменению времени пары.",
-            path: "/TeacherAdjustment",
-            color: "var(--p-orange)",
-            show: true
-        },
-        {
             title: "Модерация",
             desc: "Управление входящими заявками на бронирование и перенос.",
             path: "/Moderation",
@@ -46,7 +32,7 @@ const HomePage = () => {
             title: "Импорт нагрузки",
             desc: "Загрузка учебных планов из Excel файлов в систему.",
             path: "/AcademicLoad",
-            color: "var(--p-blue)",
+            color: "var(--p-green)",
             show: true
         }
     ];

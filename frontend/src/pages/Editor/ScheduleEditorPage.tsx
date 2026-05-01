@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { type SelectOption } from "@/types/ui";
 import SearchSelect from "@/components/UI/SearchSelect";
 import { useNavigate,useParams } from "react-router-dom";
@@ -7,7 +7,7 @@ import { DAYS,type Lesson, type Timeslot } from "@/types/schedule";
 import "@/styles/Editor.css";
 import { scheduleDraftService } from "@/services/schedule_editor";
 import LessonErrorItem from "@/components/schedule_editor/LessonError";
-import type { ConstraintError, LessonError } from "@/types/constraint";
+import type { LessonError } from "@/types/constraint";
 import { LessonCard } from "@/components/schedule_editor/LessonCard";
 
 const ScheduleEditorPage = () => {
