@@ -3,9 +3,10 @@
 from django.db import models
 
 from api.models import enums
+from api.models.academic_load import Lesson
 from api.models.buildings import Classroom
-from api.models.education_subjects import Teacher
-from api.models.schedule import Discipline, Lesson, LessonType, Timeslot
+from api.models.education_subjects import Discipline, LessonType, Teacher
+from api.models.schedule import Timeslot
 from authentification.models import CustomUser
 
 

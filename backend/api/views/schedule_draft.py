@@ -8,7 +8,7 @@ from rest_framework.decorators import action
 from api.models import Lesson
 from api.serializers import LessonSerializer
 from api.serializers.schedule import ConstraintErrorSerializer
-from api.services.constraunt.manager import ScheduleManager
+from api.services.schedule.manager import ScheduleManager
 
 from config.utils import normalize_diff
 

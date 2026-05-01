@@ -1,21 +1,21 @@
-import { useState, useEffect, useMemo } from "react";
-import { type SelectOption } from "@/types/ui";
-import SearchSelect from "@/components/UI/SearchSelect";
-import { useNavigate,useParams } from "react-router-dom";
-import { dbService } from "@/services/crud";
-import { DAYS,type Lesson, type Timeslot } from "@/types/schedule";
-import "@/styles/Editor.css";
-import { scheduleDraftService } from "@/services/schedule_editor";
-import LessonErrorItem from "@/components/schedule_editor/LessonError";
-import type { LessonError } from "@/types/constraint";
 import { LessonCard } from "@/components/schedule_editor/LessonCard";
+import LessonErrorItem from "@/components/schedule_editor/LessonError";
+import SearchSelect from "@/components/UI/SearchSelect";
+import { dbService } from "@/services/crud";
+import { scheduleDraftService } from "@/services/schedule_editor";
+import "@/styles/Editor.css";
+import type { LessonError } from "@/types/constraint";
+import { DAYS, type Lesson, type Timeslot } from "@/types/schedule";
+import { type SelectOption } from "@/types/ui";
+import { useEffect, useMemo, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
 
 const ScheduleEditorPage = () => {
     const { scenarioId } = useParams();
     const navigate = useNavigate();
 
     // Справочники
-    const [scenarios, setScenarios] = useState<any[]>([]);
+    // const [scenarios, setScenarios] = useState<any[]>([]);
     const [timeslots, setTimeslots] = useState<Timeslot[]>([]);
     const [groups, setGroups] = useState<any[]>([]);
     const [teachers, setTeachers] = useState<any[]>([]);
@@ -30,7 +30,7 @@ const ScheduleEditorPage = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
     const [lessons, setLessons] = useState<Lesson[]>([]);
-    const [loading, setLoading] = useState(false);
+    // const [loading, setLoading] = useState(false);
     const [isChecking, setIsChecking] = useState(false);
 
     const targetOptions: SelectOption[] = useMemo(() => {
@@ -41,13 +41,13 @@ const ScheduleEditorPage = () => {
 
     useEffect(() => {
         const init = async () => {
-            const [sc, ts, gr, tr] = await Promise.all([
+            const [ ts, gr, tr] = await Promise.all([
                 dbService.list("scenarios"),
                 dbService.list("timeslots"),
                 dbService.list("groups"),
                 dbService.list("teachers")
             ]);
-            setScenarios(sc);
+            // setScenarios(sc);
             setTimeslots(ts);
             setGroups(gr);
             setTeachers(tr);
@@ -58,7 +58,7 @@ const ScheduleEditorPage = () => {
     // Загрузка черновика из Redis
     const loadDraft = async () => {
         if (!scenarioId || !targetId) return;
-        setLoading(true);
+        // setLoading(true);
         try {
             const data = filterType === "group" ? 
                 await scheduleDraftService.getGroupLessons(Number(scenarioId),Number(targetId)) :
@@ -69,7 +69,7 @@ const ScheduleEditorPage = () => {
         } catch (err) {
             console.error(err);
         } finally {
-            setLoading(false);
+            // setLoading(false);
         }
     };
 

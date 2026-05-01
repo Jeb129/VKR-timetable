@@ -1,12 +1,12 @@
 from typing import Dict, Any, List
 from django.db import transaction
 
-from api.models.schedule import Lesson
-from api.services.redis.storage import RedisDraftStorage
+from api.models import Lesson
+from api.services.drafts.storage import ScheduleDraftStorage
 
 
 # 1. Сохранение всех изменений сценария
-def commit_scenario(storage: RedisDraftStorage):
+def commit_scenario(storage: ScheduleDraftStorage):
     """
     Применяет все черновые изменения к БД:
     - обновляет существующие Lesson
@@ -58,7 +58,7 @@ def commit_scenario(storage: RedisDraftStorage):
 
 
 # 2. Сохранение отдельного занятия
-def commit_lesson(storage: RedisDraftStorage, lesson_id: int):
+def commit_lesson(storage: ScheduleDraftStorage, lesson_id: int):
     """
     Применяет изменения конкретного Lesson из Redis в БД.
     """
@@ -74,7 +74,7 @@ def commit_lesson(storage: RedisDraftStorage, lesson_id: int):
 
 
 # 3. Откат одного занятия
-def rollback_lesson(storage: RedisDraftStorage, lesson_id: int):
+def rollback_lesson(storage: ScheduleDraftStorage, lesson_id: int):
     """
     Удаляет diff и пометку removed для одного Lesson.
     """
@@ -86,13 +86,13 @@ def rollback_lesson(storage: RedisDraftStorage, lesson_id: int):
 
 
 # 4. Откат нескольких занятий
-def rollback_many(storage: RedisDraftStorage, lesson_ids: List[int]):
+def rollback_many(storage: ScheduleDraftStorage, lesson_ids: List[int]):
     for lesson_id in lesson_ids:
         rollback_lesson(storage, lesson_id)
 
 
 # 5. Откат всей сессии
-def rollback_all(storage: RedisDraftStorage):
+def rollback_all(storage: ScheduleDraftStorage):
     storage.clear()
 
 

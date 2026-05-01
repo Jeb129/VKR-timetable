@@ -8,9 +8,9 @@ from django.shortcuts import get_object_or_404
 from api.models import Lesson, ScheduleScenario
 # from api.serializers.education import LessonSerializer
 from api.services.data_import.loaders import export_loading
-from api.services.redis.storage import RedisDraftStorage
-from api.services.constraunt.manager import ScheduleManager
-from api.services.schedule.draft.context import draft_context
+from api.services.drafts.storage import ScheduleDraftStorage
+from api.services.schedule.manager import ScheduleManager
+from api.services.drafts.context import draft_context
 from config.utils import normalize_diff
 from api.models import AcademicLoad
 
@@ -28,7 +28,7 @@ class TestDraftScenarioView(APIView):
         lesson_id = 1
         # lesson_id = self.request.query_params.get("lesson_id")
         get_object_or_404(ScheduleScenario, id=scenario_id)
-        storage = RedisDraftStorage(scenario_id, 0)
+        storage = ScheduleDraftStorage(scenario_id, 0)
 
         # Готовый метод в ConstraintManager
         errors= ScheduleManager().load().update_lesson_draft(
@@ -42,5 +42,5 @@ class TestDraftScenarioView(APIView):
             "errors": [e for e in errors],
         })
     def post(self, request):
-        RedisDraftStorage(1,1).clear_all()
+        ScheduleDraftStorage(1,1).clear_all()
         return Response(status=status.HTTP_200_OK)

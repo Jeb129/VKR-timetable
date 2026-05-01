@@ -3,7 +3,7 @@ import { type SelectOption } from "@/types/ui";
 import SearchSelect from "@/components/UI/SearchSelect";
 import { useNavigate } from "react-router-dom";
 import { dbService } from "@/services/crud";
-import { type MappedEvent } from "@/types/schedule";
+import { type MappedEvent} from "@/types/schedule";
 import type { Classroom } from "@/types/classroom";
 import "@/styles/Schedule.css";
 

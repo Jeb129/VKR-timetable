@@ -4,9 +4,9 @@ from typing import List
 from api.models import Constraint, Lesson
 from api.services.constraunt.constraints import registry
 from api.services.constraunt.meta import ConstraintError
-from api.services.redis.storage import RedisDraftStorage
-from api.services.schedule.draft.commit import commit_lesson, commit_scenario
-from api.services.schedule.draft.context import draft_context
+from api.services.drafts.storage import ScheduleDraftStorage
+from api.services.drafts.commit import commit_lesson, commit_scenario
+from api.services.drafts.context import draft_context
 from authentification.models import CustomUser
 
 logger = logging.getLogger("constraints")
@@ -31,7 +31,7 @@ class ScheduleManager:
 
         self.scenario_id=scenario_id
         self.user=user
-        self.storage = RedisDraftStorage(scenario_id=scenario_id,user_id=user.id)
+        self.storage = ScheduleDraftStorage(scenario_id=scenario_id,user_id=user.id)
 
 
     def init_constraints(self):

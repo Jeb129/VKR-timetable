@@ -68,7 +68,7 @@ class StudyGroup(models.Model):
         StudyProgram, on_delete=models.CASCADE, verbose_name="Направление подготовки"
     )
     learning_form = models.CharField(max_length=20, verbose_name="Форма обучения")
-    learning_stage = models.CharField(max_length=20, verbose_name="Уровень подготовки")
+    learning_stage = models.CharField(max_length=100, verbose_name="Уровень подготовки")
     group_num = models.CharField(max_length=5, verbose_name="Номер группы")
     sub_groups = models.ManyToManyField("self", symmetrical=True, blank=True)
     sub_group_num = models.PositiveIntegerField(
@@ -86,6 +86,7 @@ class StudyGroup(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
+        # print(f"{str(self.admission_year)[-2:]}-{self.study_program.short_name}{self.learning_stage.lower()[0]}{self.learning_form.lower()[0]}-{self.group_num}{f" п/г {self.sub_group_num}" if self.sub_group_num else ""}")
         self.name = f"{str(self.admission_year)[-2:]}-{self.study_program.short_name}{self.learning_stage.lower()[0]}{self.learning_form.lower()[0]}-{self.group_num}{f" п/г {self.sub_group_num}" if self.sub_group_num else ""}"
         super().save(*args, **kwargs)
 

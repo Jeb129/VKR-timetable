@@ -5,7 +5,7 @@ from uuid import uuid4
 from django_redis import get_redis_connection
 
 
-class RedisDraftStorage:
+class ScheduleDraftStorage:
     """
     Хранилище черновиков расписания в Redis.
 

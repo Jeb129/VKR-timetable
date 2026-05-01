@@ -1,5 +1,5 @@
 from django.db.models import QuerySet, Q
-from api.services.redis.storage import RedisDraftStorage
+from api.services.drafts.storage import ScheduleDraftStorage
 
 class DraftFilters:
     """
@@ -141,7 +141,7 @@ class DraftFilters:
     
 
 class DraftOverlayEngine:
-    def __init__(self, model, storage: RedisDraftStorage):
+    def __init__(self, model, storage: ScheduleDraftStorage):
         self.model = model
         self.storage = storage
 
@@ -231,7 +231,7 @@ class DraftLessonQuerySet(QuerySet):
     # Создание queryset
     # ---------------------------------------
 
-    def __init__(self, *args, storage: RedisDraftStorage=None, scenario_id=None,**kwargs):
+    def __init__(self, *args, storage: ScheduleDraftStorage=None, scenario_id=None,**kwargs):
         super().__init__(*args,**kwargs)
         self.storage = storage
         self.scenario_id = scenario_id
