@@ -73,8 +73,9 @@ const UserProfilePage = () => {
     return (
         <div className="flex-col bg-main min-h-screen m-0 p-0"> 
             <nav className="navbar">
-                <div className="logo-white" onClick={() => navigate("/schedule")}>КГУ</div>
+                <div className="logo-white" onClick={() => navigate("/")}>КГУ</div>
                 <div className="flex-row gap-10">
+                    <button className="btn nav-btn" onClick={() => navigate("/")}>Главная</button>
                     <button className="btn nav-btn" onClick={() => navigate("/schedule")}>К расписанию</button>
                     <button className="btn nav-btn btn-red" onClick={logout}>Выйти</button>
                 </div>

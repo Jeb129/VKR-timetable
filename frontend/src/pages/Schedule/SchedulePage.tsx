@@ -120,7 +120,7 @@ const SchedulePage = () => {
     return (
         <div className="flex-col bg-main min-h-screen">
             <nav className="navbar">
-                <div className="logo-white" onClick={() => navigate("/schedule")}>КГУ</div>
+                <div className="logo-white" onClick={() => navigate("/")}>КГУ</div>
                 <div className="nav-actions">
                     <button className="btn nav-btn" onClick={() => navigate("/profile")}>Профиль</button>
                     <button className="btn nav-btn btn-red" onClick={() => navigate("/login")}>Выход</button>

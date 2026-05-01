@@ -134,7 +134,7 @@ const ScheduleEditorPage = () => {
     return (
         <div className="flex-col bg-main min-h-screen">
             <nav className="navbar">
-                <div className="logo-white" onClick={() => navigate("/schedule")}>КГУ • РЕДАКТОР</div>
+                <div className="logo-white" onClick={() => navigate("/")}>КГУ • РЕДАКТОР</div>
                 <div className="flex-row gap-2">
                     <div className="week-switcher flex-row gap-1 bg-white p-1 rounded-md">
                         <button className={`btn ${currentWeek === 1 ? 'btn-primary' : 'btn-outline'}`} onClick={() => setCurrentWeek(1)}>Числитель</button>

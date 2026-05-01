@@ -66,7 +66,7 @@ const AcademicLoadImportPage = () => {
     return (
         <div className="flex-col bg-main min-h-screen">
             <nav className="navbar">
-                <div className="logo-white" onClick={() => navigate("/schedule")}>КГУ • АДМИН</div>
+                <div className="logo-white" onClick={() => navigate("/")}>КГУ • АДМИН</div>
                 <button className="btn nav-btn" onClick={() => navigate("/profile")}>В профиль</button>
             </nav>
 

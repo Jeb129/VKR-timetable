@@ -97,7 +97,7 @@ const ModerationPage = () => {
             {/* ХЕДЕР С ТАБАМИ */}
             <nav className="navbar">
                 <div className="flex-row align-center gap-3">
-                    <div className="logo-white" onClick={() => navigate("/schedule")}>КГУ • МОДЕРАЦИЯ</div>
+                    <div className="logo-white" onClick={() => navigate("/")}>КГУ • МОДЕРАЦИЯ</div>
                     <div className="flex-row gap-1 ml-2">
                         <button 
                             className={`btn nav-btn ${tab === "bookings" ? "btn-primary" : ""}`} 

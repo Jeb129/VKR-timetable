@@ -64,7 +64,7 @@ const ScenarioSelectionPage = () => {
     return (
         <div className="flex-col bg-main min-h-screen">
             <nav className="navbar">
-                <div className="logo-white" onClick={() => navigate("/schedule")}>КГУ • СЦЕНАРИИ</div>
+                <div className="logo-white" onClick={() => navigate("/")}>КГУ • СЦЕНАРИИ</div>
                 <div className="flex-row gap-2">
                     <button className="btn nav-btn" onClick={() => navigate("/schedule")}>К расписанию</button>
                     <button className="btn nav-btn" onClick={() => navigate("/profile")}>В профиль</button>

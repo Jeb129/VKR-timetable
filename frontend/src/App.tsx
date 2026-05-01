@@ -10,6 +10,7 @@ import ScheduleEditorPage from "./pages/Editor/ScheduleEditorPage";
 import ScenarioSelectionPage from "./pages/Editor/ScenarioSelectionPage";
 import TeacherAdjustmentPage from "./pages/TeacherAdjustment/TeacherAdjustmentPage"
 import AcademicLoadImportPage from "./pages/AcademicLoad/AcademicLoadImportPage"
+import HomePage from "./pages/HomePage";
 
 import './App.css'
 
@@ -17,7 +18,7 @@ import './App.css'
 const App = () =>
   <>
     <Routes>
-      <Route path="/" element={<Navigate to="/login" replace />} />
+      <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
