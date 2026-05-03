@@ -34,6 +34,13 @@ const HomePage = () => {
             path: "/AcademicLoad",
             color: "var(--p-green)",
             show: true
+        },
+        {
+            title: "Статистика аудиторий",
+            desc: "Просмотр актуальной нагрузки на аудитории",
+            path: "/Statistics",
+            color: "var(--p-orange)",
+            show: true
         }
     ];
 

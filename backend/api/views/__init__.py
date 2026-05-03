@@ -10,3 +10,5 @@ from .booking import BookingViewSet
 from .building import ClassroomViewSet
 from .schedule_draft import DraftLessonViewSet
 from .lesson import StudyGroupViewSet, TeacherViewSet
+from .academic_load import ExcelAPIView
+from .statistics import BuildingLoadView
