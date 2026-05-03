@@ -2,12 +2,13 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { dbService } from "@/services/crud";
 import { useAuth } from "@/context/AuthContext";
-import Modal from "@/components/UI/Modal";
+import { useModal } from "@/context/ModalContext";
+import SearchSelect from "@/components/UI/SearchSelect";
 import type { MappedEvent, Timeslot } from "@/types/schedule";
 import { DAYS } from "@/types/schedule";
+import type { Classroom } from "@/types/classroom";
 import "@/styles/Editor.css";
 
-// Функция для вычисления номера недели (для числителя/знаменателя)
 const getISOWeek = (date: Date) => {
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
     const dayNum = d.getUTCDay() || 7;
@@ -19,29 +20,32 @@ const getISOWeek = (date: Date) => {
 const TeacherAdjustmentPage = () => {
     const { user } = useAuth();
     const navigate = useNavigate();
+    const { openModal, closeModal } = useModal();
 
-    // Данные для сетки
     const [timeslots, setTimeslots] = useState<Timeslot[]>([]);
+    const [classrooms, setClassrooms] = useState<Classroom[]>([]);
     const [events, setEvents] = useState<MappedEvent[]>([]);
-    // const [loading, setLoading] = useState(false);
-
-    // Управление датой (выбор недели)
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [loading, setLoading] = useState(false);
 
-    // Состояния для модального окна причины
-    const [isModalOpen, setIsModalOpen] = useState(false);
-    const [reason, setReason] = useState("");
-    const [pendingMove, setPendingMove] = useState<{ lessonId: number, slotId: number, date: string } | null>(null);
+    // Загрузка справочников
+    useEffect(() => {
+        const init = async () => {
+            const [ts, rooms] = await Promise.all([
+                dbService.list("timeslots"),
+                dbService.list("classrooms")
+            ]);
+            setTimeslots(ts);
+            setClassrooms(rooms);
+        };
+        init();
+    }, []);
 
-    const [error, setError] = useState<string | null>(null);
-
-    // 1. Вычисляем даты Пн-Сб для недели, в которую входит selectedDate
     const weekDays = useMemo(() => {
         const current = new Date(selectedDate);
         const day = current.getDay(); 
-        const diff = current.getDate() - day + (day === 0 ? -6 : 1); // Находим понедельник
+        const diff = current.getDate() - day + (day === 0 ? -6 : 1);
         const monday = new Date(new Date(selectedDate).setDate(diff));
-
         return DAYS.map((d, index) => {
             const date = new Date(monday);
             date.setDate(monday.getDate() + index);
@@ -49,63 +53,111 @@ const TeacherAdjustmentPage = () => {
         });
     }, [selectedDate]);
 
-    // 2. Загрузка данных (Используем request.user на бэкенде)
     const loadSchedule = async () => {
-        if (!user?.internal_user) return;
-
-        // setLoading(true);
+        const teacherId = (user as any)?.teacher_id;
+        if (!teacherId) return;
+        setLoading(true);
         try {
-            // Запрашиваем справочник слотов
-            const tsData = await dbService.list("timeslots");
-            setTimeslots(tsData);
-
-            // Запрашиваем расписание текущего пользователя 
             const scheduleData = await dbService.list("schedule/teacher/my", {
                 date_from: weekDays[0].date,
                 date_to: weekDays[5].date
             });
             setEvents(scheduleData);
-        } catch (err) {
-            console.error("Ошибка загрузки расписания");
-        } finally {
-            // setLoading(false);
-        }
+        } finally { setLoading(false); }
     };
 
     useEffect(() => { loadSchedule(); }, [selectedDate, user]);
 
-    // 3. Логика Drag-and-Drop
-    const onDragStart = (e: React.DragEvent, lessonId: number) => {
-        e.dataTransfer.setData("lessonId", String(lessonId));
+    // --- ЛОГИКА ОТКРЫТИЯ МОДАЛКИ ЧЕРЕЗ КОНТЕКСТ ---
+    const openAdjustmentModal = (lesson: any, initialSlotId: number, initialDate: string) => {
+        // Создаем локальное состояние для формы ВНУТРИ функции, 
+        // которое будет обновляться при перерисовке контента модалки
+        // Но в React Context лучше передать отдельный компонент формы.
+        
+        const AdjustmentForm = () => {
+            const [formData, setFormData] = useState({
+                date: initialDate,
+                timeslot: initialSlotId,
+                classroom: lesson.classroom_id || classrooms[0]?.id,
+                reason: ""
+            });
+
+            const handleSend = async () => {
+                if (!formData.reason.trim()) return alert("Укажите причину");
+                try {
+                    await dbService.create("schedule/adjustment", {
+                        lesson_id: lesson.id,
+                        timeslot_id: formData.timeslot,
+                        date: formData.date,
+                        classroom_id: formData.classroom, 
+                        description: formData.reason
+                    });
+                    closeModal();
+                    loadSchedule();
+                } catch (e) { alert("Ошибка сервера"); }
+            };
+
+            return (
+                <div className="flex-col gap-2">
+                    <div className="flex-col">
+                        <label className="filter-label">Дата переноса</label>
+                        <input 
+                            type="date" 
+                            className="input-styled" 
+                            value={formData.date}
+                            onChange={e => setFormData({...formData, date: e.target.value})}
+                        />
+                    </div>
+
+                    <div className="flex-col">
+                        <label className="filter-label">Время (Таймслот)</label>
+                        <SearchSelect 
+                            options={timeslots
+                                .filter(t => t.day === (new Date(formData.date).getDay() || 7)) 
+                                .map(t => ({ value: t.id, label: `${t.order_number} пара (${t.time_start.substring(0,5)})` }))
+                            }
+                            value={formData.timeslot}
+                            onChange={val => setFormData({...formData, timeslot: Number(val)})}
+                        />
+                    </div>
+
+                    <div className="flex-col">
+                        <label className="filter-label">Аудитория</label>
+                        <SearchSelect 
+                            options={classrooms.map(c => ({ value: c.id, label: c.num }))}
+                            value={formData.classroom}
+                            onChange={val => setFormData({...formData, classroom: Number(val)})}
+                        />
+                    </div>
+
+                    <div className="flex-col">
+                        <label className="filter-label">Причина</label>
+                        <textarea 
+                            className="input-styled" 
+                            rows={3}
+                            value={formData.reason}
+                            onChange={e => setFormData({...formData, reason: e.target.value})}
+                        />
+                    </div>
+
+                    <button className="btn btn-green w-100 mt-1" onClick={handleSend}>Отправить заявку</button>
+                </div>
+            );
+        };
+
+        openModal({
+            title: `Перенос: ${lesson.discipline_name}`,
+            width: '550px',
+            content: <AdjustmentForm />
+        });
     };
 
     const onDrop = (e: React.DragEvent, slotId: number, date: string) => {
         e.preventDefault();
         const lessonId = Number(e.dataTransfer.getData("lessonId"));
-        
-        setPendingMove({ lessonId, slotId, date });
-        setReason("");
-        setIsModalOpen(true); 
-    };
-
-    const confirmAdjustment = async () => {
-        if (!pendingMove || !reason.trim()) {
-            setError("Пожалуйста, укажите причину переноса");
-            return;
-        }
-        setError(null); // Сброс старой ошибки
-
-        try {
-            await dbService.create("schedule/adjustment", {
-                lesson_id: pendingMove.lessonId,
-                timeslot_id: pendingMove.slotId,
-                date: pendingMove.date,
-                description: reason
-            });
-            setIsModalOpen(false);
-            loadSchedule();
-        } catch (err: any) {
-            setError(err.response?.data?.error || "Сервер отклонил запрос на перенос");
+        const lesson = events.find(ev => ev.extendedProps.event.id === lessonId);
+        if (lesson) {
+            openAdjustmentModal(lesson.extendedProps.event, slotId, date);
         }
     };
 
@@ -116,102 +168,56 @@ const TeacherAdjustmentPage = () => {
             <nav className="navbar">
                 <div className="logo-white" onClick={() => navigate("/")}>КГУ • ПЕРЕНОС</div>
                 <div className="flex-row gap-2 align-center">
-                    <label className="text-white" style={{fontSize: '14px'}}>Выбор недели:</label>
-                    <input 
-                        type="date" 
-                        className="btn nav-btn" 
-                        style={{background: 'white', color: 'var(--p-blue)'}}
-                        value={selectedDate}
-                        onChange={(e) => setSelectedDate(e.target.value)}
-                    />
+                    <input type="date" className="btn nav-btn" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
                     <button className="btn nav-btn" onClick={() => navigate("/profile")}>В профиль</button>
                 </div>
             </nav>
 
             <div className="p-3 flex-col gap-2">
-                <div className="card p-0 overflow-x-auto shadow-sm">
-                    <table className="editor-grid">
-                        <thead>
-                            <tr>
-                                <th style={{width: '100px'}}>Пара</th>
-                                {weekDays.map(day => (
-                                    <th key={day.id}>
-                                        {day.name} <br/>
-                                        <small>{new Date(day.date).toLocaleDateString('ru-RU')}</small>
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {orderNumbers.map(orderNum => (
-                                <tr key={orderNum}>
-                                    <td className="time-cell">
-                                        <b>{orderNum}</b>
-                                        <div className="time-range">{timeslots.find(t => t.order_number === orderNum)?.time_start.substring(0,5)}</div>
-                                    </td>
-                                    {weekDays.map(day => {
-                                        // Считаем неделю для конкретной даты в столбце
-                                        const weekNum = getISOWeek(new Date(day.date)) % 2 !== 0 ? 1 : 2;
-                                        
-                                        // Ищем слот
-                                        const slot = timeslots.find(t => t.day === day.id && t.order_number === orderNum && t.week_num === weekNum);
-                                        
-                                        // Ищем событие именно на эту дату и этот номер пары
-                                        const event = events.find(e => e.start.startsWith(day.date) && e.extendedProps.event.order === orderNum);
-
-                                        return (
-                                            <td 
-                                                key={day.id} 
-                                                className={`grid-cell ${!slot ? 'disabled' : ''}`}
-                                                onDragOver={e => e.preventDefault()}
-                                                onDrop={e => slot && onDrop(e, slot.id, day.date)}
-                                            >
-                                                {event ? (
-                                                    <div 
-                                                        className="draggable-lesson card" 
-                                                        draggable 
-                                                        onDragStart={e => onDragStart(e, event.extendedProps.event.id)}
-                                                    >
-                                                        <div className="subject-short">{event.extendedProps.event.discipline_name}</div>
-                                                        <div className="info-short">{event.extendedProps.event.classroom_name}</div>
-                                                    </div>
-                                                ) : slot && <div className="empty-slot-plus">+</div>}
-                                            </td>
-                                        );
-                                    })}
+                {loading ? <div className="card text-center">Загрузка...</div> : (
+                    <div className="card p-0 overflow-x-auto shadow-sm">
+                        <table className="editor-grid">
+                            <thead>
+                                <tr>
+                                    <th style={{width: '100px'}}>Пара</th>
+                                    {weekDays.map(day => (
+                                        <th key={day.id}>{day.name}<br/><small>{new Date(day.date).toLocaleDateString('ru-RU')}</small></th>
+                                    ))}
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+                            </thead>
+                            <tbody>
+                                {orderNumbers.map(orderNum => (
+                                    <tr key={orderNum}>
+                                        <td className="time-cell">
+                                            <b>{orderNum}</b>
+                                            <div className="time-range">{timeslots.find(t => t.order_number === orderNum)?.time_start.substring(0,5)}</div>
+                                        </td>
+                                        {weekDays.map(day => {
+                                            const weekNum = getISOWeek(new Date(day.date)) % 2 !== 0 ? 1 : 2;
+                                            const slot = timeslots.find(t => t.day === day.id && t.order_number === orderNum && t.week_num === weekNum);
+                                            const event = events.find(e => e.start.startsWith(day.date) && e.extendedProps.event.order === orderNum);
 
-            <Modal 
-                isOpen={isModalOpen} 
-                onClose={() => setIsModalOpen(false)} 
-                title="Заявка на перенос занятия"
-                footer={
-                    <>
-                        <button className="btn btn-green f-1" onClick={confirmAdjustment}>Отправить модератору</button>
-                        <button className="btn btn-outline f-1" onClick={() => setIsModalOpen(false)}>Отмена</button>
-                    </>
-                }
-            >
-                <div className="flex-col gap-1">
-                    {error && <div className="error mb-1 fade-in" style={{fontSize: '13px'}}>{error}</div>}
-                    <p className="text-muted" style={{fontSize: '14px'}}>
-                        Вы переносите занятие на <strong>{pendingMove ? new Date(pendingMove.date).toLocaleDateString('ru-RU') : ''}</strong>.
-                    </p>
-                    <label className="filter-label">Укажите причину:</label>
-                    <textarea 
-                        className="input-styled" 
-                        rows={4} 
-                        value={reason}
-                        onChange={(e) => setReason(e.target.value)}
-                        placeholder="Например: Перенос по согласованию с учебной группой..."
-                    />
-                </div>
-            </Modal>
+                                            return (
+                                                <td key={day.id} className={`grid-cell ${!slot ? 'disabled' : ''}`}
+                                                    onDragOver={e => e.preventDefault()}
+                                                    onDrop={e => slot && onDrop(e, slot.id, day.date)}>
+                                                    {event ? (
+                                                        <div className="draggable-lesson card" draggable 
+                                                             onDragStart={e => e.dataTransfer.setData("lessonId", String(event.extendedProps.event.id))}>
+                                                            <div className="subject-short">{event.extendedProps.event.discipline_name}</div>
+                                                            <div className="info-short">{event.extendedProps.event.classroom_name}</div>
+                                                        </div>
+                                                    ) : slot && <div className="empty-slot-plus">+</div>}
+                                                </td>
+                                            );
+                                        })}
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </div>
+                )}
+            </div>
         </div>
     );
 };

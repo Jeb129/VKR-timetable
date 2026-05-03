@@ -41,7 +41,6 @@ const StatsPage = () => {
 
                             <div className="flex-row space-between text-muted" style={{ fontSize: '0.85rem' }} >
                                 <span>Аудиторий: {b.rooms_count}</span>
-                                
                                 <span>Занятий в неделю: {b.lessons_count}</span>
                             </div>
                         </div>

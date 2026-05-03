@@ -42,3 +42,51 @@
     transform: translateY(-5px);
     border-color: var(--p-orange);
 }
+
+.daily-chart-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    height: 150px;
+    padding: 10px 0;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.day-column {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex: 1;
+    gap: 8px;
+}
+
+.vertical-bar-bg {
+    width: 20px;
+    height: 100px;
+    background-color: var(--p-blue-light);
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+.vertical-bar-fill {
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    background-color: var(--p-blue);
+    transition: height 0.5s ease-out;
+}
+
+.day-label {
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--p-blue);
+    text-transform: uppercase;
+}
+
+.week-title-mini {
+    font-size: 12px;
+    font-weight: 700;
+    margin-bottom: 10px;
+    color: var(--text-muted);
+}
