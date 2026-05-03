@@ -4,9 +4,18 @@ import re
 import logging
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
-from api.models.schedule import Semester, Lesson, ScheduleScenario, Timeslot
-from api.models.education_subjects import Institute, StudyProgram, Discipline, LessonType, StudyGroup, Teacher
-from api.models.buildings import Classroom
+from api.models import (
+    Semester, 
+    ScheduleScenario, 
+    Timeslot,
+    Lesson, 
+    Institute, 
+    StudyProgram, 
+    Discipline, 
+    LessonType, 
+    StudyGroup, 
+    Teacher,
+    Classroom)
 
 logger = logging.getLogger(__name__)
 
