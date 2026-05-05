@@ -49,10 +49,14 @@ class ScheduleManager:
             logger.debug("Успешная инициализация ограничения %s", c.name)
         return self
     
-    def check_lesson(self, lesson):
+    def check_lesson(self, lesson, constraint_name = None):
         """Проверяет занятие в сценарии по всем ограничениям"""
         errors = []
-        for c in self.constraints:
+        if constraint_name:
+            constraints = [c for c in self.constraints if c.name == constraint_name]
+        else:
+            constraints = self.constraints
+        for c in constraints:
             func = self.methods.get(c.name)
             if func is None:
                 continue

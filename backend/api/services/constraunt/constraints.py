@@ -15,7 +15,7 @@ from api.services.constraunt.meta import *
 # Приоритет для определенных записей академического плана (чтобы физра не в середине дня была)
 
 
-@constraint("teacher_no_overlap")
+@constraint("teacher_no_overlap",isHard=True)
 def teacher_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
     teacher_ids = lesson.teachers.values_list("id", flat=True)
     slot = lesson.timeslot
@@ -60,7 +60,7 @@ def teacher_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
     )
 
 
-@constraint("group_no_overlap")
+@constraint("group_no_overlap",isHard=True)
 def group_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
     groups_ids = lesson.study_groups.values_list("id", flat=True)
     slot = lesson.timeslot
@@ -96,7 +96,7 @@ def group_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
     )
 
 
-@constraint("room_no_overlap")
+@constraint("room_no_overlap",isHard=True)
 def room_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
     room_id = lesson.classroom.id  # type: ignore
     slot = lesson.timeslot
@@ -119,7 +119,7 @@ def room_no_overlap(lesson: Lesson, *, weight) -> ConstraintError:
     )
 
 
-@constraint("room_has_enough_seats")
+@constraint("room_has_enough_seats",isHard=True)
 def room_has_enough_seats(lesson: Lesson, *, weight) -> ConstraintError:
     classroom = lesson.classroom
     if not classroom:
@@ -139,7 +139,7 @@ def room_has_enough_seats(lesson: Lesson, *, weight) -> ConstraintError:
     )
 
 
-@constraint("room_meets_equipment_requirements")
+@constraint("room_meets_equipment_requirements",isHard=True)
 def room_meets_equipment_requirements(lesson: Lesson, *, weight) -> ConstraintError:
 
     # Аудитория занятия

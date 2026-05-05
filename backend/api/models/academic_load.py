@@ -4,41 +4,78 @@ from api.models.buildings import Classroom
 from api.models.education_subjects import Discipline, LessonType, StudyGroup, Teacher
 from api.models.schedule import Semester, Timeslot
 
+
 class Lesson(models.Model):
     """Финальное расписание (Таблица ключей)"""
 
     scenario = models.ForeignKey(
-        "ScheduleScenario", on_delete=models.CASCADE, related_name="lessons"
+        "ScheduleScenario",
+        on_delete=models.CASCADE,
+        related_name="lessons",
+        verbose_name="сценарий",
     )
-    discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE)
-    lesson_type = models.ForeignKey(LessonType, on_delete=models.CASCADE)
+    discipline = models.ForeignKey(
+        Discipline, on_delete=models.CASCADE, verbose_name="дисциплина"
+    )
+    lesson_type = models.ForeignKey(
+        LessonType, on_delete=models.CASCADE, verbose_name="вид занятия"
+    )
     timeslot = models.ForeignKey(
-        Timeslot, on_delete=models.SET_NULL, null=True, blank=True
+        Timeslot,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        verbose_name="слот расписания",
     )
-    classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE)
-    teachers = models.ManyToManyField(Teacher)
+    classroom = models.ForeignKey(
+        Classroom, on_delete=models.CASCADE, verbose_name="аудитория"
+    )
+    teachers = models.ManyToManyField(Teacher, verbose_name="преподаватели")
 
-    # Ограничение: В одном занятии нельзя объединять несколько
-    study_groups = models.ManyToManyField(StudyGroup)
+    study_groups = models.ManyToManyField(StudyGroup, verbose_name="группы")
+    whole_weeks = models.PositiveIntegerField(
+        null=True, verbose_name="количество недель"
+    )
+
+    class Meta:
+        verbose_name = "занятие"
+        verbose_name_plural = "занятия"
 
     def __str__(self) -> str:
-        return f"{self.lesson_type} {self.discipline}"
-    
+        return f"{self.lesson_type} {self.discipline} ({self.timeslot})"
+
+
 class AcademicLoad(models.Model):
     """Объединенная модель нагрузки (задание для генератора)"""
 
     # Семестр привязывает академическую нагрузку к конкретному временному промежутку
-    merge_key = models.CharField(null=True)
-    semester = models.ForeignKey(Semester, on_delete=models.SET_NULL, null=True)
-    discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE)
-    lesson_type = models.ForeignKey(LessonType, on_delete=models.CASCADE)
-    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name="loads")
-    study_group = models.ForeignKey(
-        StudyGroup, on_delete=models.CASCADE, related_name="loads"
+    merge_key = models.CharField(null=True, verbose_name="ключ связи")
+    semester = models.ForeignKey(
+        Semester, on_delete=models.SET_NULL, null=True, verbose_name="семестр"
     )
-    control_type = models.CharField(null=True,max_length=20)
-    whole_hours = models.PositiveIntegerField()
-    whole_weeks = models.PositiveIntegerField()
+    discipline = models.ForeignKey(
+        Discipline, on_delete=models.CASCADE, verbose_name="дисциплина"
+    )
+    lesson_type = models.ForeignKey(
+        LessonType, on_delete=models.CASCADE, verbose_name="вид занятия"
+    )
+    teacher = models.ForeignKey(
+        Teacher,
+        on_delete=models.CASCADE,
+        related_name="loads",
+        verbose_name="преподаватель",
+    )
+    study_group = models.ForeignKey(
+        StudyGroup,
+        on_delete=models.CASCADE,
+        related_name="loads",
+        verbose_name="группа",
+    )
+    control_type = models.CharField(
+        null=True, max_length=20, verbose_name="вид контроля"
+    )
+    whole_hours = models.PositiveIntegerField(verbose_name="всего часов")
+    whole_weeks = models.PositiveIntegerField(verbose_name="всего недель")
 
     @property
     def semester_order(self):
@@ -64,28 +101,41 @@ class AcademicLoad(models.Model):
         # sem_order = 1 (январь 1 месяц)
         # sem_year = 2026 - 2022  = 4
         # sem = 4 * 2 - 1 + 1 = 8
-        
-        return sem_year*2 - sem_order + 1
+
+        return sem_year * 2 - sem_order + 1
+
+    class Meta:
+        verbose_name = "академическая нагрузка"
+        verbose_name_plural = "академические нагрузки"
 
     def __str__(self):
         return f"{self.study_group} - {self.lesson_type} {self.discipline}"
 
+
 class PlannedLesson(models.Model):
     """Агрегированное занятие, сформированное из AcademicLoad"""
 
-    semester = models.ForeignKey(Semester, on_delete=models.CASCADE)
-    discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE)
-    lesson_type = models.ForeignKey(LessonType, on_delete=models.CASCADE)
+    semester = models.ForeignKey(
+        Semester, on_delete=models.CASCADE, verbose_name="семестр"
+    )
+    discipline = models.ForeignKey(
+        Discipline, on_delete=models.CASCADE, verbose_name="дисциплина"
+    )
+    lesson_type = models.ForeignKey(
+        LessonType, on_delete=models.CASCADE, verbose_name="вид занятия"
+    )
 
-    study_groups = models.ManyToManyField(StudyGroup)
-    teachers = models.ManyToManyField(Teacher)
+    study_groups = models.ManyToManyField(StudyGroup, verbose_name="группы")
+    teachers = models.ManyToManyField(Teacher, verbose_name="преподаватели")
 
     # источник данных
-    academic_loads = models.ManyToManyField(AcademicLoad)
+    academic_loads = models.ManyToManyField(AcademicLoad, verbose_name="источник")
 
     # рассчитанное количество занятий в 2 недели
-    hours_per_two_weeks = models.PositiveIntegerField()
-    whole_weeks = models.PositiveIntegerField()
+    hours_per_two_weeks = models.PositiveIntegerField(
+        null=True, verbose_name="часов за 2 недели"
+    )
+    whole_weeks = models.PositiveIntegerField(null=True, verbose_name="всего недель")
 
     class Meta:
         verbose_name = "плановое занятие"
