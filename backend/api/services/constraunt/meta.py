@@ -1,9 +1,6 @@
 from dataclasses import dataclass
 import logging
-import re
 from typing import Any
-
-from sqlalchemy import false
 
 logger = logging.getLogger("constraints")
 
@@ -13,7 +10,7 @@ soft_constraints = {}
 
 
 
-def constraint(name, isHard = false):
+def constraint(name, isHard = False):
     """Регистрирует функцию проверки под именем ограничения."""
     # logger.debug("Регистрация метода %s", name)
 
