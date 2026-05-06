@@ -49,7 +49,7 @@ class ConstraintErrorSerializer(serializers.Serializer):
     message = serializers.CharField()
     data = serializers.SerializerMethodField()
 
-    def get_data(self, obj):
+    def get_data(self, obj:ConstraintError):
         return self._serialize(obj.data)
 
     def _serialize(self, value):
@@ -75,3 +75,7 @@ class ConstraintErrorSerializer(serializers.Serializer):
         if isinstance(instance, Lesson):
             return LessonSerializer(instance).data
         return model_to_dict(instance, fields=fields)
+    
+class LessonErrorSerializer(serializers.Serializer):
+    lesson = LessonSerializer()
+    errors = ConstraintErrorSerializer(many=True)

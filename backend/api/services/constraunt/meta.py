@@ -1,6 +1,8 @@
 from dataclasses import dataclass
 import logging
-from typing import Any
+from typing import Any, List
+
+from api.models import Lesson
 
 logger = logging.getLogger("constraints")
 
@@ -30,3 +32,8 @@ class ConstraintError ():
     penalty: int = 0
     message: str = "OK"
     data: Any = None # По идее сюда можно запихнуть что угодно, например занятия, с которыми возникает ошибка
+
+@dataclass
+class LessonError:
+    lesson: Lesson
+    errors: List[ConstraintError]

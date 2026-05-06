@@ -91,6 +91,9 @@ class StudyGroup(models.Model):
     name = models.CharField(max_length=50, verbose_name="Шифр")
     students_count = models.PositiveIntegerField(verbose_name="Количество студентов")
 
+    max_hours_per_week = models.PositiveSmallIntegerField(null=False,blank=True,default=35,verbose_name="Максимальная нагрузка в неделю")
+    max_hours_per_day = models.PositiveSmallIntegerField(null=False,blank=True,default=10,verbose_name="Максимальная нагрузка в день")
+
     class Meta:
         ordering = ["admission_year"]
         verbose_name = "учебная группа"
@@ -118,7 +121,8 @@ class Teacher(models.Model):
     constraint_weight = models.IntegerField(
         default=1, verbose_name="Коэффицент приоритета ограничений"
     )
-    max_hours_per_week = models.PositiveSmallIntegerField(null=False,blank=True,default=35,verbose_name="Должность")
+    max_hours_per_week = models.PositiveSmallIntegerField(null=False,blank=True,default=35,verbose_name="Максимальная нагрузка в неделю")
+    max_hours_per_day = models.PositiveSmallIntegerField(null=False,blank=True,default=10,verbose_name="Максимальная нагрузка в день")
     user = models.OneToOneField(
         CustomUser, on_delete=models.SET_NULL, null=True, blank=True
     )

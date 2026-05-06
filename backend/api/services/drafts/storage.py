@@ -27,6 +27,9 @@ class ScheduleDraftStorage:
         self.user_id = user_id
         self.redis = redis or get_redis_connection("default")
         self.key = f"schedule:{scenario_id}:user:{user_id}"
+    
+    def __str__(self):
+        return f"Черновик UserID:{self.user_id}, ScenarioID:{self.scenario_id}"
 
     # -------------------------------------------------------------------------
     # Helpers
