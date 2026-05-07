@@ -1,22 +1,7 @@
 import math
-from dataclasses import dataclass, field
 from collections import defaultdict
-from typing import List, Set
 
-@dataclass
-class PlannedLessonDraft:
-    semester: object
-    discipline: object
-    lesson_type: object
-
-    groups: Set[object] = field(default_factory=set)
-    teachers: Set[object] = field(default_factory=set)
-
-    hours_per_two_weeks: int = 0
-    weeks_total: int = 0
-
-    loads: List[object] = field(default_factory=list)
-
+from api.models import PlannedLesson
 
 def make_base_key(load):
     return (
@@ -79,12 +64,8 @@ def generate_planned_lessons(loads):
     for load in loads:
         key = make_final_key(load)
         buckets[key].append(load)
-
-    drafts = []
-
     # 2. Построить черновики
-    for key, load_group in buckets.items():
-        base_key, group_key = key
+    for _, load_group in buckets.items():
         any_load = load_group[0]
 
         lessons_count = any_load.whole_hours / 2
@@ -92,18 +73,16 @@ def generate_planned_lessons(loads):
         weeks_2 = math.ceil(weeks*2)
         whole_weeks =  math.ceil(any_load.whole_hours / weeks_2)
 
-        draft = PlannedLessonDraft(
+        draft, created = PlannedLesson.objects.get_or_create(
+            semester = any_load.semestr,
             discipline=any_load.discipline,
             lesson_type=any_load.lesson_type,
             hours_per_two_weeks=weeks_2,
             weeks_total=whole_weeks,
         )
-
-        for l in load_group:
-            draft.groups.add(l.study_group)
-            draft.teachers.add(l.teacher)
-            draft.loads.append(l)
-
-        drafts.append(draft)
-
-    return drafts
+        if created:
+            for l in load_group:
+                draft.study_groups.add(l.study_group)
+                draft.teachers.add(l.teacher)
+                draft.academic_loads.add(l)
+    

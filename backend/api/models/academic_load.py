@@ -84,7 +84,8 @@ class PlannedLesson(models.Model):
     academic_loads = models.ManyToManyField(AcademicLoad)
 
     # рассчитанное количество занятий в 2 недели
-    lessons_count = models.PositiveIntegerField() 
+    hours_per_two_weeks = models.PositiveIntegerField()
+    whole_weeks = models.PositiveIntegerField()
 
     class Meta:
         verbose_name = "плановое занятие"
