@@ -11,14 +11,14 @@ class Command(BaseCommand):
     def handle(self, *args, **options):
         # Путь к файлу. Убедитесь, что файл называется unique_classrooms.csv
         # и лежит в папке api/
-        file_path = os.path.join(os.path.dirname(settings.BASE_DIR),"backend", "api", "unique_classrooms.csv")
+        file_path = settings.DATA_FILES_DIR / "unique_classrooms.csv"
 
         if not os.path.exists(file_path):
             self.stdout.write(self.style.ERROR(f"Файл не найден: {file_path}"))
             return
 
         self.stdout.write("Начинаю импорт...")
-
+        # , encoding="utf-8"
         with open(file_path, mode="r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
             count = 0
@@ -49,7 +49,7 @@ class Command(BaseCommand):
                     Classroom.objects.update_or_create(
                         eios_id=int(eios_id),
                         defaults={
-                            "num": number,
+                            "num": number.split("-")[1] if "-" in number else "К",
                             "building": building,
                             "capacity": 30, # Дефолт
                         },
