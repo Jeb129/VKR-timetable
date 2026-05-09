@@ -61,7 +61,7 @@ def test_updated_lesson_fields_are_overridden(redis_client):
     lesson = init_lesson(scenario)
 
     storage = ScheduleDraftStorage(scenario.id, user_id=1, redis=redis_client)
-    storage.update_lesson(lesson.id, {"timeslot": None})
+    storage.update_object(lesson.id, {"timeslot": None})
     with draft_context(scenario, storage) as manager:
         draft = Lesson.objects.get(id=lesson.id)
         assert draft.timeslot is None
@@ -76,7 +76,7 @@ def test_deleted_lesson_not_visible(redis_client):
     lesson = init_lesson(scenario)
 
     storage = ScheduleDraftStorage(scenario.id, user_id=1, redis=redis_client)
-    storage.delete_lesson(lesson.id)
+    storage.delete_object(lesson.id)
 
     with draft_context(scenario, storage):
         lessons = list(Lesson.objects.all())
@@ -96,7 +96,7 @@ def test_created_lessons_are_returned(redis_client):
     )
     c1, _ = Classroom.objects.get_or_create(num="101", name="аудитория", capacity=30)
     storage.clear_created()
-    storage.create_lesson(
+    storage.create_object(
         {
             "timeslot": 1,
             "classroom": 1,
@@ -144,7 +144,7 @@ def test_m2m_override(redis_client):
     lesson.study_groups.add(group1)
 
     storage = ScheduleDraftStorage(scenario.id, user_id=1, redis=redis_client)
-    storage.update_lesson(lesson.id, {"study_groups": [group1.id, group2.id]})
+    storage.update_object(lesson.id, {"study_groups": [group1.id, group2.id]})
 
     with draft_context(scenario, storage):
         draft = Lesson.objects.get(id=lesson.id)
@@ -165,7 +165,7 @@ def test_outside_context_no_changes(redis_client):
     lesson = init_lesson(scenario)
 
     storage = ScheduleDraftStorage(scenario.id, user_id=1, redis=redis_client)
-    storage.update_lesson(lesson.id, {"timeslot": 123})  # такого timeslot нет
+    storage.update_object(lesson.id, {"timeslot": 123})  # такого timeslot нет
 
     # ВНЕ контекста — никаких изменений
     fresh = Lesson.objects.get(id=lesson.id)

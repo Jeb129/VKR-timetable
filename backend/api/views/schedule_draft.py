@@ -6,8 +6,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 
 from api.models import Lesson
-from api.serializers import LessonSerializer
-from api.serializers.schedule import ConstraintErrorSerializer
+from api.serializers import LessonReadSerializer
+from api.serializers.education import LessonSerializer
+from api.serializers.schedule import LessonErrorSerializer
 from api.services.schedule.manager import ScheduleManager
 
 from config.utils import normalize_diff
@@ -23,16 +24,28 @@ class DraftLessonViewSet(viewsets.ViewSet):
 
         group_id = request.query_params.get("group_id")
         teacher_id = request.query_params.get("teacher_id")
-
-        manager = ScheduleManager(scenario_id=scenario_id,user=request.user)
+        with_errors = request.query_params.get("with_errors")
+        
+        manager = ScheduleManager(scenario_id=scenario_id,user=request.user).build_context(draft=True)
         lessons = None
+
         if group_id:
             lessons = manager.get_lessons_draft(study_groups__id=int(group_id))
         elif teacher_id:
             lessons = manager.get_lessons_draft(teachers__id=int(teacher_id))
 
+        if with_errors:
+            errors = [manager.check_lesson(l) for l in lessons]
+            return Response({
+                "lessons":LessonReadSerializer(lessons, many=True).data,
+                "errors":LessonErrorSerializer(errors,many=True).data
+            },
+                status=status.HTTP_200_OK
+            )
+            
+
         return Response(
-                LessonSerializer(lessons, many=True).data,
+                LessonReadSerializer(lessons, many=True).data,
                 status=status.HTTP_200_OK
             )
 
@@ -40,52 +53,42 @@ class DraftLessonViewSet(viewsets.ViewSet):
     def retrieve(self, request,scenario_id, pk=None):
         """GET /draft/lessons/<id>/?with_errors=True — один черновик"""
         with_errors = request.query_params.get("with_errors")
-        manager = ScheduleManager(scenario_id=scenario_id,user=request.user)
+        manager = ScheduleManager(scenario_id=scenario_id,user=request.user).build_context(draft=True)
 
-        lesson = manager.get_lessons_draft(id=pk).first()
+        lesson = manager.get_lessons_draft(id=pk)
         if with_errors:
-            errors = manager.init_constraints().check_lesson_draft(
-                lesson_id=pk,
+            errors = manager.check_lesson(
+                lesson=lesson,
             )
-            return Response(
-                {
-                    "lesson":LessonSerializer(lesson).data,
-                    "errors":ConstraintErrorSerializer(errors, many=True).data
-                }, status=status.HTTP_200_OK
-            )
+            return Response(LessonErrorSerializer(errors).data, status=status.HTTP_200_OK)
         else:
-            return Response(LessonSerializer(lesson).data,status=status.HTTP_200_OK)
+            return Response(LessonReadSerializer(lesson).data,status=status.HTTP_200_OK)
 
 
     def create(self, request,scenario_id):
         """POST /draft/lessons/ — создать черновик"""
+        data=normalize_diff(Lesson,request.data)
+    
         manager = ScheduleManager(scenario_id=scenario_id,user=request.user)
-        new_id = manager.create_lesson_draft(data=normalize_diff(Lesson,request.data))
+        new_id = manager.create_lesson_draft(data=data)
 
-        errors= manager.init_constraints().check_lesson_draft(
+        errors= manager.check_lesson_draft(
             lesson_id=new_id,
+            build_context=True
         )
-        return Response({
-            "id": new_id,
-            "errors": ConstraintErrorSerializer(errors, many=True),
-        },status=status.HTTP_201_CREATED)
+        return Response(LessonErrorSerializer(errors).data, status=status.HTTP_201_CREATED)
+
 
 
     def partial_update(self, request ,scenario_id, pk=None):
         """PATCH /draft/lessons/<id>/ — обновить черновик"""
-        # Готовый метод в commit_scenario
-        errors = ScheduleManager(scenario_id=scenario_id,user=request.user).init_constraints().update_lesson_draft(
-            lesson_id=pk,
+        lessonError = ScheduleManager(scenario_id=scenario_id,user=request.user).update_lesson_draft(
+            lesson_id=int(pk),
             diff_data=normalize_diff(Lesson,request.data),
         )
 
- 
-        #фильтрация ошибок с 0 штрафом
-        real_errors = [e for e in errors if e.penalty > 0]
-        # print(ConstraintErrorSerializer(real_errors, many = True).data)
-        return Response({
-            "errors":ConstraintErrorSerializer(real_errors, many = True).data,
-        })
+        # Возможно в будущем будем проверять весь сценарий разом, чтобы не менять вывод на фронет, подгоняем ответ апи
+        return Response(LessonErrorSerializer([lessonError], many = True).data,status=status.HTTP_200_OK)
 
 
     def destroy(self, request, scenario_id,pk=None):
@@ -99,10 +102,16 @@ class DraftLessonViewSet(viewsets.ViewSet):
         """POST /draft/lessons/apply - сохраняет Lesson в БД."""
         manager = ScheduleManager(scenario_id=scenario_id,user=request.user)
 
-        errors = manager.init_constraints().check_scenario_draft()
-        real_errors = [e for e in errors if e.penalty > 0]
+        lessonError = manager.check_scenario_draft()
+
         manager.apply_lessons()
-        return Response({
-            # "errors": len(errors),
-            "errors": ConstraintErrorSerializer(real_errors, many = True).data,
-        })
+        return Response(LessonErrorSerializer(lessonError, many = True).data,status=status.HTTP_200_OK)
+    
+    @action(detail=True, methods=["get"])
+    def check(self, request,scenario_id, pk=None):
+        """GET /draft/lessons/check - Проверяет ошибки в сценарии"""
+        manager = ScheduleManager(scenario_id=scenario_id,user=request.user)
+        lessonError = manager.check_scenario_draft()
+        return Response(LessonErrorSerializer(lessonError, many = True).data,status=status.HTTP_200_OK)
+
+

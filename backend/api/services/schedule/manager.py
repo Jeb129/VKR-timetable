@@ -92,7 +92,7 @@ class ScheduleManager:
             try:
                 logger.debug("Проверка ограничения %s", c.name)
                 res = func(lesson, self.context, weight=c.weight)
-                if res is not None:
+                if not (res is None or c.generation_only):
                     errors.append(res)
             except Exception as err:
                 logger.error("Ошибка при проверке ограничения %s для занятия %s", c.name, lesson.id)
