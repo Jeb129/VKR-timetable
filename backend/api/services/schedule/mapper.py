@@ -114,11 +114,11 @@ def map_lessons(
         "id", flat=True
     )  # подзапрос SELECT id FROM Lessons
     adjustments = ScheduleAdjustment.objects.filter(
-        status=enums.RequestStatus.VERIFIED,
+        request__status=enums.RequestStatus.VERIFIED,
         lesson__id__in=lesson_ids,
         date__gte=date_from,
         date__lte=date_to,
-    ).select_related("lesson", "lesson__timeslot")
+    ).select_related("lesson","request", "lesson__timeslot")
     sql_logger.debug("map_lessons()\n%s", adjustments.query)
 
     mapped_events: List[MappedEvent] = []
