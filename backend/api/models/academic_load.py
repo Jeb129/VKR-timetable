@@ -36,7 +36,10 @@ class Lesson(models.Model):
     whole_weeks = models.PositiveIntegerField(
         null=True, verbose_name="количество недель"
     )
-    priority = models.SmallIntegerField(null=False,blank=True,default=0,verbose_name="Приоритет")
+    priority = models.SmallIntegerField(null=False,blank=True,default=0,verbose_name="приоритет",
+                                        help_text=("Чем выше значение, тем раньше должно проводиться занятие"
+                                                   "Влияет на значение итоговой функции при генерации расписания"
+                                                   ))
 
     class Meta:
         verbose_name = "занятие"
@@ -133,11 +136,15 @@ class PlannedLesson(models.Model):
     academic_loads = models.ManyToManyField(AcademicLoad, verbose_name="источник")
 
     # рассчитанное количество занятий в 2 недели
-    lessons_per_two_weeks = models.PositiveIntegerField(
+    lessons_in_cycle = models.PositiveIntegerField(
         null=False,default=1, verbose_name="занятий за 2 недели"
     )
     whole_weeks = models.PositiveIntegerField(null=True, verbose_name="всего недель")
-    priority = models.SmallIntegerField(null=False,blank=True,default=0,verbose_name="Приоритет")
+    priority = models.SmallIntegerField(null=False,blank=True,default=0,verbose_name="приоритет",
+                                    help_text=("Чем выше значение, тем раньше должно проводиться занятие"
+                                                "Влияет на значение итоговой функции при генерации расписания"
+                                                ))
+
 
     class Meta:
         verbose_name = "плановое занятие"

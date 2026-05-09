@@ -31,7 +31,7 @@ class BuildingPriority(models.Model):
     building = models.ForeignKey(
         Building, on_delete=models.CASCADE, verbose_name="клопус"
     )
-    weight = models.IntegerField(verbose_name="приоритет")
+    weight = models.IntegerField(verbose_name="приоритет",help_text="Влияет на значение итоговой функции при генерации расписания")
 
     class Meta:
         ordering = ["institute", "building"]
@@ -45,7 +45,13 @@ class BuildingPriority(models.Model):
 class Constraint(models.Model):
     name = models.TextField(unique=True, verbose_name="имя метода")
     description = models.TextField(max_length=255, verbose_name="описание")
-    weight = models.IntegerField(verbose_name="вес")
+    weight = models.IntegerField(verbose_name="вес",help_text="Влияет на значение итоговой функции при генерации расписания")
+    is_hard =models.BooleanField(default=False,
+                                 verbose_name="запретить нарушения",
+                                 help_text="Запрещает публикацию варианта расписания если есть хоть одно занятие, с нарушением такого ограничения")
+    generation_only = models.BooleanField(default=False, 
+                                          verbose_name="только для генератора",
+                                          help_text="Информация о нарушении ограничения не будет выводится при ручном редактировании")
 
     class Meta:
         verbose_name = "ограничение"
