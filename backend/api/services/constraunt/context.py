@@ -2,11 +2,13 @@ from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Set, Optional, Tuple
 from api.models import BuildingTravelTime, Lesson
+from api.services.drafts.queryset import DraftFilters
 
 @dataclass
 class ScheduleContext:
+    # Метаданные
     scenario_id: int
-    
+
     # Основные данные (загружаются в __post_init__)
     lessons: List[Lesson] = field(default_factory=list)
     
@@ -64,6 +66,35 @@ class ScheduleContext:
             chain.sort(key=lambda x: x.timeslot.order_number)
 
             # --- Дневные цепочки ---
+    
+    # --- Поиск по контексту ---
+    def filter(self, *args, **kwargs) -> List[Lesson]:
+        """Фильтрация занятий в памяти контекста (аналог QuerySet.filter)"""
+        # Создаем структуру фильтров, которую ожидает DraftFilters: (тип, Q-объекты, lookup-словарь)
+        f = DraftFilters([("filter", list(args), kwargs)])
+        return [l for l in self.lessons if f.matches(l)]
+
+    def exclude(self, *args, **kwargs) -> List[Lesson]:
+        """Исключение занятий в памяти контекста (аналог QuerySet.exclude)"""
+        f = DraftFilters([("exclude", list(args), kwargs)])
+        return [l for l in self.lessons if f.matches(l)]
+
+    def get(self, **kwargs) -> Optional[Lesson]:
+        """Поиск одного занятия в памяти (аналог QuerySet.get)"""
+        results = self.filter(**kwargs)
+        if len(results) > 1:
+            raise ValueError(f"get() returned more than one Lesson. Found {len(results)}.")
+        if len(results) == 0:
+            return None
+        return results[0]
+
+    def get_by_id(self, lesson_id: int) -> Optional[Lesson]:
+        """Самый быстрый поиск по ID (почти мгновенно)"""
+        for l in self.lessons:
+            if l.id == lesson_id:
+                return l
+        return None
+    
     def get_teacher_day_chain(self, t_id: int, week: int, day: int) -> List[Lesson]:
         return self.teacher_day_chains.get((t_id, week, day), [])
 

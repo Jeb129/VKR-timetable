@@ -27,7 +27,7 @@ class ScheduleDraftStorage:
         self.user_id = user_id
         self.redis = redis or get_redis_connection("default")
         self.key = f"schedule:{scenario_id}:user:{user_id}"
-    
+
     def __str__(self):
         return f"Черновик UserID:{self.user_id}, ScenarioID:{self.scenario_id}"
 
@@ -69,99 +69,104 @@ class ScheduleDraftStorage:
     # Setters / mutators
     # -------------------------------------------------------------------------
 
-    def update_lesson(self, lesson_id: int, diff: Dict[str, Any]):
+    def update_object(self, obj_id: int, diff: Dict[str, Any]):
         """
         Добавляет изменения в занятия
         Отменяет удаление (если оно было)
         """
+        self.clear_deleted(obj_id)
+
         updated = self.get_updated()
-        deleted = self.get_deleted()
+        current = updated.get(obj_id, {})
+        
+        for key, value in diff.items():
+            current[key] = value
 
-        if lesson_id in deleted:
-            # lesson was previously removed — cancel deletion
-            deleted.remove(lesson_id)
-            self._save_json_field(self.FIELD_DELETED, deleted)
+        if current:
+            updated[obj_id] = current
+            self._save_json_field(self.FIELD_UPDATED, updated)
 
-        # merge diffs
-        current = updated.get(lesson_id, {})
-        current.update(diff)
-        updated[lesson_id] = current
-        self._save_json_field(self.FIELD_UPDATED, updated)
-
-    def create_lesson(self, data: Dict[str, Any], new_id: str = str(uuid4())):
+    def create_object(self, data: Dict[str, Any], new_id: str = str(uuid4())):
         """
-        Create a new lesson (merged if exists).
+        Создает новое занятие в хранилище черновика.
+        Заменяет update_object для несохраненных в бд объектов
         """
         created = self.get_created()
         current = created.get(new_id, {})
         current.update(data)
-        created[new_id] = current
-        self._save_json_field(self.FIELD_CREATED, created)
-        return new_id
+        if current:
+            created[new_id] = current
+            self._save_json_field(self.FIELD_CREATED, created)
+            return new_id
+        else:
+            return None
 
-    def delete_lesson(self, lesson_id: int):
+    def delete_object(self, obj_id: int):
         """
-        Mark lesson as deleted.
-        Remove it from updated, and from created if present.
+        
         """
         updated = self.get_updated()
         created = self.get_created()
         deleted = self.get_deleted()
 
         # Remove updated diff
-        if lesson_id in updated:
-            updated.pop(lesson_id)
-            self._save_json_field(self.FIELD_UPDATED, updated)
+        self.clear_updated(obj_id)
 
         # Remove from created (rare case)
-        created_keys = [
-            k for k, v in created.items() if str(v.get("id")) == str(lesson_id)
-        ]
-        for k in created_keys:
-            created.pop(k)
-        self._save_json_field(self.FIELD_CREATED, created)
+        self.clear_created(obj_id)
 
         # Add to deleted list
-        if lesson_id not in deleted:
-            deleted.append(lesson_id)
+        if obj_id not in deleted:
+            deleted.append(obj_id)
             self._save_json_field(self.FIELD_DELETED, deleted)
-
 
     # -------------------------------------------------------------------------
     # Очистка
     # -------------------------------------------------------------------------
 
-    def clear_updated(self):
-        self.redis.hdel(self.key, self.FIELD_UPDATED)
+    def clear_updated(self, obj_id=None, key=None):
+        if obj_id is None:
+            self.redis.hdel(self.key, self.FIELD_UPDATED)
+            return
+        
+        updated = self.get_updated()
 
-    def clear_created(self):
-        self.redis.hdel(self.key, self.FIELD_CREATED)
+        if obj_id in updated:
+            if key is not None:
+                current = updated.get(obj_id, {})
+                current.pop(key,None)
+                updated[obj_id] = current
+            else:    
+                updated.pop(obj_id)
 
-    def clear_deleted(self):
-        self.redis.hdel(self.key, self.FIELD_DELETED)
+            self._save_json_field(self.FIELD_UPDATED, updated)
+            
+
+    def clear_created(self, obj_id=None):
+        if obj_id is not None:
+            created = self.get_created()
+            if str(obj_id) in created.keys():
+                created.pop(str(obj_id))
+                self._save_json_field(self.FIELD_CREATED, created)
+        else:
+            self.redis.hdel(self.key, self.FIELD_CREATED)
+
+    def clear_deleted(self, obj_id=None):
+        if obj_id is not None:
+            deleted = self.get_deleted()
+            if obj_id in deleted:
+                deleted.remove(obj_id)
+                self._save_json_field(self.FIELD_DELETED, deleted)
+        else:
+            self.redis.hdel(self.key, self.FIELD_DELETED)
+
+    def clear_object(self, obj_id):
+        self.clear_updated(obj_id)
+        self.clear_created(obj_id)
+        self.clear_deleted(obj_id)
 
     def clear_all(self):
         self.redis.delete(self.key)
-    
-    def clear_object(self,lesson_id):
-        updated = self.get_updated()
-        created = self.get_created()
-        deleted = self.get_deleted()
-
-        if lesson_id in updated:
-            updated.pop(lesson_id)
-            self._save_json_field(self.FIELD_UPDATED, updated)
-            return
-        if lesson_id in created:
-            created.pop(lesson_id)
-            self._save_json_field(self.FIELD_CREATED, created)
-            return
-        if lesson_id in deleted:
-            deleted.remove(lesson_id)
-            self._save_json_field(self.FIELD_DELETED, deleted)
-            return
-
-
 
     # -------------------------------------------------------------------------
     # Вспомогательные функции

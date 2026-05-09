@@ -1,6 +1,8 @@
 import logging
 from typing import Dict, List, Optional
 
+from django.db.models import ManyToManyField
+
 from api.models import Constraint, Lesson
 from api.services.constraunt.constraints import registry
 from api.services.constraunt.context import ScheduleContext
@@ -29,18 +31,22 @@ class ScheduleManager:
 
     def _check_lesson_scenario(self, lesson=None, lesson_id=None):
         """
-        Проверяет принадлежность занятия сценарию.
-        Если передан объект lesson, БД не дергается.
-        Если передан только lesson_id, объект загружается из БД.
+        Улучшенная проверка: сначала ищем в контексте (в памяти), 
+        и только если контекста нет или объект не найден - идем в БД.
         """
         if lesson is None:
             if lesson_id is None:
                 raise ValueError("Не передана информация о занятии")
-            # Используем _default_manager, чтобы не дергать redis
-            lesson = Lesson._default_manager.get(id=lesson_id)
+            
+            # Пытаемся найти объект в уже загруженном контексте
+            if self.context:
+                lesson = self.context.get_by_id(lesson_id)
+            
+            # Если в контексте нет или контекст еще не собран - идем в БД
+            if lesson is None:
+                lesson = Lesson._default_manager.get(id=lesson_id)
         
         if lesson.scenario_id != self.scenario_id:
-            logger.warning("%s, попытка изменения занятия (ID: %d) в другом сценарии (ID: %d)",self.storage,lesson_id,lesson.scenario_id)
             raise ValueError("Занятие не является частью текущего сценария")
         
         return lesson
@@ -60,14 +66,19 @@ class ScheduleManager:
 
         return self
 
-    def build_context(self):
-        self.context = ScheduleContext(self.scenario_id)
+    def build_context(self,*,draft = False):
+        if draft:
+            with draft_context(self.scenario_id, self.storage):
+                self.context = ScheduleContext(self.scenario_id)
+        else:
+            self.context = ScheduleContext(self.scenario_id)
         return self
+    
     
     def check_lesson(self, lesson, constraint_name = None):
         """Проверяет занятие в сценарии по всем ограничениям"""
         if self.context is None:
-            raise ValueError("не выполнена загрузка контекста занятий для проверки")
+            self.build_context()
 
         errors = []
         constraints = (
@@ -80,7 +91,9 @@ class ScheduleManager:
                 continue
             try:
                 logger.debug("Проверка ограничения %s", c.name)
-                errors.append(func(lesson, self.context, weight=c.weight))
+                res = func(lesson, self.context, weight=c.weight)
+                if res is not None:
+                    errors.append(res)
             except Exception as err:
                 logger.error("Ошибка при проверке ограничения %s для занятия %s", c.name, lesson.id)
                 errors.append(ConstraintError(
@@ -90,49 +103,88 @@ class ScheduleManager:
                 ))
         return LessonError(lesson,errors)
 
-
-    def check_scenario(self):
+    def check_scenario(self) -> List[LessonError] :
         """Проверяет все занятия в сценарии"""
-        self.build_context()
         errors = []
         for lesson in self.context.lessons:
             errors.extend(self.check_lesson(lesson))
         return errors
 
-    def check_lesson_draft(self, lesson_id):
+    def check_lesson_draft(self, lesson_id,*,build_context=False):
         """Проверяет занятия в черновом контексте."""
-        with draft_context(self.scenario_id, self.storage):
-            self.build_context()
-            lesson = Lesson.objects.get(id=lesson_id)
-            return self.check_lesson(lesson)
+        if build_context:
+            self.build_context(draft=True)
+        elif self.context is None:
+            raise ValueError("Не собран контекст проверки. Вызовите ScheduleManager.build_context() или передайте build_context=True при вызове метода check_lesson_draft")
+        lesson = self.context.get_by_id(lesson_id)
+        return self.check_lesson(lesson)
 
-    def check_scenario_draft(self):
+    def check_scenario_draft(self,*,build_context=False)-> List[LessonError]:
         """Проверяет весь сценарий в черновом контексте."""
-        with draft_context(self.scenario_id, self.storage):
-            return self.check_scenario(self.scenario_id)
+        if build_context:
+            self.build_context(draft=True)
+        elif self.context is None:
+            raise ValueError("Не собран контекст проверки. Вызовите ScheduleManager.build_context() или передайте build_context=True при вызове метода check_scenario_draft")
+        return self.check_scenario(self.scenario_id)
 
+
+        
+    # CRUD над черновиками занятий
+    def create_lesson_draft(self,data):
+        return self.storage.create_object(data=data)
 
     def get_lessons_draft(self,*args,**kwargs):
-        with draft_context(self.scenario_id, self.storage):
-            return Lesson.objects.filter(*args,**kwargs)
-
+        """Поиск в контексте"""
+        if self.context is None:
+            raise ValueError("Не собран контекст поиска. Вызовите ScheduleManager.build_context() перед вызовом метода get_lessons_draft")
+        return self.context.filter(*args,**kwargs)
+    
     def update_lesson_draft(self,lesson_id, diff_data):
         """Вносит изменения в черновик расписания"""
-        self._check_lesson_scenario(lesson_id=lesson_id)
-        if diff_data:
-            self.storage.update_lesson(lesson_id=lesson_id,diff=diff_data)
-        return self.check_lesson_draft(lesson_id)
-    
+        if str(lesson_id) in self.storage.get_created():
+            # если занятие - созданный черновик, то пересоздаем
+            self.storage.create_object(data=diff_data,nes_id=str(lesson_id))
+            # Пересобираем контекст с обновленным занятием и проверяем
+            return self.check_lesson_draft(lesson_id, build_context=True)
+        
+        # Получаем оригинальное занятие
+        original = Lesson._default_manager.prefetch_related('teachers', 'study_groups').get(id=lesson_id)
+        self._check_lesson_scenario(lesson=original)
+        
+        # Собираем все хранящиеся и входящие изменения в один список
+        merged_candidate = {
+            **self.storage.get_updated().get(lesson_id, {}), 
+            **diff_data}
+
+        # Сравниваем все изменения с оригинальным занятием
+        final_diff = {}
+        for key, value in merged_candidate.items():
+            if isinstance(Lesson._meta.get_field(key),ManyToManyField):
+                # M2M поля 
+                value = sorted(value) if value else []
+                orig_val = sorted(list(getattr(original,key).values_list('id', flat=True)))
+            else:
+                orig_val = getattr(original, f"{key}_id", getattr(original, key, None))
+
+            if value != orig_val:
+                # Если обновленнре поле НЕ совпадает с оригиналом - запоминаем
+                final_diff[key] = value
+
+        if not final_diff:
+            # Если все обновленные поля совпадают с оригинальными значениями - удаляем запись из хранилища
+            self.storage.clear_updated(obj_id=lesson_id)
+        else:
+            self.storage.update_object(obj_id=lesson_id,diff=final_diff)
+
+        # Пересобираем контекст с обновленным занятием и проверяем
+        return self.check_lesson_draft(lesson_id, build_context=True)
+
     def delete_lessons_draft(self, lesson_id=None):
         self._check_lesson_scenario(lesson_id=lesson_id)
         if lesson_id is not None:
-            self.storage.delete_lesson(lesson_id=lesson_id)
+            self.storage.delete_object(obj_id=lesson_id)
         else:
             self.storage.clear_all()
-    
-    def create_lesson_draft(self,data):
-        return self.storage.create_lesson(data=data)
-
     
     def apply_lessons(self, lesson_id=None):
         if lesson_id is None:
@@ -144,3 +196,4 @@ class ScheduleManager:
 
     def has_draft(self):
         return self.storage.has_any_changes()
+ 
