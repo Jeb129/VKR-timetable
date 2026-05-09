@@ -8,6 +8,7 @@ from api.models import (
     Timeslot,
     Lesson,
 )
+from config.utils import SimpleRelatedSerializer
 
 
 class InstituteSerializer(serializers.ModelSerializer):
@@ -54,39 +55,49 @@ class TimeslotSerializer(serializers.ModelSerializer):
         model = Timeslot
         fields = "__all__"
 
-
+# Чисто на всякий случай мало ли будем создавать объекты не через админку
 class LessonSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Lesson
+        fields = "__all__"
+        
+
+# сериализатор только для чтения.
+# для всех M2M полей возвращается id объекта и наименование
+class LessonReadSerializer(serializers.ModelSerializer):
+
     # Текстовые названия из связанных моделей
-    discipline_name = serializers.ReadOnlyField(source="discipline.name")
-    type_name = serializers.ReadOnlyField(source="lesson_type.name")
-    classroom_name = serializers.ReadOnlyField(source="classroom.name")
+    discipline = serializers.ReadOnlyField(source="discipline.name")
+    lesson_type = serializers.ReadOnlyField(source="lesson_type.name")
+    timeslot = TimeslotSerializer()
+    classroom = serializers.ReadOnlyField(source="classroom.name")
 
-    # Номер пары и день для сортировки
-    order = serializers.ReadOnlyField(source="timeslot.order_number")
-    day = serializers.ReadOnlyField(source="timeslot.day")
-    week_num = serializers.ReadOnlyField(source='timeslot.week_num') 
+    # Списки
+    teachers = SimpleRelatedSerializer(many=True)
+    study_groups = SimpleRelatedSerializer(many=True)
+    
+    # Поля черновика
+    draft_diffs = serializers.SerializerMethodField()
+    draft_created = serializers.SerializerMethodField()
 
-    # Списки имен преподавателей и групп (Many-to-Many)
-    teachers_list = serializers.SlugRelatedField(
-        many=True, read_only=True, slug_field="name", source="teachers"
-    )
-    groups_list = serializers.SlugRelatedField(
-        many=True, read_only=True, slug_field="name", source="study_groups"
-    )
+    def get_draft_diffs(self,obj):
+        return (obj.draft_diffs if hasattr(obj, "draft_diffs") else [])
+    
+    def get_draft_created(self,obj):
+        return hasattr(obj, "draft_created")
 
     class Meta:
         model = Lesson
         fields = [
             "id",
-            "discipline_name",
-            "type_name",
-            "classroom_name",
-            "timeslot",
-            "order",
-            "day",
-            "week_num",
-            "teachers_list",
-            "groups_list",
+            "scenario", 
+            "discipline",
+            "lesson_type",
             "classroom",
-            "scenario",  # Оставляем ID для фильтрации
+            "timeslot",
+            "teachers",
+            "study_groups",
+            "whole_weeks",
+            "draft_diffs",
+            "draft_created"
         ]
