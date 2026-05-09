@@ -1,5 +1,6 @@
 from django.db.models import QuerySet, Q
 from api.services.drafts.storage import ScheduleDraftStorage
+from django.forms.models import model_to_dict
 
 class DraftFilters:
     """
@@ -100,11 +101,11 @@ class DraftFilters:
         for i, attr in enumerate(attr_parts):
 
             # ---- M2M overlay через _prefetched_objects_cache ----
-            if attr in m2m_fields and hasattr(obj, "_prefetched_objects_cache"):
-                if attr in obj._prefetched_objects_cache:
-                    current = obj._prefetched_objects_cache[attr]   # кешированный queryset
+            if attr in m2m_fields:
+                if not hasattr(obj, "_prefetched_objects_cache") or attr not in obj._prefetched_objects_cache:
+                    current = getattr(obj, attr).all() 
                 else:
-                    current = getattr(obj, attr).all()              # обычный queryset из БД
+                    current = obj._prefetched_objects_cache[attr]              
 
             # обычные поля / related поля 
             else:
@@ -112,7 +113,6 @@ class DraftFilters:
 
             if current is None:
                 break
-
             # если это M2M queryset 
             if isinstance(current, QuerySet):
                 # Если следующее поле — "id"
@@ -171,7 +171,7 @@ class DraftOverlayEngine:
         for field in self.m2m_fields:
             if field in data:
                 getattr(obj, field).set(data[field])
-
+        obj.draft_created = True
         return obj
 
     def created_objects(self):
@@ -195,7 +195,7 @@ class DraftOverlayEngine:
 
             else:
                 setattr(obj, f"{field}_id", value)
-
+        obj.draft_diffs = data.items()
         return obj
 
 
@@ -288,31 +288,6 @@ class DraftLessonQuerySet(QuerySet):
             return engine.build_created(key)
         
         return self.model._default_manager.get(*args, **kwargs)
-        
-
-    # def get(self, *args, **kwargs):
-    #     qs = self.filter(*args, **kwargs)
-
-    #     engine = DraftOverlayEngine(self.model, self.storage)
-    #     filters = DraftFilters(qs._draft_filters)
-
-    #     iterator = engine.apply_queryset(
-    #         qs.iterator(),
-    #         filters
-    #     )
-
-    #     try:
-    #         obj = next(iterator)
-    #     except StopIteration:
-    #         raise self.model.DoesNotExist()
-
-    #     try:
-    #         next(iterator)
-    #         raise self.model.MultipleObjectsReturned()
-    #     except StopIteration:
-    #         pass
-
-    #     return obj
     
     
     def first(self):
@@ -393,7 +368,7 @@ class DraftLessonQuerySet(QuerySet):
 
 
     def iterator(self, *args, **kwargs):
-        base_qs = super().iterator(*args, **kwargs)
+        base_qs = super().iterator(*args, **kwargs,chunk_size=2000)
 
         if not self.storage:
             yield from base_qs
