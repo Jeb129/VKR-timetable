@@ -62,7 +62,7 @@ class Classroom(models.Model):
 
     def save(self, *args, **kwargs):
         if not self.name and self.building:
-            self.name = f"{self.building.short_name} - {self.num}"
+            self.name = f"{self.building.short_name}–{self.num}"
         return super().save(*args, **kwargs)
 
     def __str__(self):

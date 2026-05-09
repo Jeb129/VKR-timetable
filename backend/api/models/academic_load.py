@@ -43,7 +43,7 @@ class Lesson(models.Model):
         verbose_name_plural = "занятия"
 
     def __str__(self) -> str:
-        return f"{self.lesson_type} {self.discipline} ({self.timeslot})"
+        return f"ID:{self.pk} {self.lesson_type} {self.discipline} {self.timeslot}"
 
 
 class AcademicLoad(models.Model):
