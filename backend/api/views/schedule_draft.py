@@ -28,26 +28,19 @@ class DraftLessonViewSet(viewsets.ViewSet):
         
         manager = ScheduleManager(scenario_id=scenario_id,user=request.user).build_context(draft=True)
         lessons = None
+        result = {}
 
         if group_id:
             lessons = manager.get_lessons_draft(study_groups__id=int(group_id))
         elif teacher_id:
             lessons = manager.get_lessons_draft(teachers__id=int(teacher_id))
+        result["lessons"] = LessonReadSerializer(lessons, many=True).data
 
         if with_errors:
             errors = [manager.check_lesson(l) for l in lessons]
-            return Response({
-                "lessons":LessonReadSerializer(lessons, many=True).data,
-                "errors":LessonErrorSerializer(errors,many=True).data
-            },
-                status=status.HTTP_200_OK
-            )
-            
-
-        return Response(
-                LessonReadSerializer(lessons, many=True).data,
-                status=status.HTTP_200_OK
-            )
+            result["errors"] = LessonErrorSerializer(errors,many=True).data
+        
+        return Response(result,status=status.HTTP_200_OK)
 
 
     def retrieve(self, request,scenario_id, pk=None):
@@ -62,7 +55,11 @@ class DraftLessonViewSet(viewsets.ViewSet):
             )
             return Response(LessonErrorSerializer(errors).data, status=status.HTTP_200_OK)
         else:
-            return Response(LessonReadSerializer(lesson).data,status=status.HTTP_200_OK)
+            return Response({
+                "lesson": LessonReadSerializer(lesson).data
+                },
+                status=status.HTTP_200_OK
+            )
 
 
     def create(self, request,scenario_id):

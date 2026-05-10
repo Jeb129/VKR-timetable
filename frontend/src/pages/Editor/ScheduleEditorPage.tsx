@@ -1,18 +1,22 @@
+import { GridCell } from "@/components/schedule_editor/GridCell";
 import { LessonCard } from "@/components/schedule_editor/LessonCard";
 import LessonErrorItem from "@/components/schedule_editor/LessonError";
 import SearchSelect from "@/components/UI/SearchSelect";
+import { useScheduleEditor } from "@/hooks/useScheduleEditor";
 import { dbService } from "@/services/crud";
 import { scheduleDraftService } from "@/services/schedule_editor";
 import "@/styles/Editor.css";
-import type { LessonError } from "@/types/constraint";
-import { DAYS, type Lesson, type Timeslot } from "@/types/schedule";
+import { DAYS, type Timeslot } from "@/types/schedule";
 import { type SelectOption } from "@/types/ui";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 const ScheduleEditorPage = () => {
     const { scenarioId } = useParams();
     const navigate = useNavigate();
+
+    const { lessons,lessonsLookup,lessonErrors,isChecking,
+        loadLessons,moveLesson,setLessons} = useScheduleEditor(Number(scenarioId))
 
     // Справочники
     // const [scenarios, setScenarios] = useState<any[]>([]);
@@ -26,12 +30,12 @@ const ScheduleEditorPage = () => {
     
     const [currentWeek, setCurrentWeek] = useState<number>(1);
 
-    const [lessonErrors, setLessonErrors] = useState<LessonError[]>([]);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-    const [lessons, setLessons] = useState<Lesson[]>([]);
     // const [loading, setLoading] = useState(false);
-    const [isChecking, setIsChecking] = useState(false);
+    // const [isChecking, setIsChecking] = useState(false);
+    const [hoveredLessonId, setHoveredLessonId] = useState<string | null>(null);
+    const [draggingId, setDraggingId] = useState<string | null>(null);
 
     const targetOptions: SelectOption[] = useMemo(() => {
         if (filterType === "group") return groups.map(g => ({ value: g.id, label: g.name }));
@@ -41,14 +45,14 @@ const ScheduleEditorPage = () => {
 
     useEffect(() => {
         const init = async () => {
-            const [ ts, gr, tr] = await Promise.all([
-                dbService.list("scenarios"),
-                dbService.list("timeslots"),
+            const ts = await dbService.list("timeslots")
+            setTimeslots(ts);
+
+            const [ gr, tr] = await Promise.all([
                 dbService.list("groups"),
                 dbService.list("teachers")
             ]);
             // setScenarios(sc);
-            setTimeslots(ts);
             setGroups(gr);
             setTeachers(tr);
         };
@@ -60,11 +64,10 @@ const ScheduleEditorPage = () => {
         if (!scenarioId || !targetId) return;
         // setLoading(true);
         try {
-            const data = filterType === "group" ? 
-                await scheduleDraftService.getGroupLessons(Number(scenarioId),Number(targetId)) :
-                await scheduleDraftService.getTeacherLessons(Number(scenarioId),Number(targetId))
-
-            setLessons(data || []);
+            
+            filterType === "group" ? 
+                await loadLessons({group_id: Number(targetId), with_errors: true}) :
+                await loadLessons({teacher_id: Number(targetId),with_errors: true})
             // накопленные ошибки, записываем сюда
         } catch (err) {
             console.error(err);
@@ -73,50 +76,39 @@ const ScheduleEditorPage = () => {
         }
     };
 
-    useEffect(() => { loadDraft(); }, [scenarioId, targetId, filterType]);
+    const handleDelete = async (lessonId: string) => {
+    // В черновике удаление — это тоже diff.
+    // Если урок draft_created === true, он просто исчезнет.
+    // Если урок из основной БД, он пометится как удаленный.
+    try {
+        await scheduleDraftService.deleteLesson(Number(scenarioId), lessonId);
+        // После удаления просто обновляем список уроков
+        loadDraft();
+    } catch (err) {
+        alert("Ошибка при удалении");
+    }
+};
+    useEffect(() => { loadDraft(); }, [targetId, filterType]);
 
     // Drag and Drop
-    const onDragStart = (e: React.DragEvent, lessonId: number) => {
-        e.dataTransfer.setData("lessonId", String(lessonId));
-    };
+    const handleDragStart = useCallback((e: React.DragEvent, id: string) => {
+        setDraggingId(id);
+        e.dataTransfer.setData("lessonId", id);
+        // Можно добавить небольшую задержку, чтобы браузер успел создать "призрак" 
+        // прежде чем мы сделаем исходную карточку прозрачной
+        setTimeout(() => e.target instanceof HTMLElement && (e.target.style.opacity = "0.5"), 0);
+    }, []);
 
-    const onDrop = async (e: React.DragEvent, targetTimeslotId: number) => {
-        e.preventDefault();
+    const handleDragEnd = useCallback(() => {
+        setDraggingId(null);
+    }, []);
 
-        const lessonId = Number(e.dataTransfer.getData("lessonId"));
+    const onDrop = async (lessonId: string, targetSlot: Timeslot) => {
+        setDraggingId(null); // Сбрасываем состояние
         
-        // 1. Находим данные целевого слота, чтобы обновить визуализацию немедленно
-        const targetSlot = timeslots.find(t => t.id === targetTimeslotId);
-        if (!targetSlot) return;
-
-        // 2. обновление
-        setLessons(prev => prev.map(l => 
-            l.id === lessonId 
-            ? { ...l, timeslot: targetTimeslotId, day: targetSlot.day, order: targetSlot.order_number } 
-            : l
-        ));
-        // Включаем статус проверки
-        setIsChecking(true);
-
-        try {
-            const data = await scheduleDraftService.moveLesson(Number(scenarioId), lessonId, targetTimeslotId )
-            const newErrors = lessonErrors.filter(e => e.lesson.id !== lessonId)
-            console.log(newErrors)
-            if (data.length > 0) {
-                const lesson = lessons.find(e => e.id === lessonId)
-                if (lesson)
-                    newErrors.push({
-                        lesson: lesson,
-                        errors: data 
-                    })
-            }
-            setLessonErrors(newErrors)
-        } catch (err) {
-            console.error("Ошибка перемещения");
-        }
-        finally {
-        setIsChecking(false); // Выключаем в любом случае
-        }
+        // Важно: в хуке moveLesson должно быть ОПТИМИСТИЧНОЕ ОБНОВЛЕНИЕ
+        // Оно мгновенно переместит урок в массиве lessons, и React перерисует сетку
+        await moveLesson(lessonId, targetSlot);
     };
 
 
@@ -163,7 +155,7 @@ const ScheduleEditorPage = () => {
                             <SearchSelect 
                                 options={targetOptions}
                                 value={targetId}
-                                onChange={setTargetId}
+                                onChange={(e) => setTargetId(e)}
                             />
                         </div>
                     </div>
@@ -180,30 +172,40 @@ const ScheduleEditorPage = () => {
                             <tbody>
                                 {orderNumbers.map(orderNum => (
                                     <tr key={orderNum}>
-                                        <td className="time-cell">
-                                            <b>{orderNum}</b>
-                                            <div className="time-range">{timeslots.find(t => t.order_number === orderNum)?.time_start.substring(0,5)}</div>
+                                        <td className="time-cell p-1">
+                                            <div className="order-num">{orderNum}</div>
+                                            <div className="time-range">
+                                                {timeslots.find(t => t.order_number === orderNum)?.time_start.substring(0,5)}
+                                            </div>
                                         </td>
                                         {DAYS.map(day => {
-                                            const slot = timeslots.find(t => t.day === day.id && t.order_number === orderNum && t.week_num === currentWeek);
-                                            const lesson = lessons.find(l => Number(l.day) === day.id && Number(l.order) === orderNum && Number(l.week_num) === currentWeek);
-                                            const hasError = lesson ? !!lessonErrors[lesson.id] : false;
+                                            // 1. Ищем слот
+                                            const slot = timeslots.find(t => 
+                                                Number(t.day) === day.id && 
+                                                Number(t.order_number) === orderNum && 
+                                                Number(t.week_num) === currentWeek
+                                            );
+
+                                            // 2. Генерируем ключ для поиска урока (должен совпадать с логикой хука)
+                                            const lookupKey = `${day.id}-${orderNum}-${currentWeek}`;
+                                            const lesson = lessonsLookup[lookupKey];
+
+                                            // 3. Находим ошибки
+                                            const currentErrors = lessonErrors.find(le => le.lesson.id === lesson?.id)?.errors || [];
 
                                             return (
-                                                <td key={day.id} className={`grid-cell ${!slot ? 'disabled' : ''}`}
-                                                    onDragOver={e => e.preventDefault()}
-                                                    onDrop={e => slot && onDrop(e, slot.id)}>
-                                                    {lesson ? (
-                                                        <div className={`draggable-lesson card ${hasError ? 'has-error' : ''}`} 
-                                                             draggable onDragStart={e => onDragStart(e, lesson.id)}
-                                                             onClick={() => navigate(`/admin/edit-lesson/${lesson.id}`)}>
-                                                            {hasError && <div className="error-icon">!</div>}
-                                                            <LessonCard lesson={lesson}/>
-                                                        </div>
-                                                    ) : (
-                                                        slot && <div className="empty-slot-plus">+</div>
-                                                    )}
-                                                </td>
+                                                <GridCell 
+                                                    key={day.id}
+                                                    slot={slot}
+                                                    lesson={lesson}
+                                                    errors={currentErrors}
+                                                    // isPending={lesson ? pendingIds.has(lesson.id) : false}
+                                                    onDragStart={handleDragStart}
+                                                    onDragEnd={handleDragEnd}
+                                                    onDrop={onDrop}
+                                                    onDelete={handleDelete}
+                                                    onClick={() => lesson && navigate(`/admin/edit-lesson/${lesson.id}`)}
+                                                />
                                             );
                                         })}
                                     </tr>
@@ -233,13 +235,16 @@ const ScheduleEditorPage = () => {
                     )}
 
                     <div className="flex-col scroll-y f-1">
-                       {lessonErrors.map((val,i) => 
-                            <LessonErrorItem 
-                                key={i} 
-                                lesson={val.lesson} 
-                                errors={val.errors ?? []}
-                                />
-                       )}
+                        {
+                            lessonErrors?.map((val, i) => (
+                                val.errors?.length ?? 0 > 0 ?
+                                <LessonErrorItem
+                                    key={i}
+                                    lesson={val.lesson}
+                                    errors={val.errors}
+                                /> : <></>
+                            ))
+                        }
                     </div>
                 </div>
             </div>

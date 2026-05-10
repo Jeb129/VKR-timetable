@@ -156,9 +156,9 @@ const UserProfilePage = () => {
                                             {lesson.start}
                                         </div>
                                         <div className="flex-grow">
-                                            <div style={{ fontWeight: 600 }}>{lesson.discipline_name}</div>
+                                            <div style={{ fontWeight: 600 }}>{lesson.discipline}</div>
                                             <div className="text-muted" style={{ fontSize: '13px' }}>
-                                                Кабинет {lesson.classroom_name} • {lesson.type_name}
+                                                Кабинет {lesson.classroom} • {lesson.lesson_type}
                                             </div>
                                         </div>
                                     </div>

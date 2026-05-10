@@ -1,75 +1,132 @@
 /* LessonCard.css */
 
-.lesson-card {
-  padding: 1rem;
-  border-radius: var(--radius-lg);
-  background: var(--white);
-  box-shadow: var(--shadow-sm);
-  border: 1px solid var(--border-color);
-  transition: var(--transition);
+.draggable-lesson {
+    position: relative;
+    background: var(--white);
+    border: 0.0625rem solid var(--border-color); /* 1px */
+    transition: var(--transition);
+    cursor: grab;
+    min-height: 6.25rem; /* 100px */
 }
 
-.lesson-card:hover {
-  box-shadow: 0 6px 18px rgba(44, 58, 179, 0.08);
+.draggable-lesson:hover {
+    box-shadow: 0 0.375rem 1.125rem rgba(44, 58, 179, 0.08);
 }
 
-.lesson-card-title {
-  font-size: 1.05rem;
-  font-weight: 600;
-  color: var(--p-blue);
+/* Контейнер индикаторов (absolute вне потока) */
+.card-indicators {
+    position: absolute;
+    top: -0.625rem; /* -10px */
+    left: 0.5rem;
+    z-index: 10;
+}
+
+.error-icon, .checking-spinner {
+    width: 1.375rem; /* 22px */
+    height: 1.375rem;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: white;
+    box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.2);
+}
+
+.bg-red { background-color: var(--p-red); }
+.bg-orange { background-color: var(--p-orange); }
+
+/* Состояния черновика */
+.draft-new {
+    border: 0.125rem solid var(--p-green) !important;
+}
+
+.draft-modified {
+    border: 0.125rem dashed var(--p-blue) !important;
+}
+
+/* Состояние ожидания (Pending) */
+.draggable-lesson.is-pending {
+    opacity: 0.7;
+    cursor: wait !important;
+    animation: pending-pulse 1.5s infinite ease-in-out;
+}
+.draggable-lesson.is-highlighted {
+    border-color: var(--p-orange) !important;
+    box-shadow: 0 0 15px rgba(230, 145, 0, 0.3);
+    transform: scale(1.02);
+    z-index: 5;
+}
+
+@keyframes pending-pulse {
+    0% { background-color: var(--white); }
+    50% { background-color: var(--p-blue-light); }
+    100% { background-color: var(--white); }
+}
+
+.checking-spinner {
+    background: var(--white);
+    color: var(--text-main);
+}
+
+/* Внутренняя типографика */
+.subject-short {
+    font-size: 0.875rem;
+    font-weight: 700;
+    line-height: 1.2;
 }
 
 .lesson-card-sub {
-  font-size: 0.9rem;
-  color: var(--text-muted);
-  margin-top: 0.25rem;
-}
-
-.lesson-card-meta {
-  font-size: 0.9rem;
-  color: var(--text-main);
+    font-size: 0.8125rem;
+    color: var(--text-muted);
 }
 
 .lesson-divider {
-  width: 100%;
-  height: 1px;
-  background: var(--border-color);
-  margin: 0.75rem 0;
-  opacity: 0.6;
+    height: 0.0625rem;
+    background: var(--border-color);
+    opacity: 0.4;
 }
 
-/* Список преподавателей */
-.teacher-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+.room-short {
+    font-size: 0.8125rem;
+    font-weight: 800;
+    background: var(--p-blue-light);
+    color: var(--p-blue);
+    padding: 0.125rem 0.375rem;
+    border-radius: 0.25rem;
 }
 
-/* Список групп — компактный inline текст */
-.group-list {
-  font-size: 0.9rem;
-  color: var(--text-main);
+.room-changed {
+    background-color: var(--p-orange) !important;
+    color: white !important;
 }
 
-/* Ограничиваем высоту карточки */
-.lesson-card.limited {
-  max-height: 220px; /* Можно подрегулировать */
-  overflow: hidden;
-  position: relative;
+.bg-orange-light {
+    background-color: rgba(230, 145, 0, 0.08);
 }
 
-/* Плавный градиент снизу, если внутри есть скрытый контент */
-.lesson-card.limited::after {
-  content: "";
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  width: 100%;
-  height: 30px;
-  background: linear-gradient(
-    to bottom,
-    rgba(255, 255, 255, 0),
-    var(--white)
-  );
-  pointer-events: none;
+.text-orange {
+    color: var(--p-orange) !important;
+}
+
+.lesson-card-meta {
+    font-size: 0.8125rem;
+    color: var(--text-main);
+}
+
+/* Кнопка удаления */
+.delete-btn-mini {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.25rem;
+    cursor: pointer;
+    opacity: 0;
+    transition: var(--transition);
+}
+
+.draggable-lesson:hover .delete-btn-mini {
+    opacity: 1;
+}
+
+.delete-btn-mini:hover {
+    color: var(--p-red);
 }

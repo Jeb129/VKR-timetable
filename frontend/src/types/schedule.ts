@@ -44,18 +44,20 @@ export const DAYS = [
 ] as const;
 
 export interface Lesson {
-    id: number;
-    discipline_name: string;
-    type_name: string;
-    classroom_name: string;
-    timeslot: number;
-    week_num: number;
-    start: string;
-    end: string;
-    order: number;
-    day: number;
-    teachers_list: string[];
-    groups_list: string[];
+    id: string;
+    scenario: number;
+
+    discipline: string;
+    lesson_type: string;
+    classroom: string;
+    timeslot: Timeslot;
+
+    teachers: {id:number; name:string;}[];
+    study_groups: {id:number; name:string;}[];
+
+    whole_weeks: number;
+    draft_diffs: {field: string; value: any}[];
+    draft_created: boolean;
 }
 export interface ScheduleEvent {
     id: string;
@@ -72,13 +74,6 @@ export interface ScheduleEvent {
     // Настройки для FullCalendar
     editable?: boolean; 
     backgroundColor?: string;
-}
-
-export interface ConstraintError {
-    name: string;
-    penalty: number;
-    message: string;
-    data: any
 }
 export interface ScheduleScenario {
     id: number;
