@@ -179,7 +179,8 @@ class DraftOverlayEngine:
             yield self.build_created(pk, data)
 
     def apply_update(self, obj):
-        data = self.updated.get(obj.id, {})
+        data = self.updated.get(str(obj.id), {})
+        obj.draft_originals = {}
 
         if not hasattr(obj, "_prefetched_objects_cache"):
             obj._prefetched_objects_cache = {}
@@ -187,6 +188,7 @@ class DraftOverlayEngine:
         for field, value in data.items():
 
             if field in self.m2m_fields:
+                obj.draft_originals[field] = list(getattr(obj, field).all())
                 rel_model = self.m2m_fields[field].remote_field.model
 
                 obj._prefetched_objects_cache[field] = (
@@ -194,8 +196,12 @@ class DraftOverlayEngine:
                 )
 
             else:
+                obj.draft_originals[field] = getattr(obj, field, None)
                 setattr(obj, f"{field}_id", value)
-        obj.draft_diffs = data.items()
+                # Удаляем закешированный объект, чтобы Django подгрузил новый 
+                # (или оставил None до обращения)
+                if field in obj.__dict__:
+                    del obj.__dict__[field]
         return obj
 
 
@@ -208,11 +214,11 @@ class DraftOverlayEngine:
             base_iter = iterable
 
         for obj in base_iter:
-
-            if obj.id in self.deleted:
+            id = str(obj.id)
+            if id in self.deleted:
                 continue
 
-            if obj.id in self.updated:
+            if id in self.updated:
                 obj = self.apply_update(obj)
 
             if filters.matches(obj):

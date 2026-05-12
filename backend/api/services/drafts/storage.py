@@ -1,4 +1,5 @@
 import json
+from turtle import pen
 from typing import Any, Dict, List
 from uuid import uuid4
 
@@ -54,26 +55,27 @@ class ScheduleDraftStorage:
     # -------------------------------------------------------------------------
 
     def get_updated(self) -> Dict[int, Dict[str, Any]]:
-        data = self._load_json_field(self.FIELD_UPDATED, {})
+        return self._load_json_field(self.FIELD_UPDATED, {})
         # Keys stored as strings → convert to int
-        return {int(k): v for k, v in data.items()}
+        # return {k: v for k, v in data.items()}
 
     def get_created(self) -> Dict[str, Dict[str, Any]]:
         return self._load_json_field(self.FIELD_CREATED, {})
 
-    def get_deleted(self) -> List[int]:
+    def get_deleted(self) -> List[str]:
         data = self._load_json_field(self.FIELD_DELETED, [])
-        return list(map(int, data))
+        return list(map(str,data))
 
     # -------------------------------------------------------------------------
     # Setters / mutators
     # -------------------------------------------------------------------------
 
-    def update_object(self, obj_id: int, diff: Dict[str, Any]):
+    def update_object(self, obj_id: str, diff: Dict[str, Any]):
         """
         Добавляет изменения в занятия
         Отменяет удаление (если оно было)
         """
+        obj_id = str(obj_id)
         self.clear_deleted(obj_id)
 
         updated = self.get_updated()
@@ -101,14 +103,11 @@ class ScheduleDraftStorage:
         else:
             return None
 
-    def delete_object(self, obj_id: int):
+    def delete_object(self, obj_id: str):
         """
-        
+        Помечает объект на удаление
         """
-        updated = self.get_updated()
-        created = self.get_created()
-        deleted = self.get_deleted()
-
+        obj_id = str(obj_id)
         # Remove updated diff
         self.clear_updated(obj_id)
 
@@ -116,6 +115,7 @@ class ScheduleDraftStorage:
         self.clear_created(obj_id)
 
         # Add to deleted list
+        deleted = self.get_deleted()
         if obj_id not in deleted:
             deleted.append(obj_id)
             self._save_json_field(self.FIELD_DELETED, deleted)
@@ -124,46 +124,61 @@ class ScheduleDraftStorage:
     # Очистка
     # -------------------------------------------------------------------------
 
-    def clear_updated(self, obj_id=None, key=None):
+    def clear_updated(self, obj_id:str = None, key:str = None):
         if obj_id is None:
             self.redis.hdel(self.key, self.FIELD_UPDATED)
-            return
+            return True
         
+        obj_id =str(obj_id)
         updated = self.get_updated()
+        if obj_id not in updated:
+            return False
+        
+        if key is not None:
+            current = updated.get(obj_id, {})
+            del current[key]
+            updated[obj_id] = current
+        else:
+            del updated[obj_id]
 
-        if obj_id in updated:
-            if key is not None:
-                current = updated.get(obj_id, {})
-                current.pop(key,None)
-                updated[obj_id] = current
-            else:    
-                updated.pop(obj_id)
-
-            self._save_json_field(self.FIELD_UPDATED, updated)
+        self._save_json_field(self.FIELD_UPDATED, updated)
+        return True
             
 
-    def clear_created(self, obj_id=None):
-        if obj_id is not None:
-            created = self.get_created()
-            if str(obj_id) in created.keys():
-                created.pop(str(obj_id))
-                self._save_json_field(self.FIELD_CREATED, created)
-        else:
+    def clear_created(self, obj_id: str = None):
+        if obj_id is None:
             self.redis.hdel(self.key, self.FIELD_CREATED)
+            return True
+        
+        obj_id =str(obj_id)
+        created = self.get_created()
+        if obj_id not in created.keys():
+            return False
+        
+        del created[obj_id]
+        self._save_json_field(self.FIELD_CREATED, created)
+        return True
 
-    def clear_deleted(self, obj_id=None):
-        if obj_id is not None:
-            deleted = self.get_deleted()
-            if obj_id in deleted:
-                deleted.remove(obj_id)
-                self._save_json_field(self.FIELD_DELETED, deleted)
-        else:
+    def clear_deleted(self, obj_id:str = None):
+        if obj_id is None:
             self.redis.hdel(self.key, self.FIELD_DELETED)
+            return True
+        
+        obj_id =str(obj_id)
+        deleted = self.get_deleted()
+        if obj_id not in deleted:
+            return False
+        
+        deleted.remove(obj_id)
+        self._save_json_field(self.FIELD_DELETED, deleted)
+        return True
+
 
     def clear_object(self, obj_id):
-        self.clear_updated(obj_id)
-        self.clear_created(obj_id)
-        self.clear_deleted(obj_id)
+        upd = self.clear_updated(obj_id)
+        crt = self.clear_created(obj_id)
+        rem = self.clear_deleted(obj_id)
+        return upd or crt or rem
 
     def clear_all(self):
         self.redis.delete(self.key)

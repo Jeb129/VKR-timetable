@@ -34,31 +34,6 @@ export interface DayInfo {
     name: string;
 }
 
-export const DAYS = [
-    { id: 1, name: "Понедельник" },
-    { id: 2, name: "Вторник" },
-    { id: 3, name: "Среда" },
-    { id: 4, name: "Четверг" },
-    { id: 5, name: "Пятница" },
-    { id: 6, name: "Суббота" }
-] as const;
-
-export interface Lesson {
-    id: string;
-    scenario: number;
-
-    discipline: string;
-    lesson_type: string;
-    classroom: string;
-    timeslot: Timeslot;
-
-    teachers: {id:number; name:string;}[];
-    study_groups: {id:number; name:string;}[];
-
-    whole_weeks: number;
-    draft_diffs: {field: string; value: any}[];
-    draft_created: boolean;
-}
 export interface ScheduleEvent {
     id: string;
     title: string;
@@ -75,6 +50,7 @@ export interface ScheduleEvent {
     editable?: boolean; 
     backgroundColor?: string;
 }
+
 export interface ScheduleScenario {
     id: number;
     name: string;
@@ -89,4 +65,31 @@ export interface Scenario {
     is_active: boolean;
     created_at: string;
     semester?: number;
+}
+
+export interface SimpleEntity {
+    id: number;
+    name: string;
+}
+
+export interface DraftChange {
+    field: string;
+    was: SimpleEntity | SimpleEntity[] | null;
+    now: SimpleEntity | SimpleEntity[] | null;
+}
+
+export interface Lesson {
+    id: string;
+    scenario: number;
+
+    discipline: string;
+    lesson_type: string;
+    classroom: string;
+    timeslot: Timeslot;
+
+    teachers: SimpleEntity[];
+    study_groups: SimpleEntity[];
+
+    whole_weeks: number;
+    draft_info: {is_new: boolean; changes: DraftChange[]} | null
 }

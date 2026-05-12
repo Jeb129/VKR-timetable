@@ -88,10 +88,10 @@ class ScheduleContext:
             return None
         return results[0]
 
-    def get_by_id(self, lesson_id: int) -> Optional[Lesson]:
+    def get_by_id(self, lesson_id: int | str) -> Optional[Lesson]:
         """Самый быстрый поиск по ID (почти мгновенно)"""
         for l in self.lessons:
-            if l.id == lesson_id:
+            if str(l.id) == str(lesson_id):
                 return l
         return None
     

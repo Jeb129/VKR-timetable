@@ -11,5 +11,5 @@ export const DAYS = [
     { id: 4, name: "Четверг", short_name: "Чт" },
     { id: 5, name: "Пятница", short_name: "Пт" },
     { id: 6, name: "Суббота", short_name: "Сб" },
-    { id: 6, name: "Воскресенье", short_name: "Вс" },
+    { id: 7, name: "Воскресенье", short_name: "Вс" },
 ] as const;

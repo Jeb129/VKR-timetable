@@ -4,6 +4,7 @@ from typing import Dict, List, Optional
 from django.db.models import ManyToManyField
 
 from api.models import Constraint, Lesson
+from api.serializers.education import LessonReadSerializer
 from api.services.constraunt.constraints import registry
 from api.services.constraunt.context import ScheduleContext
 from api.services.constraunt.meta import ConstraintError, LessonError
@@ -101,6 +102,7 @@ class ScheduleManager:
                     message="Ошибка при проверке",
                     data=err
                 ))
+        errors = errors if errors else None
         return LessonError(lesson,errors)
 
     def check_scenario(self) -> List[LessonError] :
@@ -117,6 +119,8 @@ class ScheduleManager:
         elif self.context is None:
             raise ValueError("Не собран контекст проверки. Вызовите ScheduleManager.build_context() или передайте build_context=True при вызове метода check_lesson_draft")
         lesson = self.context.get_by_id(lesson_id)
+        # if str(lesson_id) == "3021": print(LessonReadSerializer(lesson).data)
+
         return self.check_lesson(lesson)
 
     def check_scenario_draft(self,*,build_context=False)-> List[LessonError]:
@@ -131,6 +135,7 @@ class ScheduleManager:
         
     # CRUD над черновиками занятий
     def create_lesson_draft(self,data):
+        self.context = None
         return self.storage.create_object(data=data)
 
     def get_lessons_draft(self,*args,**kwargs):
@@ -141,11 +146,9 @@ class ScheduleManager:
     
     def update_lesson_draft(self,lesson_id, diff_data):
         """Вносит изменения в черновик расписания"""
-        if str(lesson_id) in self.storage.get_created():
+        if lesson_id in self.storage.get_created():
             # если занятие - созданный черновик, то пересоздаем
-            self.storage.create_object(data=diff_data,nes_id=str(lesson_id))
-            # Пересобираем контекст с обновленным занятием и проверяем
-            return self.check_lesson_draft(lesson_id, build_context=True)
+            self.storage.create_object(data=diff_data,nes_id=lesson_id)
         
         # Получаем оригинальное занятие
         original = Lesson._default_manager.prefetch_related('teachers', 'study_groups').get(id=lesson_id)
@@ -155,7 +158,7 @@ class ScheduleManager:
         merged_candidate = {
             **self.storage.get_updated().get(lesson_id, {}), 
             **diff_data}
-
+        # if str(lesson_id) == "3021": print(merged_candidate)
         # Сравниваем все изменения с оригинальным занятием
         final_diff = {}
         for key, value in merged_candidate.items():
@@ -170,29 +173,35 @@ class ScheduleManager:
                 # Если обновленнре поле НЕ совпадает с оригиналом - запоминаем
                 final_diff[key] = value
 
+        # if str(lesson_id) == "3021": print(LessonReadSerializer(original).data)
+        # if str(lesson_id) == "3021": print(final_diff)
         if not final_diff:
             # Если все обновленные поля совпадают с оригинальными значениями - удаляем запись из хранилища
             self.storage.clear_updated(obj_id=lesson_id)
         else:
             self.storage.update_object(obj_id=lesson_id,diff=final_diff)
-
-        # Пересобираем контекст с обновленным занятием и проверяем
-        return self.check_lesson_draft(lesson_id, build_context=True)
+        self.context = None
 
     def delete_lessons_draft(self, lesson_id=None):
         self._check_lesson_scenario(lesson_id=lesson_id)
         if lesson_id is not None:
             self.storage.delete_object(obj_id=lesson_id)
-        else:
-            self.storage.clear_all()
-    
-    def apply_lessons(self, lesson_id=None):
+        self.context = None
+
+    def apply_lessons(self, lesson_id = None):
         if lesson_id is None:
             self._check_lesson_scenario(lesson_id=lesson_id)
             commit_scenario(self.storage)
         else:
             commit_lesson(self.storage,lesson_id)
-        
+
+    def clear_lessons(self, lesson_id = None):
+        if lesson_id is None:
+            self.storage.clear_all()
+        else:
+            self.storage.clear_object(lesson_id)
+            return Lesson._default_manager.get(id=lesson_id)
+
 
     def has_draft(self):
         return self.storage.has_any_changes()

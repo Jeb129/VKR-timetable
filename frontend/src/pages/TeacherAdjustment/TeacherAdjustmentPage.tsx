@@ -5,9 +5,9 @@ import { useAuth } from "@/context/AuthContext";
 import { useModal } from "@/context/ModalContext";
 import SearchSelect from "@/components/UI/SearchSelect";
 import type { MappedEvent, Timeslot } from "@/types/schedule";
-import { DAYS } from "@/types/schedule";
 import type { Classroom } from "@/types/classroom";
 import "@/styles/Editor.css";
+import { DAYS } from "@/types/enums";
 
 const getISOWeek = (date: Date) => {
     const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));

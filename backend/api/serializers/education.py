@@ -10,6 +10,8 @@ from api.models import (
 )
 from config.utils import SimpleRelatedSerializer
 
+from django.forms.models import model_to_dict
+
 
 class InstituteSerializer(serializers.ModelSerializer):
     class Meta:
@@ -77,15 +79,28 @@ class LessonReadSerializer(serializers.ModelSerializer):
     study_groups = SimpleRelatedSerializer(many=True)
     
     # Поля черновика
-    draft_diffs = serializers.SerializerMethodField()
-    draft_created = serializers.SerializerMethodField()
+    draft_info = serializers.SerializerMethodField()
 
-    def get_draft_diffs(self,obj):
-        return (obj.draft_diffs if hasattr(obj, "draft_diffs") else [])
+    def get_draft_info(self, obj):
+        originals = getattr(obj, 'draft_originals', {})
+        if not originals and not getattr(obj, 'draft_created', False):
+            return None
+
+        diffs = []
+        for field, old_obj in originals.items():
+            # "Текущее" (новое) значение мы берем прямо из объекта obj
+            current_val = getattr(obj, field)
+            is_list = isinstance(old_obj,list)
+            diffs.append({
+                "field": field,
+                "was": SimpleRelatedSerializer(old_obj,many=is_list).data,
+                "now": SimpleRelatedSerializer(current_val,many=is_list).data
+            })
+        return {
+            "is_new": getattr(obj, 'draft_created', False),
+            "changes": diffs
+        }
     
-    def get_draft_created(self,obj):
-        return hasattr(obj, "draft_created")
-
     class Meta:
         model = Lesson
         fields = [
@@ -98,6 +113,5 @@ class LessonReadSerializer(serializers.ModelSerializer):
             "teachers",
             "study_groups",
             "whole_weeks",
-            "draft_diffs",
-            "draft_created"
+            "draft_info"
         ]

@@ -23,6 +23,10 @@ export const scheduleDraftService = {
         return res.data || [];
     },
 
+    bulkUpdateLessons: async (scenario_id: number, updates: {id: string, [key: string]: any}[]): Promise<LessonError[]> => {
+        return (await privateApi.patch(`/api/scenario/${scenario_id}/draft/lessons/bulk-patch/`, updates)).data;
+    },
+
     // Создание нового урока в черновике
     createLesson: async (scenarioId: number, data: Partial<Lesson>): Promise<LessonError> => {
         const res = await privateApi.post(`/api/scenario/${scenarioId}/draft/lessons/`, data);
@@ -35,8 +39,13 @@ export const scheduleDraftService = {
     },
 
     // Сохранение всех изменений в БД
-    commitDraft: async (scenarioId: number): Promise<LessonError[]> => {
-        const res = await privateApi.post(`/api/scenario/${scenarioId}/draft/lessons/apply/`);
+    commitDraft: async (scenarioId: number, lessonId?: string): Promise<LessonError[]> => {
+        const res = await privateApi.post(`/api/scenario/${scenarioId}/draft/lessons/${lessonId ? lessonId + "/" : ""}apply/`);
         return res.data || [];
+    },
+    clearDraft: async (scenarioId: number, lessonId?: string): Promise<Lesson | null> => {
+        const res = await privateApi.delete(`/api/scenario/${scenarioId}/draft/lessons/${lessonId ? lessonId + "/" : ""}clear/`)
+        console.log(res.data)
+        return res.data
     }
 };
