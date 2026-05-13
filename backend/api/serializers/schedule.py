@@ -3,7 +3,7 @@ from django.db import models
 from django.forms.models import model_to_dict
 
 from api.models import Lesson, ScheduleAdjustment, Booking, ScheduleScenario
-from api.serializers.education import LessonSerializer
+from api.serializers.education import LessonReadSerializer
 from api.services.constraunt.meta import ConstraintError
 from api.services.schedule.mapper import MappedEvent
 
@@ -27,13 +27,13 @@ class MappedEventSerializer(serializers.Serializer):
         в зависимости от его типа.
         """
         from api.serializers import (
-            LessonSerializer,
+            LessonReadSerializer,
             ScheduleAdjustmentSerializer,
             BookingSerializer,
         )
 
         if isinstance(obj.event, Lesson):
-            return {"event": LessonSerializer(obj.event).data}
+            return {"event": LessonReadSerializer(obj.event).data}
         elif isinstance(obj.event, ScheduleAdjustment):
             return {"event": ScheduleAdjustmentSerializer(obj.event).data}
         elif isinstance(obj.event, Booking):
@@ -49,7 +49,7 @@ class ConstraintErrorSerializer(serializers.Serializer):
     message = serializers.CharField()
     data = serializers.SerializerMethodField()
 
-    def get_data(self, obj):
+    def get_data(self, obj:ConstraintError):
         return self._serialize(obj.data)
 
     def _serialize(self, value):
@@ -73,5 +73,9 @@ class ConstraintErrorSerializer(serializers.Serializer):
         # Потом можно будет заменить на полноценное применение сериальзатором
         fields = [f.name for f in instance._meta.concrete_fields]
         if isinstance(instance, Lesson):
-            return LessonSerializer(instance).data
+            return LessonReadSerializer(instance).data
         return model_to_dict(instance, fields=fields)
+    
+class LessonErrorSerializer(serializers.Serializer):
+    lesson = LessonReadSerializer()
+    errors = ConstraintErrorSerializer(many=True)

@@ -4,7 +4,8 @@ export interface ConstraintError {
     name: string;
     penalty: number;
     message: string;
-    data: any[] | null
+    data: any;
+    // data: Record<string,any> | any[] | null
 }
 
 export interface LessonError {

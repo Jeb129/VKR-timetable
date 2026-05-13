@@ -1,4 +1,5 @@
 from django.db.models import ManyToManyField
+from rest_framework import serializers
 
 
 def normalize_diff(model, diff):
@@ -22,3 +23,10 @@ def normalize_diff(model, diff):
             fixed[key] = value
 
     return fixed
+
+class SimpleRelatedSerializer(serializers.Serializer):
+    id = serializers.IntegerField()
+    name = serializers.SerializerMethodField()
+    
+    def get_name(self, obj):
+        return str(obj.name) if hasattr(obj,"name") else str(obj)

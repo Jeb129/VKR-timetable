@@ -4,13 +4,12 @@ export const  CONSTRAINT_ERROR_TYPES: Record<number,string> = {
 }
 export type ErrorKey = keyof typeof CONSTRAINT_ERROR_TYPES; 
 
-export const  WEEK_DAYS: Record<number,string[]> = {
-    1: ["Понедельник","Пн"],
-    2: ["Вторник","Вт"],
-    3: ["Среда","Ср"],
-    4: ["Четверг","Чт"],
-    5: ["Пятница","Пт"],
-    6: ["Суббота","Сб"],
-    7: ["Воскресенье","Вс"],
-}
-export type DayKey = keyof typeof WEEK_DAYS; 
+export const DAYS = [
+    { id: 1, name: "Понедельник", short_name: "Пн" },
+    { id: 2, name: "Вторник", short_name: "Вт" },
+    { id: 3, name: "Среда", short_name: "Ср" },
+    { id: 4, name: "Четверг", short_name: "Чт" },
+    { id: 5, name: "Пятница", short_name: "Пт" },
+    { id: 6, name: "Суббота", short_name: "Сб" },
+    { id: 7, name: "Воскресенье", short_name: "Вс" },
+] as const;

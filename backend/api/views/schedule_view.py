@@ -180,7 +180,7 @@ class ScheduleAdjustmentCreateView(APIView):
         return Response({"message": "Заявка на перенос отправлена модератору"}, status=201)
 
 class ScheduleAdjustmentViewSet(viewsets.ModelViewSet):
-    queryset = ScheduleAdjustment.objects.all().order_by("-created_at")
+    queryset = ScheduleAdjustment.objects.all().order_by("-request__created_at")
     serializer_class = ScheduleAdjustmentSerializer
     permission_classes = [IsAuthenticated]
 
@@ -189,15 +189,15 @@ class ScheduleAdjustmentViewSet(viewsets.ModelViewSet):
         # Добавляем фильтрацию по статусу (?status=0)
         status_param = self.request.query_params.get("status")
         if status_param is not None:
-            queryset = queryset.filter(status=status_param)
+            queryset = queryset.filter(request__status=status_param)
         return queryset
     
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         """Метод одобрения переноса пары"""
         obj = self.get_object()
-        obj.status = 1  # VERIFIED
-        obj.save()
+        obj.request.status = 1  # VERIFIED
+        obj.request.save()
         return Response({'status': 'verified'}, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'])
@@ -208,7 +208,7 @@ class ScheduleAdjustmentViewSet(viewsets.ModelViewSet):
         if not comment:
             return Response({"detail": "Причина отказа обязательна"}, status=status.HTTP_400_BAD_REQUEST)
         
-        obj.status = 2  # REJECTED
-        obj.admin_comment = comment
-        obj.save()
+        obj.request.status = 2  # REJECTED
+        obj.request.admin_comment = comment
+        obj.request.save()
         return Response({'status': 'rejected'}, status=status.HTTP_200_OK)
