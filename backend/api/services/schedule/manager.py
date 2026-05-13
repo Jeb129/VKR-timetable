@@ -4,10 +4,9 @@ from typing import Dict, List, Optional
 from django.db.models import ManyToManyField
 
 from api.models import Constraint, Lesson
-from api.serializers.education import LessonReadSerializer
-from api.services.constraunt.constraints import registry
-from api.services.constraunt.context import ScheduleContext
-from api.services.constraunt.meta import ConstraintError, LessonError
+from api.services.constraints.constraints import registry
+from api.services.schedule.context import ScheduleContext
+from api.services.constraints.meta import ConstraintError, LessonError
 from api.services.drafts.storage import ScheduleDraftStorage
 from api.services.drafts.commit import commit_lesson, commit_scenario
 from api.services.drafts.context import draft_context

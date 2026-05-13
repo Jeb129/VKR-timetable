@@ -4,7 +4,7 @@ from django.forms.models import model_to_dict
 
 from api.models import Lesson, ScheduleAdjustment, Booking, ScheduleScenario
 from api.serializers.education import LessonReadSerializer
-from api.services.constraunt.meta import ConstraintError
+from api.services.constraints.meta import ConstraintError
 from api.services.schedule.mapper import MappedEvent
 
 class ScheduleScenarioSerializer(serializers.ModelSerializer):

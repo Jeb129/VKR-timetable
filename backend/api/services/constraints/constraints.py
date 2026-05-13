@@ -1,8 +1,6 @@
-from email import message
-
 from django.db.models import Q
-from api.services.constraunt.meta import constraint, ConstraintError
-from .context import ScheduleContext
+from api.services.constraints.meta import constraint, ConstraintError
+from api.services.schedule.context import ScheduleContext
 from api.models import (
     EquipmentRequirement,
     BuildingTravelTime,
@@ -13,7 +11,10 @@ from api.models import (
 )
 
 # Импорт в текущий модуль, для последующего импорта проверок в другие модули
-from api.services.constraunt.meta import registry, hard_constraints, soft_constraints
+# При разделении по файлам, вероятно, придется выносить список отдельно или импортировать его последовательно в каждый файл.
+# но пока что все в одном файле и это проблемы будущих разрабов.
+# Привет из мая 2026 от бекенд разработчика этого приложения, бедолаги
+from api.services.constraints.meta import registry
 
 #               Описание                    Вес    Имя метода для проверки
 # ---------------------------------------Жёсткие---------------------------------------
@@ -46,7 +47,7 @@ from api.services.constraunt.meta import registry, hard_constraints, soft_constr
 # =============================================================================
 
 
-@constraint("teacher_no_overlap", isHard=True)
+@constraint("teacher_no_overlap")
 def teacher_no_overlap(lesson: Lesson, context: ScheduleContext, weight: int):
     ts = lesson.timeslot
     if not ts:
@@ -70,7 +71,7 @@ def teacher_no_overlap(lesson: Lesson, context: ScheduleContext, weight: int):
     )
 
 
-@constraint("group_no_overlap", isHard=True)
+@constraint("group_no_overlap")
 def group_no_overlap(lesson: Lesson, context: ScheduleContext, weight: int):
     ts = lesson.timeslot
     if not ts:
@@ -94,7 +95,7 @@ def group_no_overlap(lesson: Lesson, context: ScheduleContext, weight: int):
     )
 
 
-@constraint("room_no_overlap", isHard=True)
+@constraint("room_no_overlap")
 def room_no_overlap(lesson: Lesson, context: ScheduleContext, weight: int):
     ts = lesson.timeslot
     room = lesson.classroom
@@ -116,7 +117,7 @@ def room_no_overlap(lesson: Lesson, context: ScheduleContext, weight: int):
     return None
 
 
-@constraint("room_has_enough_seats", isHard=True)
+@constraint("room_has_enough_seats")
 def room_has_enough_seats(lesson: Lesson, context: ScheduleContext, weight: int):
     room = lesson.classroom
     if not room or room.is_virtual:
@@ -133,7 +134,7 @@ def room_has_enough_seats(lesson: Lesson, context: ScheduleContext, weight: int)
     return None
 
 
-@constraint("building_travel_impossible", isHard=True)
+@constraint("building_travel_impossible")
 def building_travel_impossible(lesson: Lesson, context: ScheduleContext, weight: int):
     ts = lesson.timeslot
     room = lesson.classroom

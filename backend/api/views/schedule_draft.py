@@ -7,12 +7,10 @@ from rest_framework.decorators import action
 
 from api.models import Lesson
 from api.serializers import LessonReadSerializer
-from api.serializers.education import LessonSerializer
 from api.serializers.schedule import LessonErrorSerializer
 from api.services.schedule.manager import ScheduleManager
 
 from config.utils import normalize_diff
-import manage
 
 class DraftLessonViewSet(viewsets.ViewSet):
     """
