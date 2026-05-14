@@ -1,13 +1,12 @@
 import logging
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from django.db.models import ManyToManyField
 
-from api.models import Constraint, Lesson
-from api.services.constraints.constraints import registry
+from api.models import Lesson
 from api.services.constraints import ConstraintManager
 from api.services.schedule.context import ScheduleContext
-from api.services.constraints.meta import ConstraintError, LessonError
+from api.services.constraints.meta import LessonError
 from api.services.drafts.storage import ScheduleDraftStorage
 from api.services.drafts.commit import commit_lesson, commit_scenario
 from api.services.drafts.context import draft_context
