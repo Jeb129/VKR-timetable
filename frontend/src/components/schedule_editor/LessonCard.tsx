@@ -1,7 +1,7 @@
 // components/schedule_editor/LessonCard.tsx
-import type { Lesson} from "@/types/schedule";
+import type { Lesson } from "@/types/schedule";
 import type { ConstraintError } from "@/types/constraint";
-import { CollapsibleList } from "@/components/UI/CollapsibleList"
+import { CollapsibleList } from "@/components/UI/CollapsibleList";
 import "@/styles/LessonCard.css";
 
 interface LessonCardProps {
@@ -18,18 +18,24 @@ export const LessonCard = ({
     lesson, 
     errors = [], 
     isPending = false, 
+    isHighlighted = false,
     onDragStart, 
     onDelete, 
     onClick 
 }: LessonCardProps) => {
     
+    // Состояния валидации
     const hasErrors = errors.length > 0;
     const isHardError = errors.some(e => e.penalty >= 100);
-    const isNew = lesson.draft_created;
-    const isModified = !isNew && (lesson.draft_diffs?.length ?? 0) > 0;
 
+    // Логика черновика на основе draft_info
+    const isNew = lesson.draft_info?.is_new || false;
+    // Занятие считается измененным, если есть объект draft_info и это не создание с нуля
+    const isModified = !!lesson.draft_info && !isNew;
+
+    // Проверка изменения конкретного поля
     const isFieldChanged = (fieldName: string) => 
-        lesson.draft_diffs?.some(diff => diff.field === fieldName);
+        lesson.draft_info?.changes.some(change => change.field === fieldName);
 
     return (
         <div 
@@ -37,6 +43,7 @@ export const LessonCard = ({
                 draggable-lesson card p-1 flex-col gap-1
                 ${hasErrors ? "has-error" : ""} 
                 ${isPending ? "is-pending" : ""}
+                ${isHighlighted ? "is-highlighted" : ""}
                 ${isNew ? "draft-new" : ""}
                 ${isModified ? "draft-modified" : ""}
             `}
@@ -44,29 +51,34 @@ export const LessonCard = ({
             onDragStart={e => onDragStart?.(e, lesson.id)}
             onClick={onClick}
         >
-            {/* Абсолютно позиционированные индикаторы */}
+            {/* Индикаторы статуса в углу */}
             <div className="card-indicators flex-row gap-1">
                 {isPending ? (
-                    <div className="checking-spinner align-center justify-center" title="Проверка...">⏳</div>
+                    <div className="checking-spinner flex-row align-center justify-center" title="Проверка...">⏳</div>
                 ) : hasErrors && (
-                    <div className={`error-icon align-center justify-center ${isHardError ? 'bg-red' : 'bg-orange'}`}>!</div>
+                    <div className={`error-icon flex-row align-center justify-center ${isHardError ? 'bg-red' : 'bg-orange'}`}>!</div>
                 )}
             </div>
 
-            {/* Заголовок */}
+            {/* Заголовок (Дисциплина) */}
             <div className="flex-row space-between align-start w-100">
                 <div className={`subject-short truncate f-1 ${isFieldChanged('discipline') ? 'text-orange' : 'text-primary'}`}>
                     {lesson.discipline}
                 </div>
                 {onDelete && (
-                    <button className="delete-btn-mini ml-1" onClick={(e) => { e.stopPropagation(); onDelete(); }}>×</button>
+                    <button 
+                        className="delete-btn-mini ml-1" 
+                        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                    >
+                        ×
+                    </button>
                 )}
             </div>
 
-            {/* Преподаватели */}
+            {/* Список преподавателей */}
             <CollapsibleList
                 items={lesson.teachers || []}
-                containerClassName={isFieldChanged('teachers') ? 'bg-orange-light p-1' : ''}
+                containerClassName={isFieldChanged('teachers') ? 'bg-orange-light' : ''}
                 renderItem={(t, idx) => (
                     <span className="lesson-card-sub truncate" key={idx}>👤 {t.name}</span>
                 )}
@@ -74,7 +86,7 @@ export const LessonCard = ({
 
             <div className="lesson-divider w-100" />
 
-            {/* Подвал */}
+            {/* Подвал (Аудитория и Группы) */}
             <div className="flex-row space-between align-center w-100 gap-1">
                 <div className={`room-short ${isFieldChanged('classroom') ? 'room-changed' : ''}`}>
                     {lesson.classroom || "—"}

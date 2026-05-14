@@ -34,7 +34,6 @@ export const GridCell = memo(({
 
     // Если слота нет в сетке (выходной)
     if (!slot) return <td className="grid-cell disabled"></td>;
-    // console.log("Cell render", slot.id, !!lesson)
     const handleDragOver = (e: React.DragEvent) => {
         e.preventDefault(); // Обязательно для работы Drop
         if (!lesson) setIsOver(true);

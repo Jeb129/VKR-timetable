@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Set, Optional, Tuple
-from api.models import BuildingTravelTime, Lesson
+from typing import Dict, List, Optional, Tuple
+from api.models import Lesson
 from api.services.drafts.queryset import DraftFilters
 
 @dataclass

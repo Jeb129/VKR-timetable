@@ -40,7 +40,7 @@
 }
 
 .draft-modified {
-    border: 0.125rem dashed var(--p-blue) !important;
+    border: 0.125rem dashed var(--p-blue-light) !important;
 }
 
 /* Состояние ожидания (Pending) */
