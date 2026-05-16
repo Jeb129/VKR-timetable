@@ -45,13 +45,13 @@ class ExcelAPIView(APIView):
                     "messages": ValidationMeassageSerializer(messages, many=True).data,
                     "created": {
                         "study_programs": load_stream.programs_created_counter,
-                        "disciplines": load_stream.discipline_created_counter,
+                        "disciplines": load_stream.disciplines_created_counter,
                         "groups": load_stream.groups_created_counter,
                         "teachers": load_stream.teachers_created_counter,
                     },
                     "exists": {
                         "study_programs": load_stream.programs_exists_counter,
-                        "disciplines": load_stream.discipline_exists_counter,
+                        "disciplines": load_stream.disciplines_exists_counter,
                         "groups": load_stream.groups_exists_counter,
                         "teachers": load_stream.teachers_exists_counter,
                     },
