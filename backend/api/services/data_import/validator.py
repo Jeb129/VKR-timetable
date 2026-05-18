@@ -42,13 +42,13 @@ def parse_int_or_none(value):
         return None
 
 
-def validate_row(row, idx):
+def validate_load_row(row, idx):
     errors = []
 
     def err(field, message):
         errors.append(ValidationMessage(idx,"WARNING", field, message))
 
-    # Разбор полей (строго 22, как в выгрузке)
+    # Разбор полей
     (
         institute,
         code,
@@ -149,8 +149,8 @@ def validate_row(row, idx):
             err("Группа.Год", "Должен быть целым числом >= 0")
 
     # Номер группы (строка)
-    if is_empty(group_num):
-        err("Группа.Номер группы", "Обязательное поле")
+    # if is_empty(group_num):
+    #     err("Группа.Номер группы", "Обязательное поле")
     group_num_str = None if is_empty(group_num) else str(group_num).strip()
 
     # Подгруппа

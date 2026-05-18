@@ -6,12 +6,13 @@ from django.db.models import Q
 from api.models import *
 from api.services.data_import.excel import export_excel
 from api.services.data_import.structure import (ACADEMIC_LOAD_STRUCTURE)
-from api.services.data_import.validator import ValidationMessage, validate_row
+from api.services.data_import.validator import ValidationMessage, validate_load_row
 from api.services.schedule.mapper import get_semester_by_date
 
 logger = logging.getLogger("data_import")
 
 class AcademicLoadReader:
+
     def __init__(self,data):
         self.data = data
         self.errors = []
@@ -25,317 +26,248 @@ class AcademicLoadReader:
         self.programs_created_counter = 0 # Созданные направления подготовки
         self.programs_exists_counter = 0 # Уже существующие направления подготовки
 
-        self.discipline_created_counter = 0 # Созданные дисциплины
-        self.discipline_exists_counter = 0 # Уже существующие дисциплины
+        self.disciplines_created_counter = 0 # Созданные дисциплины
+        self.disciplines_exists_counter = 0 # Уже существующие дисциплины
 
         self.teachers_created_counter = 0 # Созданные преподаватели
         self.teachers_exists_counter = 0 # Существующие преподаватели
 
         self.groups_created_counter = 0 # Созданные группы
-        self.groups_exists_counter = 0 # Существующие группы
+        self.groups_exists_counter = 0 # Существующие группы !!!Работает криво!!!
 
         self.load_created_counter = 0 # Созданные записи нагрузки
-        self.load_exists_counter = 0 # Существующие записис нагрузки
+        self.load_exists_counter = 0 # Существующие записис нагрузки !!!Работает криво!!!
         
-        # Временные хранилища (чтобы не дергать БД каждый раз)
+        # Кэш для создаваемых объектов
         self.programs = {}     # code -> {code, name, institute}
         self.teachers = {}     # fio -> {name, post}
         self.disciplines = {}
         self.groups = {}
 
-        self.groups_raw = {} # Группы без подгруппы, для постобработки
-        self.load_raw = [] # Академическая нагрузка для групп без подгрупп
+        # Кэши справочников
+        self.semesters = {}
+        self.institutes_cache = {i.short_name: i for i in Institute.objects.all()}
+        self.lesson_types_cache = {lt.name: lt for lt in LessonType.objects.all()}
+        self.lesson_types_cache.update({lt.short_name: lt for lt in LessonType.objects.all() if lt.short_name})
+
+        # Постобработка
+        self.queue_groups = [] # Группы без подгруппы, для постобработки
+        self.queue_flow = [] # Группы без номера группы и подгруппы (потоки), для постобработки
+        self.linked_groups = set() # Хранилище для отслеживания уже связанных групп (чтобы не дергать БД лишний раз)
+
+    def _skip(self,idx,field,message):
+        msg = ValidationMessage(
+            idx,"ERROR",field,message
+        )
+        self.errors.append(msg)
+        self.skipped_counter += 1
+        return msg
+    
+    def _error(self,idx,field,message):
+        msg = ValidationMessage(
+            idx,"CRITICAL",field,message
+        )
+        self.errors.append(msg)
+        self.error_counter += 1
+        return msg
+
+    def _get_semester(self, adm_year, sem_order):
+        sem_year = adm_year + (sem_order // 2)
+        sem_month = 2 if sem_order % 2 == 0 else 9
+        dt_key = f"{sem_year}-{sem_month:02d}-01"
+        
+        if dt_key not in self.semesters:
+            self.semesters[dt_key] = get_semester_by_date(dt_key)
+        return self.semesters[dt_key]
+
+    def process_row(self, idx, norm, mode):
+        """
+        Единый метод обработки одной нормализованной строки.
+        mode: subgroup | group | stream
+        """
+        (inst_short, sp_code, sp_name, sp_short, d_name, d_merge, 
+         lt_name, lt_short, sem_order, control, weeks, hours, 
+         t_inst_short, t_name, t_post, adm_year, g_num, sub_g_num, 
+         l_form, l_stage, stud_count, m_key) = norm
+
+        with transaction.atomic():
+            try:
+                # 1. Получаем общие объекты (используя кэш)
+                inst_obj = self.institutes_cache.get(inst_short)
+                if not inst_obj:
+                    yield self._skip(idx, "Институт", f"Не найден: {inst_short}")
+                    return
+                
+                # Вид занятия
+                lt_obj = self.lesson_types_cache.get(lt_name) or self.lesson_types_cache.get(lt_short)
+                if not lt_obj:
+                    yield self._skip(idx, "Вид занятия", f"Не найден: {lt_name}, {lt_short}")
+                    return
+
+                # Семестр
+                sem_obj = self._get_semester(adm_year, sem_order)
+                if not sem_obj:
+                    yield self._skip(idx, "Семестр", f"Не найден для {adm_year} год, {sem_order} сем.")
+                    return
+                
+                # Программа
+                if sp_code not in self.programs:
+                    sp_obj, created = StudyProgram.objects.get_or_create(
+                        code=sp_code, institute=inst_obj, 
+                        defaults={"name": sp_name, "short_name": sp_short}
+                    )
+                    self.programs[sp_code] = sp_obj
+                    if created:
+                        self.programs_created_counter += 1
+                    else:
+                        self.programs_exists_counter += 1
+                sp_obj = self.programs[sp_code]
+
+                # Дисциплина
+                if d_name not in self.disciplines:
+                    d_obj, created = Discipline.objects.get_or_create(
+                        name=d_name, defaults={"allow_merge_teachers": bool(d_merge)}
+                    )
+                    self.disciplines[d_name] = d_obj
+                    if created:
+                        self.disciplines_created_counter += 1
+                    else:
+                        self.disciplines_exists_counter += 1
+                d_obj = self.disciplines[d_name]
+
+
+
+                # Преподаватель (get_or_create с кэшем)
+                t_key = (t_inst_short, t_name)
+                if t_key not in self.teachers:
+                    # Поиск института преподавателя (опционально)
+                    t_inst = self.institutes_cache.get(t_inst_short)
+                    t_obj, created = Teacher.objects.get_or_create(
+                        name=t_name, institute=t_inst, defaults={"post": t_post}
+                    )
+                    self.teachers[t_key] = t_obj
+                    if created:
+                        self.teachers_created_counter += 1
+                    else:
+                        self.teachers_exists_counter += 1
+                t_obj = self.teachers[t_key]
+
+
+
+                # 2. ПОИСК / СОЗДАНИЕ ГРУПП (Логика зависит от mode)
+                target_groups = []
+                
+                # Общий фильтр потока
+                base_filter = {
+                    "study_program": sp_obj,
+                    "admission_year": adm_year,
+                    "learning_form": l_form,
+                    "learning_stage": l_stage,
+                }
+
+                if mode == "subgroup":
+                    # Создаем/находим конкретную подгруппу
+                    g_obj, created = StudyGroup.objects.get_or_create(
+                        group_num=g_num, sub_group_num=sub_g_num,
+                        **base_filter,
+                        defaults={"students_count": stud_count}
+                    )
+                    target_groups = [g_obj]
+                    if created:
+                        self.groups_created_counter += 1
+                    else:
+                        self.groups_exists_counter += 1
+
+                elif mode == "group":
+                    # Ищем все подгруппы этой группы
+                    target_groups = list(StudyGroup.objects.filter(group_num=g_num, **base_filter))
+                    if not target_groups:
+                        # Если подгрупп не было создано в 1-м цикле, создаем саму группу (sub_group=None)
+                        g_obj, created = StudyGroup.objects.get_or_create(
+                            group_num=g_num, sub_group_num=None,
+                            **base_filter,
+                            defaults={"students_count": stud_count}
+                        )
+                        target_groups = [g_obj]
+                        if created:
+                            self.groups_created_counter += 1
+                        else:
+                            self.groups_exists_counter += 1
+                    else:
+                        # --- ВОТ ЭТОТ МОМЕНТ: Связываем подгруппы между собой ---
+                        group_key = (sp_code, adm_year, g_num, l_form, l_stage)
+                        if group_key not in self.linked_groups:
+                            count = len(target_groups)
+                            for i in range(count):
+                                for j in range(i + 1, count):
+                                    # Благодаря symmetrical=True в модели, связь создастся в обе стороны
+                                    target_groups[i].sub_groups.add(target_groups[j])
+                            self.linked_groups.add(group_key)
+
+                elif mode == "flow":
+                    # Ищем ВСЕ группы этого потока (направление + год + форма + уровень)
+                    target_groups = list(StudyGroup.objects.filter(**base_filter))
+                    if not target_groups:
+                        yield self._skip(idx, "Поток", "Не найдено ни одной группы для потока")
+                        return
+
+                # 3. СОЗДАНИЕ НАГРУЗКИ
+                for g in target_groups:
+                    _, created = AcademicLoad.objects.get_or_create(
+                        semester=sem_obj,
+                        discipline=d_obj,
+                        lesson_type=lt_obj,
+                        teacher=t_obj,
+                        study_group=g,
+                        whole_hours=hours,
+                        whole_weeks=weeks,
+                        defaults={"merge_key": m_key, "control_type":control}
+                    )
+                    if created:
+                        self.load_created_counter += 1
+                    else:
+                        self.load_exists_counter += 1
+                
+                self.success_counter += 1
+
+            except Exception as err:
+                yield self._error(idx,err.__class__.__name__,str(err))
+
 
     def __iter__(self):
-        
-        def skip(idx,field,message):
-            msg = ValidationMessage(
-                idx,"ERROR",field,message
-            )
-            self.errors.append(msg)
-            self.skipped_counter += 1
-            return msg
-        
-        def error(idx,field,message):
-            msg = ValidationMessage(
-                idx,"CRITICAL",field,message
-            )
-            self.errors.append(msg)
-            self.error_counter += 1
-            return msg
-
+        # --- ПРОХОД 1: ВАЛИДАЦИЯ И ПОДГРУППЫ ---
         for idx, row in enumerate(self.data):
-            row_errors, (
-            institute_short_name,
-            study_program_code,
-            study_program_name,
-            study_program_short_name,
-
-            discipline_name,
-            d_allow_merge_teachers,
-
-            lesson_type_name,
-            lesson_type_short_name,
-
-            semester_order,
-            control_type,
-            weeks,
-            hours,
-
-            teacher_institute_short_name,
-            teacher_name,
-            teacher_post,
-
-            admission_year,
-            group_num,
-            sub_group_num,
-            learning_form,
-            learning_stage,
-            students_count,
-
-            merge_key) = validate_row(row,idx)
-
+            row_errors, norm = validate_load_row(row, idx)
             if row_errors:
                 self.errors.extend(row_errors)
                 self.skipped_counter += 1
-                for msg in row_errors:
-                    yield msg
+                for msg in row_errors: yield msg
                 continue
 
-            # Обработка строки
-            with transaction.atomic():
-                try:
-                    # Направление подготовки
-                    if study_program_code not in self.programs:
-                        institute_obj = Institute.objects.filter(
-                        short_name=institute_short_name
-                        ).first()
-                        if not institute_obj:
-                            yield skip(idx,"Направление.Институт",
-                                       f"Не найден институт {institute_short_name}")
-                            continue
+            # Определяем тип строки
+            g_num = norm[16]      # group_num
+            sub_g_num = norm[17]  # sub_group_num
 
-                        study_program_obj, created = StudyProgram.objects.get_or_create(
-                                institute=institute_obj,
-                                code=study_program_code,
-                                defaults={
-                                    "name": study_program_name, 
-                                    "short_name": study_program_short_name
-                                    },
-                            )
-                        
-                        self.programs[study_program_code] = study_program_obj
-                        if created:
-                            self.programs_created_counter += 1
-                        else:
-                            self.programs_exists_counter += 1
-                    else:
-                        study_program_obj = self.programs[study_program_code]
+            if g_num is None:
+                # В очередь потоков
+                self.queue_flow.append((idx, norm))
+                continue
+            
+            if sub_g_num is None:
+                # В очередь групп
+                self.queue_groups.append((idx, norm))
+                continue
 
-                    # Дисциплина
-                    if discipline_name not in self.disciplines:
-                        discipline_obj, created = Discipline.objects.get_or_create(
-                            name=discipline_name,
-                            defaults={
-                                "allow_merge_teachers": not not d_allow_merge_teachers
-                                }
-                            )
-                        self.disciplines[discipline_name] = discipline_obj
-                        if created:
-                            self.discipline_created_counter += 1
-                        else:
-                            self.discipline_exists_counter += 1
-                    else:
-                        discipline_obj = self.disciplines[discipline_name]
-                    
-                    # Вид занятия
-                    lesson_type_obj = LessonType.objects.filter(
-                        Q(name = lesson_type_name) | Q(short_name = lesson_type_short_name)
-                    ).first()
-                    if not lesson_type_obj:
-                        yield skip(idx,"Вид занятия",
-                            f"Не найден вид занятия {lesson_type_name}, {lesson_type_short_name}")
-                        continue
-                    
-                    # Преподаватель
-                    if (teacher_institute_short_name,teacher_name) not in self.teachers:
-                        if teacher_institute_short_name:
-                            teacher_inst_obj = Institute.objects.filter(
-                            short_name=teacher_institute_short_name
-                            ).first()
-                        else:
-                            teacher_inst_obj = None
-                        if teacher_inst_obj:
-                            teacher_obj, created = Teacher.objects.get_or_create(
-                                institute=teacher_inst_obj,
-                                name = teacher_name,
-                                defaults={
-                                    "post":teacher_post
-                                }
-                            )
-                        else:
-                            teacher_obj, created = Teacher.objects.get_or_create(
-                                name = teacher_name,
-                                defaults={
-                                    "post":teacher_post
-                                }
-                            )
-                        self.teachers[(teacher_institute_short_name,teacher_name)] = teacher_obj
-                        if created:
-                            self.teachers_created_counter += 1
-                        else:
-                            self.teachers_exists_counter += 1
-                    else:
-                        teacher_obj =  self.teachers[(teacher_institute_short_name,teacher_name)]
-                    
-                    # Семестр
-                    start_year = admission_year + (semester_order) // 2
-                    month = 2 if semester_order % 2 == 0 else 9
+            # Если мы здесь - это конкретная подгруппа (базовая единица)
+            yield from self.process_row(idx, norm, mode="subgroup")
 
-                    dt = f"{start_year}-{month:02d}-01"
-                    semester_obj = get_semester_by_date(dt)
-                    if not semester_obj:
-                            yield skip(idx,"Нагрузка.Номер семестра",
-                                f"Не найден семестр {semester_order} для групп, поступивших в {admission_year} (Расчитанная дата: {dt})")
-                            continue
-                    
-                    # Нагрузка
-                    group_key = (study_program_code, 
-                                    admission_year,
-                                    group_num,
-                                    learning_form,
-                                    learning_stage,
-                                    sub_group_num)
-                    if sub_group_num is None:
-                        if group_key not in self.groups_raw:
-                            g_obj = StudyGroup(
-                                    study_program=study_program_obj,
-                                    admission_year=admission_year,
-                                    group_num=group_num,
-                                    learning_form=learning_form,
-                                    learning_stage=learning_stage,
-                                    students_count=students_count)
-                                
-                            self.groups_raw[group_key] = g_obj
-                        else:
-                            g_obj = self.groups_raw[group_key]
-                        
-                        self.load_raw.append(
-                                    AcademicLoad(
-                                        semester=semester_obj,
-                                        discipline=discipline_obj,
-                                        lesson_type=lesson_type_obj,
-                                        teacher=teacher_obj,
-                                        study_group=g_obj,
-                                        control_type=control_type,
-                                        whole_hours=hours,
-                                        whole_weeks=weeks,     
-                                    )
-                                )
-                    else:
-                        if group_key not in self.groups:
-                            g_obj, created = StudyGroup.objects.get_or_create(
-                                    study_program=study_program_obj,
-                                    admission_year=admission_year,
-                                    group_num=group_num,
-                                    learning_form=learning_form,
-                                    learning_stage=learning_stage,
-                                    students_count=students_count,
-                                    sub_group_num=int(sub_group_num)
-                                )
-                            self.groups[group_key] = g_obj
-                            if created:
-                                self.groups_created_counter += 1
-                            else:
-                                self.groups_exists_counter += 1
-                        else:
-                            g_obj = self.groups[group_key]
-                        _, created = AcademicLoad.objects.get_or_create(
-                                semester=semester_obj,
-                                discipline=discipline_obj,
-                                lesson_type=lesson_type_obj,
-                                teacher=teacher_obj,
-                                study_group=g_obj,
-                                control_type=control_type,
-                                whole_hours=hours,
-                                whole_weeks=weeks,
-                                defaults={
-                                    "merge_key":merge_key
-                                }
-                        )
-                        if created:
-                            self.load_created_counter += 1
-                        else:
-                            self.load_exists_counter += 1
-                    self.success_counter += 1
-                except Exception as err:
-                    yield error(idx,err.__class__.__name__,err)
+        # --- ПРОХОД 2: ОБРАБОТКА ГРУПП (уже есть все подгруппы) ---
+        for idx, norm in self.queue_groups:
+            yield from self.process_row(idx, norm, mode="group")
 
-        for _,raw_group in self.groups_raw.items():
-                try:
-                    with transaction.atomic():
-                        subs = list(StudyGroup.objects.filter(
-                                    admission_year = raw_group.admission_year,
-                                    study_program = raw_group.study_program,
-                                    learning_form = raw_group.learning_form,
-                                    learning_stage = raw_group.learning_stage,
-                                    group_num = raw_group.group_num,
-                                    sub_group_num__isnull=False
-                                ).all())
-                        count = len(subs)
-                        if count == 0:
-                            # Если нет аналогичных групп с номерами подгрупп - создаем группу
-                            group, created = StudyGroup.objects.get_or_create(
-                                admission_year = raw_group.admission_year,
-                                study_program = raw_group.study_program,
-                                learning_form = raw_group.learning_form,
-                                learning_stage = raw_group.learning_stage,
-                                students_count = raw_group.students_count,
-                                group_num = raw_group.group_num,
-                                # sub_group_num = None
-                            )
-                            if created:
-                                self.groups_created_counter += 1
-                            else:
-                                self.groups_exists_counter += 1
-                            subs.append(group)
-                            count += 1
-
-                        academic_loads = [a for a in self.load_raw if (
-                            a.study_group.admission_year == raw_group.admission_year and
-                            a.study_group.study_program == raw_group.study_program and
-                            a.study_group.learning_form == raw_group.learning_form and
-                            a.study_group.learning_stage == raw_group.learning_stage and
-                            a.study_group.group_num == raw_group.group_num
-                            )]
-
-
-                        
-                        for i in range(count):
-                            # Создаем нагрузку для каждой подгруппы
-                            for raw_load in academic_loads:
-                                _, created = AcademicLoad.objects.get_or_create(
-                                    semester=raw_load.semester,
-                                    discipline=raw_load.discipline,
-                                    lesson_type=raw_load.lesson_type,
-                                    teacher=raw_load.teacher,
-                                    study_group=subs[i],
-                                    whole_hours =raw_load.whole_hours,
-                                    whole_weeks =raw_load.whole_weeks,
-                                    defaults={
-                                        "merge_key":raw_load.merge_key
-                                        }
-                                    )
-                                if created:
-                                    self.load_created_counter += 1
-                                else:
-                                    self.load_exists_counter += 1                          
-                            # Соединяем группы в подгруппы
-                            for j in range(i+1,count):
-                                subs[i].sub_groups.add(subs[j])
-                    # self.success_counter += 1
-                except Exception as err:
-                    yield error(idx,err.__class__.__name__,err)
+        # --- ПРОХОД 3: ОБРАБОТКА ПОТОКОВ (уже есть все группы) ---
+        for idx, norm in self.queue_flow:
+            yield from self.process_row(idx, norm, mode="flow")
 
 
 def export_loading(target,queryset = None):
