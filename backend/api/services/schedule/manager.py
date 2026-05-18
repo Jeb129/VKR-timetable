@@ -168,7 +168,10 @@ class ScheduleManager:
         else:
             self.storage.clear_object(lesson_id)
             return Lesson._default_manager.get(id=lesson_id)
-
+    
+    def get_deleted_lessons_draft(self):
+        deleted_ids = self.storage.get_deleted() # Получаем список ID из Redis
+        return Lesson.objects.filter(id__in=deleted_ids)
 
     def has_draft(self):
         return self.storage.has_any_changes()

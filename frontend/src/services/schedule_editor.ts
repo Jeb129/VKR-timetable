@@ -43,6 +43,13 @@ export const scheduleDraftService = {
         const res = await privateApi.post(`/api/scenario/${scenarioId}/draft/lessons/${lessonId ? lessonId + "/" : ""}apply/`);
         return res.data || [];
     },
+
+    //получение корзины с парами 
+    getTrash: async (scenarioId: number): Promise<Lesson[]> => {
+        const res = await privateApi.get(`/api/scenario/${scenarioId}/draft/lessons/trash/`);
+        return res.data;
+    },
+
     clearDraft: async (scenarioId: number, lessonId?: string): Promise<Lesson | null> => {
         const res = await privateApi.delete(`/api/scenario/${scenarioId}/draft/lessons/${lessonId ? lessonId + "/" : ""}clear/`)
         console.log(res.data)
