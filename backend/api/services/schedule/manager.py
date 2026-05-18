@@ -1,13 +1,12 @@
 import logging
-from typing import Dict, List, Optional
+from typing import List, Optional
 
 from django.db.models import ManyToManyField
 
-from api.models import Constraint, Lesson
-from api.serializers.education import LessonReadSerializer
-from api.services.constraunt.constraints import registry
-from api.services.constraunt.context import ScheduleContext
-from api.services.constraunt.meta import ConstraintError, LessonError
+from api.models import Lesson
+from api.services.constraints import ConstraintManager
+from api.services.schedule.context import ScheduleContext
+from api.services.constraints.meta import LessonError
 from api.services.drafts.storage import ScheduleDraftStorage
 from api.services.drafts.commit import commit_lesson, commit_scenario
 from api.services.drafts.context import draft_context
@@ -22,11 +21,7 @@ class ScheduleManager:
         self.scenario_id = scenario_id
         self.user = user
         self.storage = ScheduleDraftStorage(scenario_id=scenario_id, user_id=user.id)
-        
-        # Данные загружаются при создании экземпляра
-        self.constraints: List[Constraint] = []
-        self.methods: Dict[str, callable] = {}
-        self._load_constraints()
+        self.constraints = ConstraintManager()
 
         self.context: Optional[ScheduleContext] = None
 
@@ -52,20 +47,6 @@ class ScheduleManager:
         
         return lesson
     
-    def _load_constraints(self):
-        """Загружает ограничения и сопоставляет с реализованными функциями."""
-        logger.info("Проверка реализации ограничений")
-
-        for c in Constraint.objects.all():
-            func = registry.get(c.name)
-            if func:
-                self.constraints.append(c)
-                self.methods[c.name] = func
-                logger.debug("Успешная инициализация ограничения %s", c.name)
-            else:
-                logger.warning("Метод проверки ограничения '%s' не найден.",c.name)
-
-        return self
 
     def build_context(self,*,draft = False):
         if draft:
@@ -74,36 +55,22 @@ class ScheduleManager:
         else:
             self.context = ScheduleContext(self.scenario_id)
         return self
-    
-    
-    def check_lesson(self, lesson, constraint_name = None):
-        """Проверяет занятие в сценарии по всем ограничениям"""
+
+
+    def check_lesson(self, lesson):
+        """Проверка занятия по всем ограничениям"""
+        # Проверяем наличие индексированного списка занятий. Если нет - индексируем данные из БД
         if self.context is None:
             self.build_context()
-
-        errors = []
-        constraints = (
-            [c for c in self.constraints if c.name == constraint_name] 
-            if constraint_name else self.constraints
+    
+        errors = self.constraints.check(
+            lesson=lesson,
+            context=self.context,
+            generation_only=False
         )
-        for c in constraints:
-            func = self.methods.get(c.name)
-            if func is None:
-                continue
-            try:
-                logger.debug("Проверка ограничения %s", c.name)
-                res = func(lesson, self.context, weight=c.weight)
-                if not (res is None or c.generation_only):
-                    errors.append(res)
-            except Exception as err:
-                logger.error("Ошибка при проверке ограничения %s для занятия %s", c.name, lesson.id)
-                errors.append(ConstraintError(
-                    name=c.name,
-                    message="Ошибка при проверке",
-                    data=err
-                ))
-        errors = errors if errors else None
-        return LessonError(lesson,errors)
+        
+        return LessonError(lesson,errors if errors else None )
+
 
     def check_scenario(self) -> List[LessonError] :
         """Проверяет все занятия в сценарии"""
