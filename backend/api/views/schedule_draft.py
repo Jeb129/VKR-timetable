@@ -155,6 +155,13 @@ class DraftLessonViewSet(viewsets.ViewSet):
             results.append(lesson_error)
 
         return Response(LessonErrorSerializer(results, many=True).data, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=["get"], url_path="trash")
+    def trash(self, request, scenario_id):
+        """GET /api/scenario/{id}/draft/lessons/trash/ — список удаленных занятий"""
+        manager = ScheduleManager(scenario_id=scenario_id, user=request.user)
+        deleted_lessons = manager.get_deleted_lessons_draft()
+        return Response(LessonReadSerializer(deleted_lessons, many=True).data)
 
     @action(detail=True, methods=["delete"])
     def clear(self,request,scenario_id,pk=None):
