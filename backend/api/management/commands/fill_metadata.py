@@ -83,40 +83,41 @@ class Command(BaseCommand):
         # Формат: (Описание, Вес, Техническое имя)
         constraints = [
             # --- КРИТИЧЕСКИЕ (HARD) ---
-            ("Пересечение по преподавателю", 500, "teacher_no_overlap",True,False),
-            ("Пересечение по группе", 500, "group_no_overlap",True,False),
-            ("Пересечение по аудиториям", 500, "room_no_overlap",True,False),
-            ("Аудитория вмещает всех студентов", 500, "room_has_enough_seats",True,False),
-            ("Физическая невозможность перехода между корпусами", 500, "building_travel_impossible",True,False),
+            ("Пересечение по преподавателю", 500, "teacher_no_overlap",True,False,False),
+            ("Пересечение по группе", 500, "group_no_overlap",True,False,False),
+            ("Пересечение по аудиториям", 500, "room_no_overlap",True,False,False),
+            ("Аудитория вмещает всех студентов", 500, "room_has_enough_seats",True,False,False),
+            ("Физическая невозможность перехода между корпусами", 500, "building_travel_impossible",True,False,False),
 
             # --- ТЕХНИЧЕСКИЕ И ПРИОРЕТЕТНЫЕ ---
-            ("Аудитория соответствует оборудованию", 400, "room_meets_equipment_requirements",False,False),
-            ("Предпочтения преподавателя по аудитории", 300, "matches_teacher_room_preference",False,False),
-            ("Ручной приоритет расположения занятий", 300, "lessons_ordering",False,True),
-            ("Предпочтения преподавателя по времени", 200, "matches_teacher_time_preference",False,False),
+            ("Аудитория соответствует оборудованию", 400, "room_meets_equipment_requirements",False,False,False),
+            ("Предпочтения преподавателя по аудитории", 300, "matches_teacher_room_preference",False,False,False),
+            ("Ручной приоритет расположения занятий", 300, "lessons_ordering",False,False,True),
+            ("Предпочтения преподавателя по времени", 200, "matches_teacher_time_preference",False,False,False),
 
             # --- ЭРГОНОМИКА (КАЧЕСТВО РАСПИСАНИЯ) ---
-            ("Дневная перегрузка группы",150,"group_daily_overload",False,False),
-            ("Дневная перегрузка преподавателя",100,"teacher_daily_overload",False,False),
-            ("Превышение недельной нагрузки преподавателя", 50, "teacher_weekly_overload",False,False),
-            ("Превышение недельной нагрузки группы", 50, "group_weekly_overload",False,False),
-            ("Окно у студентов", 100, "students_gap",False,False),
-            ("Окно у преподавателя", 50, "teachers_gap",False,False),
-            ("Факт смены корпуса в течение дня", 100, "building_clustering",False,False),
-            ("Занятия с малым количеством часов не должны стоять в середине дня", 100, "lesson_persistence_sort",False,False),
-            ("Приоритет заполнения первой половины дня", 80, "morning_preference",False,True),
+            ("Дневная перегрузка группы",150,"group_daily_overload",False,False,False),
+            ("Дневная перегрузка преподавателя",100,"teacher_daily_overload",False,False,False),
+            ("Превышение недельной нагрузки преподавателя", 50, "teacher_weekly_overload",False,False,False),
+            ("Превышение недельной нагрузки группы", 50, "group_weekly_overload",False,False,False),
+            ("Окно у студентов", 100, "students_gap",False,False,False),
+            ("Окно у преподавателя", 50, "teachers_gap",False,False,False),
+            ("Факт смены корпуса в течение дня", 100, "building_clustering",False,False,False),
+            ("Занятия с малым количеством часов не должны стоять в середине дня", 100, "lesson_persistence_sort",False,False,False),
+            ("Приоритет заполнения первой половины дня", 80, "morning_preference",False,False,True),
 
         ]
 
         c_count = 0
-        for description, weight, name, is_hard, generation_only in constraints:
+        for description, weight, name, is_hard, exlude_generation, exclude_manual in constraints:
             _, created = Constraint.objects.get_or_create(
                 name=name,  # name теперь уникальное поле
                 defaults={
                     "weight": weight, 
                     "description": description,
                     "is_hard":is_hard,
-                    "generation_only":generation_only},
+                    "exclude_generation":exlude_generation,
+                    "exclude_manual":exclude_manual},
             )
             if created:
                 c_count += 1
