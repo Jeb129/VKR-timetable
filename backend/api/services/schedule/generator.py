@@ -81,7 +81,8 @@ class TimetableGenerator:
                 h_errors = self.constraint_manager.check(
                     lesson=l, 
                     context=self.context, 
-                    constraint_level=2
+                    constraint_level=2,
+                    generation_only=True
                 )
                 if h_errors:
                     hard_penalty += sum(err.penalty for err in h_errors)
@@ -98,7 +99,8 @@ class TimetableGenerator:
                 s_errors = self.constraint_manager.check(
                     lesson=l, 
                     context=self.context, 
-                    constraint_level=1
+                    constraint_level=1,
+                    generation_only=True
                 )
                 soft_penalty += sum(err.penalty for err in s_errors)
                 

@@ -69,16 +69,16 @@ def generate_planned_lessons(loads):
         any_load = load_group[0]
 
         lessons_count = any_load.whole_hours / 2
-        weeks = lessons_count / any_load.whole_weeks
+        weeks = lessons_count / max(any_load.whole_weeks,1)
         weeks_2 = math.ceil(weeks*2)
-        whole_weeks =  math.ceil(any_load.whole_hours / weeks_2)
+        whole_weeks =  math.ceil(any_load.whole_hours / max(weeks_2,1))
 
         draft, created = PlannedLesson.objects.get_or_create(
-            semester = any_load.semestr,
+            semester = any_load.semester,
             discipline=any_load.discipline,
             lesson_type=any_load.lesson_type,
-            hours_per_two_weeks=weeks_2,
-            weeks_total=whole_weeks,
+            lessons_in_cycle=weeks_2,
+            whole_weeks=whole_weeks,
         )
         if created:
             for l in load_group:

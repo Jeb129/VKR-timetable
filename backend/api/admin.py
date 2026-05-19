@@ -5,7 +5,7 @@ from django.contrib import admin
 from api.models import (AcademicLoad, Building, BuildingPriority, Classroom,
                         Constraint, Discipline, Institute, Lesson, LessonType,
                         ScheduleScenario, StudyGroup, StudyProgram, Teacher,
-                        Timeslot,Semester)
+                        Timeslot,Semester,PlannedLesson)
 
 #  ИНЛАЙНЫ (Позволяют создавать связанные объекты на одной странице)
 
@@ -81,6 +81,7 @@ class AcademicLoadAdmin(admin.ModelAdmin):
 class LessonAdmin(admin.ModelAdmin):
     list_display = ("discipline", "timeslot", "classroom", "scenario")
     list_filter = ("scenario", "timeslot__day", "classroom__building")
+    search_fields = ("id","discipline__name")
     # Чтобы не грузить сервер огромными списками
     raw_id_fields = ("timeslot", "classroom")
 

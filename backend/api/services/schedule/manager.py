@@ -66,7 +66,7 @@ class ScheduleManager:
         errors = self.constraints.check(
             lesson=lesson,
             context=self.context,
-            generation_only=False
+            manual_only=True
         )
         
         return LessonError(lesson,errors if errors else None )
