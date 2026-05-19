@@ -9,13 +9,13 @@ from api.models import (
 
 @constraint("teacher_no_overlap")
 def teacher_no_overlap(lesson: Lesson, context: ScheduleContext, weight: int):
-    ts = lesson.timeslot
-    if not ts:
+    ts_id = lesson.timeslot.id
+    if not ts_id:
         return None
 
     violations = []
-    for teacher in lesson.teachers.all():
-        others = context.teacher_lookup.get((teacher.id, ts.id), [])
+    for teacher in context._get_cached(lesson,"teachers"):
+        others = context.teacher_lookup.get((teacher.id, ts_id), [])
         for other in others:
             if other.id != lesson.id:
                 violations.append({"teacher": teacher, "lesson": other})
@@ -33,13 +33,13 @@ def teacher_no_overlap(lesson: Lesson, context: ScheduleContext, weight: int):
 
 @constraint("group_no_overlap")
 def group_no_overlap(lesson: Lesson, context: ScheduleContext, weight: int):
-    ts = lesson.timeslot
-    if not ts:
+    ts_id = lesson.timeslot.id
+    if not ts_id:
         return None
 
     violations = []
-    for group in lesson.study_groups.all():
-        others = context.group_lookup.get((group.id, ts.id), [])
+    for group in context._get_cached(lesson,"study_groups"):
+        others = context.group_lookup.get((group.id, ts_id), [])
         for other in others:
             if other.id != lesson.id:
                 violations.append({"group": group, "lesson": other})
@@ -59,7 +59,10 @@ def group_no_overlap(lesson: Lesson, context: ScheduleContext, weight: int):
 def room_no_overlap(lesson: Lesson, context: ScheduleContext, weight: int):
     ts = lesson.timeslot
     room = lesson.classroom
-    if not ts or not room or room.allow_parallel:
+    
+    if not ts or not room:
+        return None
+    if room.allow_parallel:
         return None
 
     others = [
@@ -83,7 +86,8 @@ def room_has_enough_seats(lesson: Lesson, context: ScheduleContext, weight: int)
     if not room or room.is_virtual:
         return None
 
-    total_students = sum(g.students_count for g in lesson.study_groups.all())
+    total_students = getattr(lesson, 'total_students', None) or sum(g.students_count for g in lesson.study_groups.all())
+
     if total_students > room.capacity:
         return ConstraintError(
             name="room_has_enough_seats",
@@ -93,66 +97,41 @@ def room_has_enough_seats(lesson: Lesson, context: ScheduleContext, weight: int)
         )
     return None
 
-
 @constraint("building_travel_impossible")
 def building_travel_impossible(lesson: Lesson, context: ScheduleContext, weight: int):
     ts = lesson.timeslot
     room = lesson.classroom
+    
     if not ts or not room or room.is_virtual:
         return None
 
     violations = []
-    # Проверяем перемещения для учителей и групп
-    entities_to_check = [
-        ("teacher", lesson.teachers.all()),
-        ("group", lesson.study_groups.all()),
-    ]
 
-    for type_name, entities in entities_to_check:
+    teachers = context._get_cached(lesson,"teachers")
+    groups = context._get_cached(lesson,"study_groups")
+
+    check_list = [("teacher", teachers), ("group", groups)]
+
+    for type_name, entities in check_list:
         for ent in entities:
+            # Получаем соседей из индекса контекста
             prev_l, next_l = (
                 context.get_teacher_neighbors(lesson, ent.id)
                 if type_name == "teacher"
                 else context.get_group_neighbors(lesson, ent.id)
             )
 
-            for neighbor in filter(None, [prev_l, next_l]):
-                if not neighbor.classroom or neighbor.classroom.is_virtual:
-                    continue
-                if room.building_id == neighbor.classroom.building_id:
-                    continue
+            # Проверяем и предыдущее, и следующее занятие
+            if prev_l:
+                # Оцениваем перемещение с предыдущего на текущее
+                err = _check_travel(prev_l, lesson, context, "prev")
+                if err: violations.append({**err, "entity": ent, "type": type_name})
+            
+            if next_l:
+                # Оцениваем перемещение с текущего на следующее
+                err = _check_travel(lesson, next_l, context, "next")
+                if err: violations.append({**err, "entity": ent, "type": type_name})
 
-                travel = BuildingTravelTime.objects.filter(
-                    (
-                        Q(from_building_id=room.building_id)
-                        & Q(to_building_id=neighbor.classroom.building_id)
-                    )
-                    | (
-                        Q(from_building_id=neighbor.classroom.building_id)
-                        & Q(to_building_id=room.building_id)
-                    )
-                ).first()
-
-                travel_min = travel.travel_time_minutes if travel else 999
-                # Время между концом одной и началом другой
-                available = abs(
-                    (ts.time_start.hour * 60 + ts.time_start.minute)
-                    - (
-                        neighbor.timeslot.time_end.hour * 60
-                        + neighbor.timeslot.time_end.minute
-                    )
-                )
-
-                if travel_min > available:
-                    violations.append(
-                        {
-                            "entity": ent,
-                            "type": type_name,
-                            "travel_time": travel_min,
-                            "available_time": available,
-                            "neighbor_lesson": neighbor,
-                        }
-                    )
     return (
         ConstraintError(
             name="building_travel_impossible",
@@ -163,3 +142,34 @@ def building_travel_impossible(lesson: Lesson, context: ScheduleContext, weight:
         if violations
         else None
     )
+
+def _check_travel(l1: Lesson, l2: Lesson, context: ScheduleContext, direction):
+    """
+    Вспомогательная функция для проверки пары занятий.
+    Работает БЕЗ обращений к БД.
+    """
+    # Если аудитории нет или она виртуальная — перемещение всегда возможно
+    r1, r2 = l1.classroom, l2.classroom
+    if not r1 or not r2 or r1.is_virtual or r2.is_virtual:
+        return None
+    
+    b1_id, b2_id = r1.building_id, r2.building_id
+    if b1_id == b2_id:
+        return None
+
+    # Ищем время перемещения в кэше. Если нет в базе - считаем очень далеким (999)
+    travel_min = context.travel_map.get((b1_id, b2_id), 999)
+    
+    # Берем время из кэша слотов
+    _, t1_end = context.slot_times.get(l1.timeslot_id, (0,0))
+    t2_start, _ = context.slot_times.get(l2.timeslot_id, (0,0))
+
+    available = t2_start - t1_end
+    
+    if travel_min > available:
+        return {
+            "travel_time": travel_min,
+            "available_time": available,
+            "neighbor_lesson": l1 if direction == "prev" else l2,
+        }
+    return None
