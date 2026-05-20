@@ -76,7 +76,7 @@ class ScheduleManager:
         """Проверяет все занятия в сценарии"""
         errors = []
         for lesson in self.context.lessons:
-            errors.extend(self.check_lesson(lesson))
+            errors.append(self.check_lesson(lesson))
         return errors
 
     def check_lesson_draft(self, lesson_id,*,build_context=False):
@@ -96,7 +96,7 @@ class ScheduleManager:
             self.build_context(draft=True)
         elif self.context is None:
             raise ValueError("Не собран контекст проверки. Вызовите ScheduleManager.build_context() или передайте build_context=True при вызове метода check_scenario_draft")
-        return self.check_scenario(self.scenario_id)
+        return self.check_scenario()
 
 
         

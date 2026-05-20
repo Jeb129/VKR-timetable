@@ -166,3 +166,30 @@ class DraftLessonViewSet(viewsets.ViewSet):
         lesson = ScheduleManager(scenario_id,request.user).clear_lessons(pk)
         print(pk, LessonReadSerializer(lesson).data)
         return Response(LessonReadSerializer(lesson).data,status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=["get"], url_path="summary")
+    def summary(self, request, scenario_id):
+        """
+        GET /api/scenario/{id}/draft/lessons/summary/
+        Один запрос для страницы подтверждения.
+        """
+        manager = ScheduleManager(scenario_id=scenario_id, user=request.user).build_context(draft=True)
+        # 1. Получаем пары этого сценария из черновика (Redis + БД)
+        all_lessons = manager.get_lessons_draft()
+        # 2. Фильтруем только на измененые или новые
+        changes = [ l for l in all_lessons  if hasattr(l, 'draft_originals') or hasattr(l, 'draft_created')  ]
+        
+        # 3. Получаем список удаленных (те, что в корзине)
+        deleted = manager.get_deleted_lessons_draft()
+        
+        # 4. Запускаем проверку конфликтов по всему сценарию
+        errors = manager.check_scenario_draft()
+        # Оставляем только те LessonError, где список ошибок не пуст
+        active_errors = [e for e in errors if e.errors]
+
+        return Response({
+            "changes": LessonReadSerializer(changes, many=True).data,
+            "deleted": LessonReadSerializer(deleted, many=True).data,
+            "errors": LessonErrorSerializer(active_errors, many=True).data,
+            "has_changes": len(changes) > 0 or deleted.exists()
+        }, status=status.HTTP_200_OK)
