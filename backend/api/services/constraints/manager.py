@@ -111,6 +111,9 @@ class ConstraintManager:
         errors: List[ConstraintError] = []
         for cname, func in funcs.items():
             constraint_obj = self.constraints[cname]
+            # result = func(lesson=lesson, context=context, weight=constraint_obj.weight)
+            # if result:
+            #     errors.append(result)
             try:
                 result = func(lesson=lesson, context=context, weight=constraint_obj.weight)
                 if result:

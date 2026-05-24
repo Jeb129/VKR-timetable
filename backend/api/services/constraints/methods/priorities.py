@@ -19,9 +19,11 @@ def room_meets_equipment_requirements(
     if not room:
         return None
 
-    req = context.requirements_cache[
-        (lesson.discipline_id,lesson.lesson_type_id)
-    ]
+    req = context.requirements_cache.get(
+        (lesson.discipline_id,lesson.lesson_type_id),
+        set()
+    )
+    
     provided = set(get_cached_M2M(room,"equipment"))
     missing = req - provided
 
