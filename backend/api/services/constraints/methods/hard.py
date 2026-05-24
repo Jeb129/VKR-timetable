@@ -1,10 +1,7 @@
-from django.db.models import Q
 from api.services.constraints.meta import constraint, ConstraintError
 from api.services.schedule.context import ScheduleContext
-from api.models import (
-    BuildingTravelTime,
-    Lesson,
-)
+from api.models import Lesson
+from config.utils import get_cached_M2M
 
 
 @constraint("teacher_no_overlap")
@@ -14,7 +11,7 @@ def teacher_no_overlap(lesson: Lesson, context: ScheduleContext, weight: int):
         return None
 
     violations = []
-    for teacher in context._get_cached(lesson,"teachers"):
+    for teacher in get_cached_M2M(lesson,"teachers"):
         others = context.teacher_lookup.get((teacher.id, ts_id), [])
         for other in others:
             if other.id != lesson.id:
@@ -38,7 +35,7 @@ def group_no_overlap(lesson: Lesson, context: ScheduleContext, weight: int):
         return None
 
     violations = []
-    for group in context._get_cached(lesson,"study_groups"):
+    for group in get_cached_M2M(lesson,"study_groups"):
         others = context.group_lookup.get((group.id, ts_id), [])
         for other in others:
             if other.id != lesson.id:
@@ -107,8 +104,8 @@ def building_travel_impossible(lesson: Lesson, context: ScheduleContext, weight:
 
     violations = []
 
-    teachers = context._get_cached(lesson,"teachers")
-    groups = context._get_cached(lesson,"study_groups")
+    teachers = get_cached_M2M(lesson,"teachers")
+    groups = get_cached_M2M(lesson,"study_groups")
 
     check_list = [("teacher", teachers), ("group", groups)]
 

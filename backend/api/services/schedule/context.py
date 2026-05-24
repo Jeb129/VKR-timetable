@@ -1,7 +1,8 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
-from typing import Dict, List, Optional, Tuple
-from api.models import Lesson, BuildingTravelTime, Timeslot
+from typing import Any, Dict, List, Optional, Set, Tuple
+from api.models import Lesson, BuildingTravelTime, Timeslot,EquipmentRequirement,ClassroomPreference,ExcludedTimeslot
+from api.models.enums import RequestStatus
 from api.services.drafts.queryset import DraftFilters
 
 @dataclass
@@ -30,6 +31,13 @@ class ScheduleContext:
     # Справочник времени слотов: {slot_id: (start_mins, end_mins)}
     slot_times: Dict[int, Tuple[int, int]] = field(default_factory=dict)
 
+    # Требования к оборудованию {(discipline_id, lesson_type_id): Set[Equipment_objects]}
+    requirements_cache: Dict[Tuple[int, int], Set[Any]] = field(default_factory=dict)
+    # Предпочтение по аудиториям {(teacher_id, discipline_id, lesson_type_id): Classroom}
+    teacher_room_prefs: Dict[Tuple[int, int, int], Any] = field(default_factory=dict)
+    # Исключенное время занятий {(teacher_id, timeslot_id)}
+    teacher_excluded_slots: Set[Tuple[int, int]] = field(default_factory=set)
+
     # --- Работа с индексами ---
     
     def _load_from_db(self):
@@ -42,25 +50,48 @@ class ScheduleContext:
                     "discipline", 
                     "lesson_type"
                 )
-                .prefetch_related("teachers", "study_groups")
+                .prefetch_related("teachers", "study_groups","classroom_equipment")
             )
         
     def _index_metadata(self):
         """Загружает вспомогательные справочники из БД"""
         
         # 1. Индексируем время перемещений
-        # Т.к. перемещение симметрично в твоем фильтре, пишем в обе стороны
+        # Т.к. перемещение симметрично в фильтре, пишем в обе стороны
         travels = BuildingTravelTime.objects.all()
         for t in travels:
             self.travel_map[(t.from_building_id, t.to_building_id)] = t.travel_time_minutes
             self.travel_map[(t.to_building_id, t.from_building_id)] = t.travel_time_minutes
 
-        # 2. Индексируем время слотов (переводим Time в минуты с начала дня)
+        # Время слотов (переводим Time в минуты с начала дня)
         slots = Timeslot.objects.all()
         for s in slots:
             start_m = s.time_start.hour * 60 + s.time_start.minute
             end_m = s.time_end.hour * 60 + s.time_end.minute
             self.slot_times[s.id] = (start_m, end_m)
+
+        # Требования по оборудованию
+        all_reqs = EquipmentRequirement.objects.select_related('equipment')
+        for req in all_reqs:
+            key = (req.discipline_id, req.lesson_type_id)
+            if key not in self.requirements_cache:
+                self.requirements_cache[key] = set()
+            self.requirements_cache[key].add(req.equipment)
+
+        # Предпочтения по аудиториям
+        prefs = ClassroomPreference.objects.filter(
+            status=RequestStatus.VERIFIED
+        ).select_related('classroom')
+        for p in prefs:
+            key = (p.teacher_id, p.discipline_id, p.lesson_type_id)
+            self.teacher_room_prefs[key] = p.classroom
+
+        # Исключенное время занятий
+        excluded_data = ExcludedTimeslot.objects.filter(
+            status=RequestStatus.VERIFIED
+        ).values_list('teacher_id', 'timeslot_id')
+        self.teacher_excluded_slots = set(excluded_data)
+
     def _sort_chains(self):
         for chain in self.teacher_day_chains.values():
             chain.sort(key=lambda x: x.timeslot.order_number)
@@ -91,13 +122,13 @@ class ScheduleContext:
         ts = lesson.timeslot
         if not ts: return
 
-        for t in self._get_cached(lesson,"teachers"):
+        for t in self.get_cached_M2M(lesson,"teachers"):
             key = (t.id, ts.id)
             if lesson in self.teacher_lookup[key]: self.teacher_lookup[key].remove(lesson)
             day_key = (t.id, ts.week_num, ts.day)
             if lesson in self.teacher_day_chains[day_key]: self.teacher_day_chains[day_key].remove(lesson)
 
-        for g in self._get_cached(lesson,"study_groups"):
+        for g in self.get_cached_M2M(lesson,"study_groups"):
             key = (g.id, ts.id)
             if lesson in self.group_lookup[key]: self.group_lookup[key].remove(lesson)
             day_key = (g.id, ts.week_num, ts.day)
@@ -127,20 +158,6 @@ class ScheduleContext:
         self.rebuild_indexes()
         self._index_metadata()
 
-    def _get_cached(self, lesson: Lesson,field:str):
-        """Получение M2M связей для занятия без вызова менеджера (без необходимости)"""
-        # Сначала проверяем кэш
-        cache = getattr(lesson, '_prefetched_objects_cache', {})
-        if field in cache:
-            return cache[field]
-        
-        # Если объекта нет в кэше и нет ID (новый объект), возвращаем пустой список
-        if not lesson.pk:
-            return []
-            
-        # Если ID есть, но кэша нет — обычный запрос
-        return getattr(lesson,field).all()
-
     def update_lesson_location(self, lesson: Lesson, new_timeslot, new_classroom):
         """Обновление занятия из индекса"""
         # 1. Удаляем из старых индексов
@@ -157,9 +174,9 @@ class ScheduleContext:
         
         # 4. Сортируем только затронутые цепочки
         ts = lesson.timeslot
-        for t in self._get_cached(lesson,"teachers"):
+        for t in self.get_cached_M2M(lesson,"teachers"):
             self.teacher_day_chains[(t.id, ts.week_num, ts.day)].sort(key=lambda x: x.timeslot.order_number)
-        for g in self._get_cached(lesson,"study_groups"):
+        for g in self.get_cached_M2M(lesson,"study_groups"):
             self.group_day_chains[(g.id, ts.week_num, ts.day)].sort(key=lambda x: x.timeslot.order_number)
 
     # --- QuerySet подобный поиск ---
