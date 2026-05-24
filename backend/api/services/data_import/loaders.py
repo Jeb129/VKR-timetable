@@ -237,6 +237,7 @@ class AcademicLoadReader:
     def __iter__(self):
         # --- ПРОХОД 1: ВАЛИДАЦИЯ И ПОДГРУППЫ ---
         for idx, row in enumerate(self.data):
+            # Валидация строки
             row_errors, norm = validate_load_row(row, idx)
             if row_errors:
                 self.errors.extend(row_errors)
