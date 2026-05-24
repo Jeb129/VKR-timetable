@@ -1,10 +1,12 @@
 import random
+import time
 import logging
 import math
 from typing import List
 from django.db import transaction
 from api.models import PlannedLesson, Lesson, Timeslot, Classroom, ScheduleScenario
 from api.services.constraints import ConstraintManager
+from api.services.schedule.context import ScheduleContext
 
 logger = logging.getLogger("generator")
 
@@ -113,8 +115,6 @@ class TimetableGenerator:
         :t_start: начальная температура (чем выше, тем больше хаоса в начале)
         :cooling_rate: скорость остывания (0.99 - быстро, 0.9999 - медленно)
         """
-        from api.services.schedule.context import ScheduleContext
-        import time
         
         # 1. Инициализация
         lessons = self._hydrate()
@@ -123,17 +123,13 @@ class TimetableGenerator:
         # current_penalty = 1000
         current_penalty = self._get_total_penalty(lessons)
         best_penalty = current_penalty
-        best_state = None # Здесь можно хранить копию лучшего решения
-        
         temp = t_start
         
         logger.info(f"Начало генерации. Штраф: {current_penalty}, Температура: {temp}")
-        now = time.time()
+        start = time.time()
         for i in range(iterations):
             # 2. Выбор случайного занятия
-            # Подсказка для ВКР: можно выбирать не любое занятие, 
-            # а то, у которого ConstraintManager нашел ошибки.
-            print(f"Итерация {i+1} из {iterations}")
+            logger.debug(f"Итерация {i+1} из {iterations}")
             lesson = random.choice(lessons)
             
             old_slot, old_room = lesson.timeslot, lesson.classroom
@@ -162,7 +158,7 @@ class TimetableGenerator:
             
             if accept:
                 current_penalty = new_penalty
-                # Если это лучшее, что мы видели за всё время — запоминаем (не обязательно для простоты)
+                # Если это лучшее, что мы видели за всё время — запоминаем
                 if current_penalty < best_penalty:
                     best_penalty = current_penalty
             else:
@@ -178,9 +174,8 @@ class TimetableGenerator:
             if current_penalty == 0:
                 logger.info("Найдено идеальное расписание!")
                 break
-
-        logger.info(f"Генерация завершена. Итоговый штраф: {current_penalty}")
-        print("Генерация заняла (сек.):",time.time() - now)
+        end = time.time() - start
+        logger.info(f"Генерация завершена. Итоговый штраф: {current_penalty} Затраченное время: {end} сек.")
         return lessons,current_penalty
 
     @transaction.atomic

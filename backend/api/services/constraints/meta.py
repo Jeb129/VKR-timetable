@@ -11,8 +11,6 @@ registry = {}
 
 def constraint(name):
     """Регистрирует функцию проверки под именем ограничения."""
-    # logger.debug("Регистрация метода %s", name)
-
     def decorator(func):
         if name not in registry:
             registry[name] = func

@@ -12,6 +12,6 @@ def draft_context(scenario_id, storage):
     draft_manager = DraftLessonManager(storage=storage, scenario_id=scenario_id, base_manager = original_base_manager)
     Lesson.objects = draft_manager
     try:
-        yield draft_manager,
+        yield draft_manager
     finally:
         Lesson.objects = original_base_manager

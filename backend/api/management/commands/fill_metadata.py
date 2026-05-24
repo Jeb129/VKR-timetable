@@ -116,8 +116,8 @@ class Command(BaseCommand):
                     "weight": weight, 
                     "description": description,
                     "is_hard":is_hard,
-                    "exclude_generation":exlude_generation,
-                    "exclude_manual":exclude_manual},
+                    "manual_only":exlude_generation,
+                    "generation_only":exclude_manual},
             )
             if created:
                 c_count += 1
