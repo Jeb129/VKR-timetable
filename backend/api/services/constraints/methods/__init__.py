@@ -34,5 +34,5 @@
 
 
 from . import hard
-# from . import priorities
+from . import priorities
 # from . import quality

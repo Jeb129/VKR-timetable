@@ -4,6 +4,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple
 from api.models import Lesson, BuildingTravelTime, Timeslot,EquipmentRequirement,ClassroomPreference,ExcludedTimeslot
 from api.models.enums import RequestStatus
 from api.services.drafts.queryset import DraftFilters
+from config.utils import get_cached_M2M
 
 @dataclass
 class ScheduleContext:
@@ -50,7 +51,7 @@ class ScheduleContext:
                     "discipline", 
                     "lesson_type"
                 )
-                .prefetch_related("teachers", "study_groups","classroom_equipment")
+                .prefetch_related("teachers", "study_groups","classroom__equipment")
             )
         
     def _index_metadata(self):
@@ -122,13 +123,13 @@ class ScheduleContext:
         ts = lesson.timeslot
         if not ts: return
 
-        for t in self.get_cached_M2M(lesson,"teachers"):
+        for t in get_cached_M2M(lesson,"teachers"):
             key = (t.id, ts.id)
             if lesson in self.teacher_lookup[key]: self.teacher_lookup[key].remove(lesson)
             day_key = (t.id, ts.week_num, ts.day)
             if lesson in self.teacher_day_chains[day_key]: self.teacher_day_chains[day_key].remove(lesson)
 
-        for g in self.get_cached_M2M(lesson,"study_groups"):
+        for g in get_cached_M2M(lesson,"study_groups"):
             key = (g.id, ts.id)
             if lesson in self.group_lookup[key]: self.group_lookup[key].remove(lesson)
             day_key = (g.id, ts.week_num, ts.day)
@@ -174,9 +175,9 @@ class ScheduleContext:
         
         # 4. Сортируем только затронутые цепочки
         ts = lesson.timeslot
-        for t in self.get_cached_M2M(lesson,"teachers"):
+        for t in get_cached_M2M(lesson,"teachers"):
             self.teacher_day_chains[(t.id, ts.week_num, ts.day)].sort(key=lambda x: x.timeslot.order_number)
-        for g in self.get_cached_M2M(lesson,"study_groups"):
+        for g in get_cached_M2M(lesson,"study_groups"):
             self.group_day_chains[(g.id, ts.week_num, ts.day)].sort(key=lambda x: x.timeslot.order_number)
 
     # --- QuerySet подобный поиск ---
