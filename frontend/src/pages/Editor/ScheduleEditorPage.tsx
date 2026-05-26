@@ -90,7 +90,7 @@ const ScheduleEditorPage = () => {
             const [gr, tr, rm] = await Promise.all([
                 dbService.list("groups"),
                 dbService.list("teachers"),
-                dbService.list("classrooms") // Добавили аудитории
+                dbService.list("classrooms"), // Добавили аудитории
             ]);
             setGroups(gr);
             setTeachers(tr);
@@ -186,32 +186,10 @@ const ScheduleEditorPage = () => {
         loadDraft();
     };
 
-    // 5. Публикация с проверкой ошибок
-    const handleCommit = async () => {
-        const hasCriticalErrors = lessonErrors.some(le => (le.errors?.length ?? 0) > 0);
-        
-        const process = async () => {
-            try {
-                await dbService.commitDraft(sId);
-                closeModal();
-                loadDraft();
-            } catch (err) { alert("Ошибка публикации"); }
-        };
-
-        if (hasCriticalErrors) {
-            openModal({
-                title: "Внимание!",
-                content: <p>В расписании есть конфликты. Вы уверены, что хотите опубликовать эту версию?</p>,
-                footer: (
-                    <>
-                        <button className="btn btn-red f-1" onClick={process}>Опубликовать с ошибками</button>
-                        <button className="btn btn-outline f-1" onClick={closeModal}>Отмена</button>
-                    </>
-                )
-            });
-        } else {
-            process();
-        }
+    // 5. Публикация 
+    const handleCommit = () => {
+        // Просто уходим на страницу ревью, передавая ID сценария
+        navigate(`/ScheduleEditor/${sId}/review`);
     };
 
     return (

@@ -8,7 +8,8 @@ from api.models import (
     ScheduleAdjustment,
     Constraint,
     Lesson,
-    enums
+    enums,
+    BookingType
 )
 
 
@@ -34,6 +35,10 @@ class RequestBaseSerializer(serializers.ModelSerializer):
             "status_display",
         ]
 
+class BookingTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = BookingType
+        fields = ['id', 'name']
 
 class BookingSerializer(serializers.ModelSerializer):
     user_name = serializers.ReadOnlyField(source="user.username")

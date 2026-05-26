@@ -2,8 +2,12 @@ from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from api.models import Booking
-from api.serializers.requests import BookingSerializer
+from api.models import Booking, BookingType
+from api.serializers.requests import BookingSerializer, BookingTypeSerializer
+
+class BookingTypeViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = BookingType.objects.all().order_by('name')
+    serializer_class = BookingTypeSerializer
 
 class BookingViewSet(viewsets.ModelViewSet):
     serializer_class = BookingSerializer

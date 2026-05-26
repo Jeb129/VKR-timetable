@@ -160,6 +160,20 @@ export const useScheduleEditor = (scenarioId: number) => {
         return map;
     }, [lessons]);
 
+    const checkAll = async () => {
+        setIsChecking(true);
+        try {
+            const errors = await scheduleDraftService.checkScenario(scenarioId);
+            setLessonErrors(errors.filter(e => e.errors && e.errors.length > 0));
+        } finally {
+            setIsChecking(false);
+        }
+    };
+    const clearAll = async () => {
+        await scheduleDraftService.clearAllDrafts(scenarioId);
+        await loadLessons({}); // Перезагружаем "чистые" данные из БД
+    };
+
     // Список всех измененных или новых занятий для Панели изменений
     const draftChanges = useMemo(() => {
         console.log("Обновляем список изменений")
@@ -179,6 +193,8 @@ export const useScheduleEditor = (scenarioId: number) => {
         moveLesson,
         swapLessons,
         setLessons,
+        checkAll,
+        clearAll,
         revertLesson
     };
 };

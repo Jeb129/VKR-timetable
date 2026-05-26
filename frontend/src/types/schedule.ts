@@ -5,18 +5,22 @@ export interface MappedEvent {
     type: string;   // "0", "2", "3"
     extendedProps: {
         event: {
-            id: number;
-            order: number;           // Номер пары
-            day: number;   
-            discipline_name?: string;
-            type_name?: string;
-            classroom_name?: string;
-            teachers_list?: string[];
-            groups_list?: string[];
-            description?: string;   // Для брони
-            user_name?: string;     // Для брони
+             id: number;
+            discipline: string;     // Название дисциплины (строка)
+            lesson_type: string;    // Тип занятия (строка)
+            classroom: string;       // Название аудитории (строка)
+            teachers: SimpleEntity[]; // Массив объектов {id, name}
+            study_groups: SimpleEntity[]; // Массив объектов {id, name}
+            
+            // Поля для бронирований
+            description?: string;
+            user_name?: string;
             status?: number;
             admin_comment?: string;
+            
+            // Системные поля для фильтрации
+            order: number;
+            day: number;
         }
     }
 }

@@ -331,3 +331,31 @@
     letter-spacing: 2px;
     opacity: 0.5;
 }
+.admin-action-bar {
+    position: fixed;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    min-width: 600px;
+    background: white;
+    border: 2px solid var(--p-blue);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 25px !important;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+.status-dot.orange { background: var(--p-orange); animation: pulse 2s infinite; }
+.status-dot.green { background: var(--p-green); }
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+}
