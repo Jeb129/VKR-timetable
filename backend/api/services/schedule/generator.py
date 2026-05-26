@@ -1,10 +1,11 @@
+from collections import defaultdict
 import random
 import time
 import logging
 import math
 from typing import List
 from django.db import transaction
-from api.models import PlannedLesson, Lesson, Timeslot, Classroom, ScheduleScenario
+from api.models import enums, PlannedLesson, Lesson, Timeslot, Classroom, ScheduleScenario,ClassroomPreference, BuildingPriority
 from api.services.constraints import ConstraintManager
 from api.services.schedule.context import ScheduleContext
 
@@ -17,14 +18,72 @@ class TimetableGenerator:
         self.all_slots = list(Timeslot.objects.all())
         self.all_rooms = list(Classroom.objects.filter(is_virtual=False).prefetch_related("building","equipment"))
         
+        # Кэшируем справочники для ускорения _hydrate
+        self._pref_cache = self._load_teacher_preferences()
+        self._building_priority_cache = self._load_building_priorities()
+
         self.constraint_manager = ConstraintManager()
         self.context = None
 
-    def _get_suitable_rooms(self, planned_lesson: PlannedLesson) -> List[Classroom]:
+    def _load_teacher_preferences(self):
+        """Кэш: (teacher_id, discipline_id, lesson_type_id) -> list[classroom_id]"""
+        prefs = ClassroomPreference.objects.filter(status=enums.RequestStatus.VERIFIED)
+        cache = defaultdict(list)
+        for p in prefs:
+            cache[(p.teacher_id, p.discipline_id, p.lesson_type_id)].append(p.classroom_id)
+        return cache
+
+    def _load_building_priorities(self):
+        """Кэш: (institute_id, building_id) -> weight"""
+        priorities = BuildingPriority.objects.all()
+        cache = {}
+        for p in priorities:
+            cache[(p.institute_id, p.building_id)] = p.weight
+        return cache
+
+
+    def _get_suitable_rooms(self, pl: PlannedLesson) -> List[Classroom]:
         """Фильтр комнат по вместимости (базовое жесткое ограничение)"""
-        total_students = sum(g.students_count for g in planned_lesson.study_groups.all())
-        suitable = [r for r in self.all_rooms if r.capacity >= total_students]
-        return suitable if suitable else self.all_rooms
+        # 1. Базовый фильтр по вместимости
+        total_students = sum(g.students_count for g in pl.study_groups.all())
+        base_rooms = [r for r in self.all_rooms if r.capacity >= total_students]
+        
+        if not base_rooms:
+            return self.all_rooms
+
+        # 2. Проверка предпочтений преподавателей (Жесткий фильтр)
+        teachers = list(pl.teachers.all())
+        pref_room_ids = set()
+        
+        # Собираем все комнаты, которые хотят учителя, учитывая их вес
+        # Сортируем учителей по их весу (кто важнее, того комнату ищем первой)
+        sorted_teachers = sorted(teachers, key=lambda t: t.constraint_weight, reverse=True)
+        
+        for t in sorted_teachers:
+            room_ids = self._pref_cache.get((t.id, pl.discipline_id, pl.lesson_type_id), [])
+            for rid in room_ids:
+                pref_room_ids.add(rid)
+        
+        if pref_room_ids:
+            # Если есть предпочтения, возвращаем ТОЛЬКО их (пересечение с вместимостью)
+            suitable = [r for r in base_rooms if r.id in pref_room_ids]
+            if suitable:
+                return suitable
+
+        # 3. Приоритет по институтам (Мягкое ранжирование)
+        # Берем институт первой группы (обычно в одном PlannedLesson группы одного института)
+        first_group = pl.study_groups.all()[0]
+        institute_id = first_group.study_program.institute_id
+        
+        def get_room_rank(room):
+            # Чем выше вес в BuildingPriority, тем меньше должен быть ранг (ближе к началу списка)
+            # Если приоритет не задан, даем средний штрафной балл
+            weight = self._building_priority_cache.get((institute_id, room.building_id), 0)
+            return -weight # Инвертируем, чтобы больший вес был первым
+
+        # Сортируем все подходящие по вместимости комнаты по весу корпусов
+        # Дополнительно сортируем по названию корпуса, чтобы была группировка
+        return sorted(base_rooms, key=lambda r: (get_room_rank(r), r.building.short_name))
 
     def _hydrate(self) -> List[Lesson]:
         """Создание объектов в RAM"""
@@ -51,7 +110,7 @@ class TimetableGenerator:
                     whole_weeks=pl.whole_weeks,
                     priority=pl.priority,
                     timeslot=random.choice(self.all_slots),
-                    classroom=random.choice(suitable_rooms)
+                    classroom=suitable_rooms[0]
                 )
                 lesson._prefetched_objects_cache = {
                     'teachers': teachers_list,
