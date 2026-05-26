@@ -20,6 +20,7 @@ from .requests import (
     ClassroomPreference,
     ScheduleAdjustment,
     Booking,
+    BookingType,
 )
 from .schedule import (
     ScheduleScenario,

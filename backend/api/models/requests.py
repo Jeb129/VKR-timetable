@@ -46,16 +46,21 @@ class ClassroomPreference(Request):
         self.request_type = enums.RequestType.CLASSROOM_PREFERENCE
         super().save(*args, **kwargs)
 
+class BookingType(models.Model):
+    name = models.CharField(max_length=100, unique=True, verbose_name="Тип мероприятия")
+
+    def __str__(self):
+        return self.name
 
 class Booking(Request):
     classroom = models.ForeignKey(Classroom, on_delete=models.CASCADE)
+    booking_type = models.ForeignKey(BookingType, on_delete=models.PROTECT, null=True, verbose_name="Тип брони")
     date_start = models.DateTimeField()
     date_end = models.DateTimeField()
 
     def save(self, *args, **kwargs):
         self.request_type = enums.RequestType.BOOKING
         super().save(*args, **kwargs)
-
 
 # Корректировка расписания позволяет либо снять, либо переместить занятие в сетке
 # Заменяет timeslot в занятии на timeslot в записи

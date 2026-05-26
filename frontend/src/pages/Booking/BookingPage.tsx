@@ -4,133 +4,119 @@ import FullCalendar from "@fullcalendar/react";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { dbService } from "@/services/crud";
+import SearchSelect from "@/components/UI/SearchSelect";
 import type { Classroom } from "@/types/classroom";
+import type { SelectOption } from "@/types/ui";
 import "@/styles/Booking.css";
 
 const BookingPage = () => {
     const navigate = useNavigate();
     const calendarRef = useRef<FullCalendar>(null);
     
+    //справочники
     const [rooms, setRooms] = useState<Classroom[]>([]);
-    const [selectedRoomId, setSelectedRoomId] = useState<string>("");
-    const [selectedRoomObj, setSelectedRoomObj] = useState<Classroom | null>(null);
-    const [busyEvents, setBusyEvents] = useState<any[]>([]); 
-    
+    const [bookingTypes, setBookingTypes] = useState<any[]>([]);
+
+    // Поля для формы
+    const [selectedRoomId, setSelectedRoomId] = useState<string | number>("");
+    const [selectedTypeId, setSelectedTypeId] = useState<string | number>("");
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [startTime, setStartTime] = useState("10:00");
-    const [endTime, setEndTime] = useState("11:00");
+    const [endTime, setEndTime] = useState("11:30");
     const [reason, setReason] = useState("");
 
     const [formError, setFormError] = useState<string | null>(null);
+    const [busyEvents, setBusyEvents] = useState<any[]>([]); 
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         dbService.list("classrooms").then(setRooms);
     }, []);
 
-    // Загрузка занятости
+    // 1. Загрузка справочников
     useEffect(() => {
-        const room = rooms.find(r => String(r.id) === selectedRoomId);
-        setSelectedRoomObj(room || null);
-        
+        dbService.list("classrooms").then(setRooms);
+        dbService.list("booking-types").then(setBookingTypes); // Создай такой эндпоинт на бэке
+    }, []);
+
+    const selectedRoomObj = useMemo(() => rooms.find(r => r.id === selectedRoomId), [selectedRoomId, rooms]);
+
+    // 2. Опции для SearchSelect
+    const roomOptions: SelectOption[] = useMemo(() => 
+        rooms.map(r => ({ value: r.id, label: r.name || r.num })), [rooms]);
+    
+    const typeOptions: SelectOption[] = useMemo(() => 
+        bookingTypes.map(t => ({ value: t.id, label: t.name })), [bookingTypes]);
+
+    // 3. Расчет длительности для резюме
+    const durationText = useMemo(() => {
+        if (!startTime || !endTime || startTime >= endTime) return null;
+        const [h1, m1] = startTime.split(':').map(Number);
+        const [h2, m2] = endTime.split(':').map(Number);
+        const diffMinutes = (h2 * 60 + m2) - (h1 * 60 + m1);
+        const hours = Math.floor(diffMinutes / 60);
+        const mins = diffMinutes % 60;
+        return `${hours > 0 ? hours + ' ч. ' : ''}${mins > 0 ? mins + ' мин.' : ''}`;
+    }, [startTime, endTime]);
+
+    // 4. Загрузка занятости (Уроки + Другие Брони)
+    useEffect(() => {
         if (selectedRoomId) {
             const fetchBusy = async () => {
-                try {
-                    const data = await dbService.list("schedule/classroom", { 
-                        classroom_id: selectedRoomId,
-                        date: selectedDate 
-                    });
-
-                    const formatted = data.map((item: any) => {
-                        const tStart = item.start.split('T')[1].substring(0, 5);
-                        const tEnd = item.end.split('T')[1].substring(0, 5);
-                        // "0" - LESSON (Урок)
-                        // "2" - SCHEDULE_ADJUSTMENT (Корректировка/Замена)
-                        // "3" - BOOKING (Бронирование)
-                        const isLesson = item.type === "0" || item.type === "2";
-                        const isBooking = item.type === "3";
-
-                        return {
-                            title: isBooking  ? `БРОНЬ: ${item.extendedProps?.event?.description}` : item.title,
-                            start: item.start, 
-                            end: item.end,
-                            backgroundColor: isLesson  ? "var(--p-orange)" : "var(--p-blue)",
-                            borderColor: 'transparent',
-                            display: 'block',
-                            timeStart: tStart,
-                            timeEnd: tEnd
-                        };
-                    });
-                    setBusyEvents(formatted);
-                } catch (err) {
-                    console.error("Ошибка загрузки занятости");
-                }
+                const data = await dbService.list("schedule/classroom", { 
+                    classroom_id: selectedRoomId,
+                    date: selectedDate 
+                });
+                const formatted = data.map((item: any) => ({
+                    title: item.type === "3" ? "ЗАНЯТО: БРОНЬ" : item.title,
+                    start: item.start, 
+                    end: item.end,
+                    backgroundColor: item.type === "3" ? 'var(--p-orange)' : 'var(--p-blue)',
+                    borderColor: 'transparent',
+                    timeStart: item.start.split('T')[1].substring(0, 5),
+                    timeEnd: item.end.split('T')[1].substring(0, 5)
+                }));
+                setBusyEvents(formatted);
             };
             fetchBusy();
         }
-    }, [selectedRoomId, selectedDate, rooms]); 
+    }, [selectedRoomId, selectedDate]);
 
-    // Валидация при изменении времени или списка занятых слотов
+    // 5. Валидация пересечений
     useEffect(() => {
         setFormError(null);
-
-        if (!startTime || !endTime) return;
-
         if (startTime >= endTime) {
-            setFormError("Время начала не может быть позже или равно времени окончания");
+            setFormError("Время начала позже или равно времени конца");
             return;
         }
-
-        // Проверка наложений
-        const hasOverlap = busyEvents.some(event => {
-            // Математика пересечения интервалов:
-            // Выбор начнется раньше, чем занятость закончится И выбор закончится позже, чем занятость начнется
-            return startTime < event.timeEnd && endTime > event.timeStart;
-        });
-
-        if (hasOverlap) {
-            setFormError("Выбранное время пересекается с существующим занятием или бронью");
-        }
+        const hasOverlap = busyEvents.some(e => startTime < e.timeEnd && endTime > e.timeStart);
+        if (hasOverlap) setFormError("Выбранное время пересекается с существующей записью");
     }, [startTime, endTime, busyEvents]);
 
-    // Динамическое превью (рисуем только если нет ошибок)
     const previewEvent = useMemo(() => {
-        if (!selectedRoomId || !startTime || !endTime || formError) return [];
-
+        if (!selectedRoomId || formError) return [];
         return [{
             id: 'preview',
             title: 'ВАШ ВЫБОР',
             start: `${selectedDate}T${startTime}:00`,
             end: `${selectedDate}T${endTime}:00`,
-            backgroundColor: '#2e7d32', 
-            borderColor: 'transparent',
+            backgroundColor: 'var(--p-green)', 
             className: 'preview-event-pulse'
         }];
     }, [startTime, endTime, selectedDate, selectedRoomId, formError]);
 
-    const allEvents = [...busyEvents, ...previewEvent];
-
     const handleBookingSubmit = async () => {
-        if (formError || !reason || !selectedRoomId) {
-            if (!reason) setFormError("Укажите причину бронирования");
-            return;
-        }
-
-        setIsSubmitting(true);
+        if (formError || !reason || !selectedRoomId || !selectedTypeId) return;
         try {
             await dbService.create("bookings", {
                 classroom: selectedRoomId,
+                booking_type: selectedTypeId,
                 date_start: `${selectedDate}T${startTime}:00`,
                 date_end: `${selectedDate}T${endTime}:00`,
                 description: reason
             });
             navigate("/profile");
-        } catch (err: any) {
-            const serverMsg = err.response?.data?.non_field_errors?.[0] || "Ошибка сервера";
-            setFormError(serverMsg);
-        } finally {
-            setIsSubmitting(false);
-        }
+        } catch (err) { setFormError("Ошибка сервера при создании брони"); }
     };
 
     return (
@@ -143,16 +129,19 @@ const BookingPage = () => {
                 </div>
             </nav>
 
-            <div className="profile-wrapper flex-row gap-3 align-start p-2" style={{ flex: 1 }}>
-                <div className="card flex-col gap-2" style={{ width: '380px', flexShrink: 0 }}>
-                    <h3 className="text-primary mb-1">Параметры брони</h3>
+            <div className="profile-wrapper flex-row gap-3 align-start p-2">
+                {/* ЛЕВАЯ ПАНЕЛЬ ПАРАМЕТРОВ */}
+                <div className="card flex-col gap-2" style={{ width: '400px', flexShrink: 0 }}>
+                    <h3 className="text-primary">Параметры брони</h3>
                     
                     <div className="flex-col">
                         <label className="filter-label">Аудитория</label>
-                        <select className="styled-select" value={selectedRoomId} onChange={(e) => setSelectedRoomId(e.target.value)}>
-                            <option value="">Выберите...</option>
-                            {rooms.map(r => <option key={r.id} value={r.id}>{r.num}</option>)}
-                        </select>
+                        <SearchSelect options={roomOptions} value={selectedRoomId} onChange={setSelectedRoomId} />
+                    </div>
+
+                    <div className="flex-col">
+                        <label className="filter-label">Тип мероприятия</label>
+                        <SearchSelect options={typeOptions} value={selectedTypeId} onChange={setSelectedTypeId} placeholder="Выберите тип..." />
                     </div>
 
                     <div className="flex-col">
@@ -172,26 +161,29 @@ const BookingPage = () => {
                     </div>
 
                     <div className="flex-col">
-                        <label className="filter-label">Причина</label>
-                        <textarea className="input-styled" placeholder="Зачем вам аудитория?" style={{ minHeight: '100px' }} value={reason} onChange={(e) => setReason(e.target.value)} />
+                        <label className="filter-label">Краткое описание</label>
+                        <textarea className="input-styled" style={{ minHeight: '80px' }} value={reason} onChange={(e) => setReason(e.target.value)} />
                     </div>
 
-                    {formError && (
-                        <div className="error fade-in" style={{ fontSize: '13px', textAlign: 'center' }}>
-                            {formError}
+                    {/* БЛОК РЕЗЮМЕ */}
+                    {selectedRoomObj && !formError && durationText && (
+                        <div className="card p-2 bg-white" style={{ borderStyle: 'dashed', borderColor: 'var(--p-green)' }}>
+                            <div style={{ fontSize: '13px' }}>
+                                Вы бронируете <strong>{selectedRoomObj.num}</strong> <br/>
+                                на <strong>{durationText}</strong>
+                            </div>
                         </div>
                     )}
 
-                    <button 
-                        className="btn btn-green mt-1" 
-                        onClick={handleBookingSubmit}
-                        disabled={isSubmitting || !!formError}
-                    >
-                        {isSubmitting ? "Отправка..." : "Отправить заявку"}
+                    {formError && <div className="error text-center" style={{ fontSize: '13px' }}>{formError}</div>}
+
+                    <button className="btn btn-green w-100" onClick={handleBookingSubmit} disabled={!!formError}>
+                        Отправить заявку
                     </button>
                 </div>
 
-                <div className="card f-1" style={{ minWidth: '500px', height: '80vh' }}>
+                {/* КАЛЕНДАРЬ */}
+                <div className="card f-1" style={{ minWidth: '600px', height: '80vh' }}>
                     {selectedRoomObj ? (
                         <FullCalendar
                             key={`${selectedRoomId}-${selectedDate}`} 
@@ -205,15 +197,14 @@ const BookingPage = () => {
                             locale="ru"
                             height="100%"
                             headerToolbar={false}
-                            events={allEvents}
+                            events={[...busyEvents, ...previewEvent]}
                             slotMinTime={selectedRoomObj.work_start || "08:00:00"}
                             slotMaxTime={selectedRoomObj.work_end || "22:00:00"}
                             selectable={false}
                         />
                     ) : (
                         <div className="flex-col justify-center align-center h-100 text-muted">
-                            <h3>Выберите аудиторию</h3>
-                            <p>чтобы увидеть график занятости</p>
+                            <h3>Выберите аудиторию для просмотра графика</h3>
                         </div>
                     )}
                 </div>

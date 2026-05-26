@@ -5,12 +5,14 @@ from api.views import (
     TimeslotViewSet,
     ScheduleScenarioViewSet,
     StudyGroupViewSet,
-    TeacherViewSet
+    TeacherViewSet,
+    BookingTypeViewSet
     )
 
 router = DefaultRouter()
 router.register(r'classrooms', ClassroomViewSet, basename='classroom')
 router.register(r'bookings', BookingViewSet, basename='booking')
+router.register(r'booking-types', BookingTypeViewSet, basename='booking-type')
 router.register(r'timeslots', TimeslotViewSet, basename='timeslot')
 router.register(r'scenarios', ScheduleScenarioViewSet, basename='scenario')
 router.register(r'groups', StudyGroupViewSet, basename='group')
