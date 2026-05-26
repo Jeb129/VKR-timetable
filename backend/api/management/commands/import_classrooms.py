@@ -26,22 +26,20 @@ class Command(BaseCommand):
                 try:
                     eios_id = row.get("eios_id")
                     number = row.get("number")
-                    
-                    if not eios_id or not number:
-                        continue
+                    b_code = row.get("building")
 
-                    # Определяем код корпуса (например, 'Б' из 'Б-204')
-                    b_code = number.split("-")[0] if "-" in number else "К"
-                    b_code = b_code[:5] # Ограничение модели max_length=5
+                    
+                    if not eios_id or not number or not b_code:
+                        continue
 
                     # 1. Получаем или создаем Корпус
                     building, _ = Building.objects.get_or_create(
                         short_name=b_code,
                         defaults={
                             "name": f"Корпус {b_code}",
-                            "address": "ул. Университетская, д. 1", # Можно поправить позже
+                            "address": "Адрес не указан",
                             "work_start_time": time(8, 0),
-                            "work_end_time": time(21, 0),
+                            "work_end_time": time(20, 0),
                         },
                     )
 
@@ -49,7 +47,7 @@ class Command(BaseCommand):
                     Classroom.objects.update_or_create(
                         eios_id=int(eios_id),
                         defaults={
-                            "num": number.split("-")[1] if "-" in number else "К",
+                            "num": number,
                             "building": building,
                             "capacity": 30, # Дефолт
                         },

@@ -58,7 +58,7 @@ class Classroom(models.Model):
     allow_lessons = models.BooleanField(
         default=True, verbose_name="разрешить проводить занятия в аудитории"
     )
-    allow_lessons = models.BooleanField(
+    allow_booking = models.BooleanField(
         default=True, verbose_name="разрешить бронировать аудиторию для проведения мероприятий"
     )
 
