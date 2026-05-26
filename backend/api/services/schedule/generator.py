@@ -122,7 +122,7 @@ class TimetableGenerator:
 
                 in_memory_lessons.append(lesson)
                 fake_id_counter -= 1
-
+        logger.info(f"Сгенерировано и {len(in_memory_lessons)} занятий")
         return in_memory_lessons
 
     def _get_total_penalty(self, lessons: List[Lesson]) -> int:
