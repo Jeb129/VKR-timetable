@@ -1,5 +1,8 @@
 from django.db import models
-
+from django.db.models import Q
+from django.contrib.postgres.constraints import ExclusionConstraint
+from django.contrib.postgres.fields import RangeOperators
+from django.core.exceptions import ValidationError
 
 class Semester(models.Model):
     """Для отображения расписания в календаре"""
@@ -12,7 +15,34 @@ class Semester(models.Model):
         ordering = ["date_start"]
         verbose_name = "семестр"
         verbose_name_plural = "семестры"
+        
+        constraints = [
+            # пересечение периодов
+            ExclusionConstraint(
+                name='exclude_overlapping_semesters',
+                expressions=[
+                    (models.Func('date_start', 'date_end', models.Value('[]'), function='daterange'), RangeOperators.OVERLAPS),
+                ],
+            ),
 
+            models.CheckConstraint(
+                condition=models.Q(date_start__lt=models.F('date_end')),
+                name='check_start_before_end'
+            ),
+        ]
+
+    def clean(self):
+        if self.date_start and self.date_end and self.date_start >= self.date_end:
+            raise ValidationError("Дата начала должна быть меньше даты окончания")
+        
+        overlap = Semester.objects.filter(
+            date_start__lt=self.date_end,
+            date_end__gt=self.date_start
+        ).exclude(pk=self.pk)
+        
+        if overlap.exists():
+            raise ValidationError(f"Период пересекается с существующим семестром: {overlap.first()}")
+        
     def __str__(self) -> str:
         return self.name
 

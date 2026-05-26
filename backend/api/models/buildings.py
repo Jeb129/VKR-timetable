@@ -55,6 +55,12 @@ class Classroom(models.Model):
     is_virtual = models.BooleanField(
         default=False, verbose_name="виртуальная аудитория"
     )
+    allow_lessons = models.BooleanField(
+        default=True, verbose_name="разрешить проводить занятия в аудитории"
+    )
+    allow_lessons = models.BooleanField(
+        default=True, verbose_name="разрешить бронировать аудиторию для проведения мероприятий"
+    )
 
     class Meta:
         verbose_name = "аудитория"
