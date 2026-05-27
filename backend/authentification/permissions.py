@@ -48,7 +48,7 @@ class IsScheduleModerator(permissions.IsAuthenticated):
     def has_permission(self, request, view):
         if not super().has_permission(request, view):
             return False
-        return bool(request.user.is_schedule_moderator or request.user.is_staff)
+        return bool(request.user.is_schedule_moderator)
 
 
 class IsBookingModerator(permissions.IsAuthenticated):
@@ -59,4 +59,4 @@ class IsBookingModerator(permissions.IsAuthenticated):
     def has_permission(self, request, view):
         if not super().has_permission(request, view):
             return False
-        return bool(request.user.is_booking_moderator or request.user.is_staff)
+        return bool(request.user.is_booking_moderator)
