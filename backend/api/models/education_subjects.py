@@ -51,6 +51,7 @@ class StudyProgram(models.Model):
 class Discipline(models.Model):
     name = models.CharField(max_length=255,verbose_name="Наименование")
     allow_merge_teachers = models.BooleanField(default=False,verbose_name="Разрешить объединение преподавателей")
+    
     class Meta:
         ordering = ["name"]
         verbose_name = "дисциплина"

@@ -1,11 +1,12 @@
 from re import search
 
 from django.contrib import admin
+from django.db.models import Count
 
 from api.models import (AcademicLoad, Building, BuildingPriority, Classroom,
                         Constraint, Discipline, Institute, Lesson, LessonType,
                         ScheduleScenario, StudyGroup, StudyProgram, Teacher,
-                        Timeslot,Semester)
+                        Timeslot,Semester,PlannedLesson)
 
 #  ИНЛАЙНЫ (Позволяют создавать связанные объекты на одной странице)
 
@@ -81,6 +82,7 @@ class AcademicLoadAdmin(admin.ModelAdmin):
 class LessonAdmin(admin.ModelAdmin):
     list_display = ("discipline", "timeslot", "classroom", "scenario")
     list_filter = ("scenario", "timeslot__day", "classroom__building")
+    search_fields = ("id","discipline__name")
     # Чтобы не грузить сервер огромными списками
     raw_id_fields = ("timeslot", "classroom")
 
@@ -97,10 +99,85 @@ class SemesterAdmin(admin.ModelAdmin):
     search_fields = ("name",)
     ordering = ("date_start",)
 
+@admin.register(PlannedLesson)
+class PlannedLessonAdmin(admin.ModelAdmin):
+    # Поля, отображаемые в списке
+    list_display = (
+        "id",
+        "discipline",
+        "lesson_type",
+        "semester",
+        "get_loads_count",
+        "get_teachers_count",
+        "get_groups_count",
+        "lessons_in_cycle",
+        "whole_weeks",
+        "priority",
+    )
 
+    # Фильтры справа
+    list_filter = ("semester", "lesson_type", "discipline")
+    
+    # Поиск
+    search_fields = ("discipline__name", "study_groups__name", "teachers__name")
+
+    # Оптимизация запроса: считаем количество связанных объектов в одном SQL-запросе
+    def get_queryset(self, request):
+        queryset = super().get_queryset(request)
+        queryset = queryset.annotate(
+            _loads_count=Count("academic_loads", distinct=True),
+            _teachers_count=Count("teachers", distinct=True),
+            _groups_count=Count("study_groups", distinct=True),
+        )
+        return queryset
+
+    # Методы для отображения колонок с поддержкой сортировки
+    
+    @admin.display(description="Нагрузок", ordering="_loads_count")
+    def get_loads_count(self, obj):
+        return obj._loads_count
+
+    @admin.display(description="Преподавателей", ordering="_teachers_count")
+    def get_teachers_count(self, obj):
+        return obj._teachers_count
+
+    @admin.display(description="Групп", ordering="_groups_count")
+    def get_groups_count(self, obj):
+        return obj._groups_count
+
+    # Настройка формы редактирования (для удобства работы с M2M)
+    filter_horizontal = ("study_groups", "teachers", "academic_loads")
+    
+    # Чтобы не делать лишних запросов при открытии формы редактирования
+    raw_id_fields = ("academic_loads",)
+
+    actions = ['fast_delete_selected']
+
+    def get_actions(self, request):
+        # Удаляем стандартное удаление, чтобы случайно не запустить "медленный" процесс
+        actions = super().get_actions(request)
+        if 'delete_selected' in actions:
+            del actions['delete_selected']
+        return actions
+
+    @admin.action(description="БЫСТРОЕ УДАЛЕНИЕ (без проверки связей)")
+    def fast_delete_selected(self, request, queryset: QuerySet):
+        # .delete() на уровне QuerySet в Django работает гораздо быстрее,
+        # так как он минимизирует работу "коллектора" и делает массовое удаление.
+        count = queryset.count()
+        queryset.delete()
+        self.message_user(request, f"Успешно удалено {count} записей (включая их связи).")
+
+    # Также полезно для массовых операций
+    def delete_queryset(self, request, queryset):
+        """Переопределение для удаления через контекстное меню действий"""
+        queryset.delete()
+
+        
 admin.site.register(Discipline, search_fields=["name"])
 admin.site.register(LessonType)
 admin.site.register(ScheduleScenario)
 admin.site.register(BuildingPriority)
 admin.site.register(Constraint)
+admin.site.register(Classroom)
 # admin.site.register(Semester)

@@ -1,32 +1,37 @@
-from django.conf import settings
-from django.core.management.base import BaseCommand
-from django.utils import timezone
-
-from api.models import AcademicLoad
-from api.services.data_import.loaders import export_loading
-from api.services.schedule.planner import generate_planned_lessons
-
+from django.core.management.base import BaseCommand, CommandError
+from api.models import AcademicLoad,Semester
+from api.services.schedule.planner import generate_planned_lessons_bulk
 
 class Command(BaseCommand):
-    help = "Экспорт академической нагрузки в Excel (1NF)."
+    help = "Генерация агрегированных плановых занятий на основе академической нагрузки"
 
-    # def add_arguments(self, parser):
-    #     parser.add_argument("path", type=str, help="Путь к создаваемому XLSX файлу")
+    def add_arguments(self, parser):
+        parser.add_argument("semester_id", type=int, help="ID семестра")
 
     def handle(self, *args, **options):
-        loads = AcademicLoad.objects.all()
-        # path = options["path"]
-        now = timezone.localtime(timezone.now())
-        # path = (
-        #     settings.DATA_FILES_DIR
-        #     / f"план-занятий_{now.strftime("%Y-%m-%d_%H-%M-%S")}.txt"
-        # )
-        # self.stdout.write(self.style.SUCCESS(f"Файл успешно создан: {path}"))
-
-        result = generate_planned_lessons(loads)
-
-        self.stdout.write(self.style.SUCCESS(f"Запланировано занятий: {len(result)}"))
-        for res in result:
-            print(res,'\n')
-
+        semester_id = options["semester_id"]
         
+        try:
+            semester = Semester.objects.get(pk=semester_id)
+        except Semester.DoesNotExist:
+            raise CommandError(f"Семестр {semester_id} не найден")
+
+        # Предварительная загрузка связей для ускорения make_final_key
+        self.stdout.write(f"Начинаю обработку семестра {semester}")
+
+        loads = AcademicLoad.objects.filter(semester=semester).select_related(
+            "discipline", "lesson_type", "study_group"
+        )
+
+        if not loads.exists():
+            self.stdout.write("Нет нагрузки для обработки.")
+            return
+
+        self.stdout.write(f"Начинаю обработку {loads.count()} записей нагрузки...")
+        
+        # Вызываем наш отдельный сервис
+        created_count = generate_planned_lessons_bulk(semester, loads)
+
+        self.stdout.write(
+            self.style.SUCCESS(f"Успешно создано {created_count} PlannedLesson(s)")
+        )

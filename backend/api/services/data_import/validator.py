@@ -124,16 +124,16 @@ def validate_load_row(row, idx):
     # Недели
     weeks_int = parse_int_or_none(weeks)
     if weeks_int is None:
-        err("Нагрузка.Недели", "Должно быть целым числом >= 0")
-    elif weeks_int < 0:
-        err("Нагрузка.Недели", "Должно быть >= 0")
+        err("Нагрузка.Недели", "Должно быть целым числом >= 1")
+    elif weeks_int < 1:
+        err("Нагрузка.Недели", "Должно быть >= 1")
 
     # Часы
     hours_int = parse_int_or_none(hours)
     if hours_int is None:
-        err("Нагрузка.Часы", "Должно быть целым числом >= 0")
-    elif hours_int < 0:
-        err("Нагрузка.Часы", "Должно быть >= 0")
+        err("Нагрузка.Часы", "Должно быть целым числом >= 2")
+    elif hours_int < 2:
+        err("Нагрузка.Часы", "Должно быть >= 2")
 
     # Преподаватель ФИО
     if is_empty(teacher_name):

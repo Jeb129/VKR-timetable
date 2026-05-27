@@ -24,6 +24,20 @@ def normalize_diff(model, diff):
 
     return fixed
 
+def get_cached_M2M(model_obj,field:str):
+        """Получение M2M связей для занятия без вызова менеджера (без необходимости)"""
+        # Сначала проверяем кэш
+        cache = getattr(model_obj, '_prefetched_objects_cache', {})
+        if field in cache:
+            return cache[field]
+        
+        # Если объекта нет в кэше и нет ID (новый объект), возвращаем пустой список
+        if not model_obj.pk:
+            return []
+            
+        # Если ID есть, но кэша нет — обычный запрос
+        return getattr(model_obj,field).all()
+
 class SimpleRelatedSerializer(serializers.Serializer):
     id = serializers.IntegerField()
     name = serializers.SerializerMethodField()

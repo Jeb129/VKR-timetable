@@ -63,7 +63,7 @@ const constraintFormatters: Record<
     </div>
   ),
 
-  building_travel_impossible: (data) => (
+  building_travel_impossible_old: (data) => (
     <ul className="constraint-error-list flex-col gap-1">
       {data.map((v: any, i: number) => (
         <li key={i} className="flex-col">
@@ -78,6 +78,43 @@ const constraintFormatters: Record<
       ))}
     </ul>
   ),
+  building_travel_impossible: (data: any[]) => (
+    <ul className="constraint-error-list flex-col gap-2 m-0 p-0">
+        {data.map((v: any, i: number) => (
+            <li key={i} className="constraint-error-item p-2 card flex-col gap-1">
+                {/* Заголовок: Кто именно не успевает */}
+                <div className="flex-row align-center gap-1">
+                    <span className="text-muted small-text">
+                        {v.type === 'teacher' ? '👤 Преподаватель:' : '👥 Группа:'}
+                    </span>
+                    <strong className="text-primary">{v.entity.name}</strong>
+                </div>
+
+                {/* Инфо о времени: выделяем красным несоответствие */}
+                <div className="flex-row space-between align-center bg-main p-1 rounded-md">
+                    <div className="flex-col">
+                        <span className="tiny-text uppercase text-muted">В пути</span>
+                        <span className="font-bold">{v.travel_time} мин.</span>
+                    </div>
+                    <div className="text-muted">→</div>
+                    <div className="flex-col align-end">
+                        <span className="tiny-text uppercase text-muted">Доступно</span>
+                        <span className="text-red font-bold">{v.available_time} мин.</span>
+                    </div>
+                </div>
+
+                {/* Соседнее занятие: чтобы понять, откуда/куда идет человек */}
+                <div className="mt-1 pt-1 border-top">
+                    <div className="tiny-text uppercase text-muted mb-1">
+                        {v.direction === 'prev' ? 'Предыдущая пара:' : 'Следующая пара:'}
+                    </div>
+                    {/* Используем LessonBrief для краткого отображения дисциплины и кабинета */}
+                    <LessonBrief lesson={v.neighbor_lesson} />
+                </div>
+            </li>
+        ))}
+    </ul>
+),
 
   // --- ТЕХНИКА / ПРИОРИТЕТ ---
 

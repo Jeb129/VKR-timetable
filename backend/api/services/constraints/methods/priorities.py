@@ -8,6 +8,7 @@ from api.models import (
     Lesson,
     enums,
 )
+from config.utils import get_cached_M2M
 
 
 @constraint("room_meets_equipment_requirements")
@@ -18,16 +19,13 @@ def room_meets_equipment_requirements(
     if not room:
         return None
 
-    req_ids = list(
-        EquipmentRequirement.objects.filter(
-            discipline=lesson.discipline, lesson_type=lesson.lesson_type
-        )
+    req = context.requirements_cache.get(
+        (lesson.discipline_id,lesson.lesson_type_id),
+        set()
     )
-
-    if not req_ids:
-        return None
-    provided = set(room.equipment)
-    missing = [rid for rid in req_ids if rid not in provided]
+    
+    provided = set(get_cached_M2M(room,"equipment"))
+    missing = req - provided
 
     if missing:
         return ConstraintError(
@@ -48,15 +46,22 @@ def matches_teacher_room_preference(
         return None
 
     violations = []
-    for teacher in lesson.teachers.all():
-        pref = ClassroomPreference.objects.filter(
-            teacher=teacher,
-            discipline=lesson.discipline,
-            lesson_type=lesson.lesson_type,
-            status=enums.RequestStatus.VERIFIED,
-        ).first()
-        if pref and pref.classroom_id != room.id:
-            violations.append({"teacher": teacher, "preferred_room": pref.classroom})
+    
+    # Используем твою новую утилиту для получения учителей без SQL
+    teachers = get_cached_M2M(lesson, 'teachers')
+
+    for teacher in teachers:
+        # Пытаемся найти предпочтение по ключу: (Учитель, Дисциплина, Тип занятия)
+        pref_room = context.teacher_room_prefs.get(
+            (teacher.id, lesson.discipline_id, lesson.lesson_type_id)
+        )
+
+        # Если предпочтение есть и оно не совпадает с текущей аудиторией
+        if pref_room and pref_room.id != room.id:
+            violations.append({
+                "teacher": teacher, 
+                "preferred_room": pref_room
+            })
 
     return (
         ConstraintError(
@@ -77,7 +82,7 @@ def lessons_ordering(lesson: Lesson, context: ScheduleContext, weight: int):
         return None
 
     violations = []
-    for group in lesson.study_groups.all():
+    for group in get_cached_M2M(lesson, 'study_groups'):
         chain = context.get_group_day_chain(group.id, ts.week_num, ts.day)
         # Проверяем порядок приоритетов в цепочке
         for i in range(len(chain) - 1):
@@ -111,11 +116,12 @@ def matches_teacher_time_preference(
         return None
 
     violations = []
-    for teacher in lesson.teachers.all():
-        if ExcludedTimeslot.objects.filter(
-            teacher=teacher, timeslot=ts, status=enums.RequestStatus.VERIFIED
-        ).exists():
-            violations.append({"teacher": teacher, "timeslot": ts})
+    for teacher in get_cached_M2M(lesson, 'teachers'):
+        if (teacher.id, ts.id) in context.teacher_excluded_slots:
+            violations.append({
+                "teacher": teacher, 
+                "timeslot": ts
+            })
 
     return (
         ConstraintError(

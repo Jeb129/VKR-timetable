@@ -237,6 +237,7 @@ class AcademicLoadReader:
     def __iter__(self):
         # --- ПРОХОД 1: ВАЛИДАЦИЯ И ПОДГРУППЫ ---
         for idx, row in enumerate(self.data):
+            # Валидация строки
             row_errors, norm = validate_load_row(row, idx)
             if row_errors:
                 self.errors.extend(row_errors)
@@ -251,11 +252,13 @@ class AcademicLoadReader:
             if g_num is None:
                 # В очередь потоков
                 self.queue_flow.append((idx, norm))
+                yield ValidationMessage(idx,"INFO","Номер группы","Не заполнено. Добавляем в очередь обработки потоков")
                 continue
             
             if sub_g_num is None:
                 # В очередь групп
                 self.queue_groups.append((idx, norm))
+                yield ValidationMessage(idx,"INFO","Номер подгруппы","Не заполнено. Добавляем в очередь обработки групп")
                 continue
 
             # Если мы здесь - это конкретная подгруппа (базовая единица)

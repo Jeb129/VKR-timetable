@@ -41,7 +41,8 @@ class ConstraintManager:
         *,
         name: str | None = None,
         level: int = 0,              # 0 = все, 1 = soft, 2 = hard
-        generation_only: bool | None = None
+        manual_only: bool | None = None,
+        generation_only: bool | None = None,
     ) -> Dict[str, callable]:
         """Выбирает ограничения по фильтрам из списка методов"""
         selected = {}
@@ -59,8 +60,10 @@ class ConstraintManager:
             if level == 2 and not constraint.is_hard:  # hard-only
                 continue
 
-            # 3) Фильтр по auto_only
-            if generation_only is not None and constraint.generation_only != generation_only:
+            # 3) Фильтр по manual_only
+            if generation_only and constraint.manual_only:
+                continue
+            if manual_only and constraint.generation_only:
                 continue
 
             selected[cname] = func
@@ -69,7 +72,10 @@ class ConstraintManager:
 
     def check(
         self,*,lesson: Lesson, context:ScheduleContext,
-        constraint_name:str = None, constraint_level: int = 0, generation_only: bool=None
+        constraint_name:str = None, 
+        constraint_level: int = 0, 
+        manual_only: bool=None,
+        generation_only: bool=None,
     ) -> List[ConstraintError]:
         """
         Проверяет переданное занятие по всем ограничениям, относительно индексированных занятий в контексте
@@ -81,6 +87,7 @@ class ConstraintManager:
         Дополнительные параметры
             :constraint_name: Имя конкретного ограничения для проверки
             :generation_only: Проверка только по ограничениям для генератора
+            :manual_only: Проверка только по ограничениям для ручных изменений
             :constraint_level: Используемый список для проверки
                 - 0 (default) - Проверка по всем существующим ограничениям
                 - 1 - Проверка по списку мягких ограничений
@@ -97,12 +104,16 @@ class ConstraintManager:
         funcs = self._select_constraints(
             name=constraint_name,
             level=constraint_level,
+            manual_only=manual_only,
             generation_only=generation_only,
         )
 
         errors: List[ConstraintError] = []
         for cname, func in funcs.items():
             constraint_obj = self.constraints[cname]
+            # result = func(lesson=lesson, context=context, weight=constraint_obj.weight)
+            # if result:
+            #     errors.append(result)
             try:
                 result = func(lesson=lesson, context=context, weight=constraint_obj.weight)
                 if result:

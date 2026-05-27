@@ -1,6 +1,9 @@
+from numpy import less
+
 from api.services.constraints.meta import constraint, ConstraintError
 from api.services.schedule.context import ScheduleContext
 from api.models import Lesson
+from config.utils import get_cached_M2M
 
 
 @constraint("group_daily_overload")
@@ -10,7 +13,8 @@ def group_daily_overload(lesson: Lesson, context: ScheduleContext, weight: int):
         return None
 
     violations = []
-    for group in lesson.study_groups.all():
+    study_groups = get_cached_M2M(lesson, "study_groups")
+    for group in study_groups:
         chain = context.get_group_day_chain(group.id, ts.week_num, ts.day)
         hours = len(chain) * 2
         limit = getattr(group, "max_hours_per_day", 8) or 8
@@ -36,7 +40,8 @@ def teacher_daily_overload(lesson: Lesson, context: ScheduleContext, weight: int
         return None
 
     violations = []
-    for teacher in lesson.teachers.all():
+    teachers = get_cached_M2M(lesson, "teachers")
+    for teacher in teachers:
         chain = context.get_teacher_day_chain(teacher.id, ts.week_num, ts.day)
         hours = len(chain) * 2
         limit = teacher.max_hours_per_day or 8
@@ -64,7 +69,8 @@ def students_gap(lesson: Lesson, context: ScheduleContext, weight: int):
         return None
 
     violations = []
-    for group in lesson.study_groups.all():
+    study_groups = get_cached_M2M(lesson, "study_groups")
+    for group in study_groups:
         prev, nxt = context.get_group_neighbors(lesson, group.id)
         if prev and (ts.order_number - prev.timeslot.order_number > 1):
             violations.append({"group": group, "side": "before", "gap_with": prev})
@@ -90,7 +96,8 @@ def building_clustering(lesson: Lesson, context: ScheduleContext, weight: int):
         return None
 
     violations = []
-    for group in lesson.study_groups.all():
+    study_groups = get_cached_M2M(lesson, "study_groups")
+    for group in study_groups:
         chain = context.get_group_day_chain(group.id, ts.week_num, ts.day)
         buildings = {
             l.classroom.building
@@ -123,7 +130,8 @@ def lesson_persistence_sort(lesson: Lesson, context: ScheduleContext, weight: in
     violations = []
 
     # 1. Проверяем цепочки групп
-    for group in lesson.study_groups.all():
+    study_groups = get_cached_M2M(lesson, "study_groups")
+    for group in study_groups:
         chain = context.get_group_day_chain(group.id, ts.week_num, ts.day)
 
         # Ищем занятия в тот же день, которые длятся дольше
@@ -153,7 +161,8 @@ def lesson_persistence_sort(lesson: Lesson, context: ScheduleContext, weight: in
             )
 
     # 2. Проверяем цепочки преподавателей
-    for teacher in lesson.teachers.all():
+    teachers = get_cached_M2M(lesson, "teachers")
+    for teacher in teachers:
         chain = context.get_teacher_day_chain(teacher.id, ts.week_num, ts.day)
 
         longer_before = [
@@ -210,7 +219,8 @@ def teachers_gap(lesson: Lesson, context: ScheduleContext, weight: int):
         return None
 
     violations = []
-    for teacher in lesson.teachers.all():
+    teachers = get_cached_M2M(lesson, "teachers")
+    for teacher in teachers:
         prev, nxt = context.get_teacher_neighbors(lesson, teacher.id)
         if prev and (ts.order_number - prev.timeslot.order_number > 1):
             violations.append({"teacher": teacher, "side": "before", "gap_with": prev})
@@ -232,7 +242,8 @@ def teachers_gap(lesson: Lesson, context: ScheduleContext, weight: int):
 @constraint("teacher_weekly_overload")
 def teacher_weekly_overload(lesson: Lesson, context: ScheduleContext, weight: int):
     violations = []
-    for teacher in lesson.teachers.all():
+    teachers = get_cached_M2M(lesson, "teachers")
+    for teacher in teachers:
         hours = context.get_teacher_weekly_hours(teacher.id)
         limit = teacher.max_hours_per_week or 36
         if hours > limit:
@@ -253,9 +264,10 @@ def teacher_weekly_overload(lesson: Lesson, context: ScheduleContext, weight: in
 @constraint("group_weekly_overload")
 def group_weekly_overload(lesson: Lesson, context: ScheduleContext, weight: int):
     violations = []
-    for group in lesson.study_groups.all():
+    study_groups = get_cached_M2M(lesson, "study_groups")
+    for group in study_groups:
         hours = context.get_group_weekly_hours(group.id)
-        limit = getattr(group, "max_hours_per_week", 36) or 36
+        limit = group.max_hours_per_week or 36
         if hours > limit:
             violations.append({"group": group, "hours": hours, "limit": limit})
 

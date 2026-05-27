@@ -49,9 +49,12 @@ class Constraint(models.Model):
     is_hard =models.BooleanField(default=False,
                                  verbose_name="запретить нарушения",
                                  help_text="Запрещает публикацию варианта расписания если есть хоть одно занятие, с нарушением такого ограничения")
+    manual_only = models.BooleanField(default=False, 
+                                          verbose_name="Исключить при генерации",
+                                          help_text="При генерации расписания ограничение не будет учитываться")
     generation_only = models.BooleanField(default=False, 
-                                          verbose_name="только для генератора",
-                                          help_text="Информация о нарушении ограничения не будет выводится при ручном редактировании")
+                                          verbose_name="Исключить при ручных изменениях",
+                                          help_text="Информация о нарушении ограничения не будет выводиться при ручном редактировании расписания")
 
     class Meta:
         verbose_name = "ограничение"

@@ -155,6 +155,9 @@ class Command(BaseCommand):
                     self.stdout.write(self.style.HTTP_NOT_FOUND(msg))
                 case "CRITICAL":
                     self.stdout.write(self.style.NOTICE(msg))
+                case _:
+                    self.stdout.write(self.style.HTTP_INFO(msg))
+
 
 
         self.stdout.write()
