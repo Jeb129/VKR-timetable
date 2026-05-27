@@ -22,5 +22,11 @@ class CustomUser(AbstractUser):
     # username остается, но он не используется как логин
     REQUIRED_FIELDS = ["username"]
 
+    @property
+    def is_internal(self):
+        # Пользователь считается внутренним, если флаг установлен вручную 
+        # ИЛИ если он успешно привязал Moodle
+        return self.internal_user or self.moodle_id is not None
+
     def __str__(self):
         return self.email
