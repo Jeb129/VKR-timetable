@@ -239,7 +239,7 @@ def teachers_gap(lesson: Lesson, context: ScheduleContext, weight: int):
     )
 
 
-@constraint("teacher_weekly_overload")
+# @constraint("teacher_weekly_overload")
 def teacher_weekly_overload(lesson: Lesson, context: ScheduleContext, weight: int):
     violations = []
     teachers = get_cached_M2M(lesson, "teachers")
@@ -261,7 +261,7 @@ def teacher_weekly_overload(lesson: Lesson, context: ScheduleContext, weight: in
     )
 
 
-@constraint("group_weekly_overload")
+# @constraint("group_weekly_overload")
 def group_weekly_overload(lesson: Lesson, context: ScheduleContext, weight: int):
     violations = []
     study_groups = get_cached_M2M(lesson, "study_groups")
