@@ -161,7 +161,7 @@ class PlannedLessonAdmin(admin.ModelAdmin):
         return actions
 
     @admin.action(description="БЫСТРОЕ УДАЛЕНИЕ (без проверки связей)")
-    def fast_delete_selected(self, request, queryset: QuerySet):
+    def fast_delete_selected(self, request, queryset):
         # .delete() на уровне QuerySet в Django работает гораздо быстрее,
         # так как он минимизирует работу "коллектора" и делает массовое удаление.
         count = queryset.count()
