@@ -62,6 +62,10 @@ class Booking(Request):
         self.request_type = enums.RequestType.BOOKING
         super().save(*args, **kwargs)
 
+    def __str__(self):
+        b_type = self.booking_type.name if self.booking_type else "Мероприятие"
+        return f"{b_type}: {self.description[:30]}"
+
 # Корректировка расписания позволяет либо снять, либо переместить занятие в сетке
 # Заменяет timeslot в занятии на timeslot в записи
 # Для снятия нужно создаь запись с пустым timeslot

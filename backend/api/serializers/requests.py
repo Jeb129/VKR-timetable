@@ -43,6 +43,7 @@ class BookingTypeSerializer(serializers.ModelSerializer):
 class BookingSerializer(serializers.ModelSerializer):
     user_name = serializers.ReadOnlyField(source="user.username")
     classroom_num = serializers.ReadOnlyField(source="classroom.num")
+    booking_type_name = serializers.ReadOnlyField(source="booking_type.name")
 
     class Meta:
         model = Booking
@@ -53,6 +54,8 @@ class BookingSerializer(serializers.ModelSerializer):
             "classroom",
             "classroom_num",
             "date_start",
+            "booking_type",
+            "booking_type_name",
             "date_end",
             "description",
             "status",
