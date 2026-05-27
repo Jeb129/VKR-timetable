@@ -5,16 +5,15 @@ from rest_framework.views import Response, APIView
 from rest_framework.decorators import action
 from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
-from datetime import datetime
+from datetime import datetime,time
+from django.utils import timezone
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from api.models import Timeslot, ScheduleScenario, Lesson, ScheduleAdjustment
 from api.serializers.schedule import ScheduleScenarioSerializer
 from api.serializers import MappedEventSerializer, TimeslotSerializer,ScheduleAdjustmentSerializer
 from api.services.schedule.mapper import (
     MappedEvent,
-    get_classroom_schedule,
-    get_group_schedule,
-    get_teacher_schedule,
+    ScheduleMapper,
 )
 
 logger = logging.getLogger("cheker")
@@ -82,15 +81,28 @@ class ScheduleView(ListAPIView):
         dt = self.request.query_params.get("date")
         dt_f = self.request.query_params.get("date_from")
         dt_t = self.request.query_params.get("date_to")
+        
         if dt:
-            return datetime.strptime(dt, "%Y-%m-%d"), datetime.strptime(dt, "%Y-%m-%d")
+            # Парсим дату
+            date_obj = datetime.strptime(dt, "%Y-%m-%d")
+            # Начало дня (00:00:00)
+            start = timezone.make_aware(datetime.combine(date_obj, time.min))
+            # Конец дня (23:59:59), чтобы захватить все события за этот день
+            end = timezone.make_aware(datetime.combine(date_obj, time.max))
+            return start, end
 
-        if not dt_f:
-            raise ValueError("Не передан параметр date_from")
-        if not dt_t:
-            raise ValueError("Не передан параметр date_to")
+        if not dt_f or not dt_t:
+            raise ValueError("Не переданы параметры date_from / date_to")
 
-        return datetime.strptime(dt_f, "%Y-%m-%d"), datetime.strptime(dt_t, "%Y-%m-%d")
+        # Парсим границы диапазона
+        df_obj = datetime.strptime(dt_f, "%Y-%m-%d")
+        dt_obj = datetime.strptime(dt_t, "%Y-%m-%d")
+
+        # Делаем их "осознанными" и устанавливаем время на начало и конец дня соответственно
+        start = timezone.make_aware(datetime.combine(df_obj, time.min))
+        end = timezone.make_aware(datetime.combine(dt_obj, time.max))
+
+        return start, end
 
     def list(self, request, *args, **kwargs):
         try:
@@ -112,26 +124,37 @@ class GroupScheduleView(ScheduleView):
     def get_queryset(self) -> List[MappedEvent]:
         dt_f, dt_t = self.get_query_date()
         group_id = self.request.query_params.get("group_id")
-
-        return get_group_schedule(date_from=dt_f, date_to=dt_t, group_id=group_id)
+        return ScheduleMapper(
+            date_from=dt_f,
+            date_to=dt_t,
+            group_id=int(group_id)
+        ).get_schedule()
 
 
 class ClassroomScheduleView(ScheduleView):
     def get_queryset(self) -> List[MappedEvent]:
         dt_f, dt_t = self.get_query_date()
+        if dt_f == dt_t:
+            dt_t = datetime.combine(dt_t.date(),time.max)
+
         classroom_id = self.request.query_params.get("classroom_id")
-        return get_classroom_schedule(
-            classroom_id=int(classroom_id),
+        return ScheduleMapper(
             date_from=dt_f,
             date_to=dt_t,
-        )
+            classroom_id=int(classroom_id)
+        ).get_schedule()
 
 
 class TeacherScheduleView(ScheduleView):
     def get_queryset(self) -> List[MappedEvent]:
         dt_f, dt_t = self.get_query_date()
         teacher_id = self.request.query_params.get("teacher_id")
-        return get_teacher_schedule(date_from=dt_f, date_to=dt_t, teacher_id=teacher_id)
+        return ScheduleMapper(
+            date_from=dt_f,
+            date_to=dt_t,
+            teacher_id=int(teacher_id)
+        ).get_schedule()
+
 
 class MyTeacherScheduleView(ScheduleView):
     permission_classes = [IsAuthenticated]
@@ -146,11 +169,11 @@ class MyTeacherScheduleView(ScheduleView):
         except Exception:
             raise ValueError("Ваш аккаунт не связан с профилем преподавателя")
         # Вызываем маппер, используя ID найденного преподавателя
-        return get_teacher_schedule(
+        return ScheduleMapper(
             date_from=dt_f,
             date_to=dt_t,
             teacher_id=teacher.id
-        )
+        ).get_schedule()
 
 
 class ScheduleAdjustmentCreateView(APIView):
@@ -178,6 +201,7 @@ class ScheduleAdjustmentCreateView(APIView):
         )
 
         return Response({"message": "Заявка на перенос отправлена модератору"}, status=201)
+
 
 class ScheduleAdjustmentViewSet(viewsets.ModelViewSet):
     queryset = ScheduleAdjustment.objects.all().order_by("-request__created_at")
