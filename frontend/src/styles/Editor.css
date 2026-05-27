@@ -284,3 +284,78 @@
     background-image: repeating-linear-gradient(45deg, transparent, transparent 10px, #eee 10px, #eee 20px);
     cursor: not-allowed;
 }
+
+/* Зоны по краям для авто-переключения */
+.drag-edge-zone {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50px; /* Ширина чувствительной зоны */
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none; 
+    transition: all 0.3s ease;
+    opacity: 0;
+    background: linear-gradient(to right, rgba(44, 58, 179, 0.1), transparent);
+}
+
+/* Активируем зоны только во время Drag-события над ними */
+.drag-edge-zone.active {
+    pointer-events: all;
+    opacity: 1;
+}
+
+.drag-edge-zone.left {
+    left: 0;
+    border-radius: var(--radius-lg) 0 0 var(--radius-lg);
+}
+
+.drag-edge-zone.right {
+    right: 0;
+    background: linear-gradient(to left, rgba(44, 58, 179, 0.1), transparent);
+    border-radius: 0 var(--radius-lg) var(--radius-lg) 0;
+}
+
+.drag-edge-zone.active:hover {
+    background: rgba(44, 58, 179, 0.2);
+}
+
+.edge-label {
+    writing-mode: vertical-rl;
+    text-orientation: mixed;
+    color: var(--p-blue);
+    font-weight: 800;
+    font-size: 0.7rem;
+    letter-spacing: 2px;
+    opacity: 0.5;
+}
+.admin-action-bar {
+    position: fixed;
+    bottom: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    min-width: 600px;
+    background: white;
+    border: 2px solid var(--p-blue);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 25px !important;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+}
+.status-dot.orange { background: var(--p-orange); animation: pulse 2s infinite; }
+.status-dot.green { background: var(--p-green); }
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.4; }
+    100% { opacity: 1; }
+}

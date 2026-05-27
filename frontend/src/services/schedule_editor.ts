@@ -43,9 +43,39 @@ export const scheduleDraftService = {
         const res = await privateApi.post(`/api/scenario/${scenarioId}/draft/lessons/${lessonId ? lessonId + "/" : ""}apply/`);
         return res.data || [];
     },
+
+    //получение корзины с парами 
+    getTrash: async (scenarioId: number): Promise<Lesson[]> => {
+        const res = await privateApi.get(`/api/scenario/${scenarioId}/draft/lessons/trash/`);
+        return res.data;
+    },
+
     clearDraft: async (scenarioId: number, lessonId?: string): Promise<Lesson | null> => {
         const res = await privateApi.delete(`/api/scenario/${scenarioId}/draft/lessons/${lessonId ? lessonId + "/" : ""}clear/`)
         console.log(res.data)
         return res.data
+    },
+
+    //Получить только измененные занятия (добавим флаг only_changes)
+    getAllDraftLessons: async (scenarioId: number): Promise<{lessons: Lesson[]}> => {
+        const res = await privateApi.get(`/api/scenario/${scenarioId}/draft/lessons/`);
+        return res.data;
+    },
+    //глобальная проверка всего сценария на конфликты 
+    getSummary: async (scenarioId: number): Promise<{
+        changes: Lesson[], 
+        deleted: Lesson[], 
+        errors: LessonError[] 
+    }> => {
+        const res = await privateApi.get(`/api/scenario/${scenarioId}/draft/lessons/summary/`);
+        return res.data;
+    },
+    // Опубликовать всё (Насрать из редиса в БД)
+    applyAll: async (scenarioId: number): Promise<void> => {
+        await privateApi.post(`/api/scenario/${scenarioId}/draft/lessons/apply/`);
+    },
+    // Сбросить всё
+    clearAllDrafts: async (scenarioId: number): Promise<void> => {
+        await privateApi.delete(`/api/scenario/${scenarioId}/draft/lessons/clear/`);
     }
 };

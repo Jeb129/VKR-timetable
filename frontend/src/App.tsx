@@ -13,6 +13,7 @@ import AcademicLoadImportPage from "./pages/AcademicLoad/AcademicLoadImportPage"
 import HomePage from "./pages/HomePage";
 import StatsPage from "./pages/Statistics/StatsPage"
 import BuildingStatsPage from "./pages/Statistics/BuildingStatsPage"
+import ScenarioReviewPage from "./pages/Editor/ScenarioReviewPage"
 
 import './App.css'
 
@@ -33,6 +34,7 @@ const App = () =>
       <Route path="/AcademicLoad" element={<ProtectedRoute><AcademicLoadImportPage/></ProtectedRoute>}/>
       <Route path="/Statistics" element={<ProtectedRoute><StatsPage/></ProtectedRoute>} />
       <Route path="/Statistics/:buildingId" element={<ProtectedRoute><BuildingStatsPage /></ProtectedRoute>} />
+      <Route path="/ScheduleEditor/:scenarioId/review" element={<ProtectedRoute><ScenarioReviewPage /></ProtectedRoute>} />
     </Routes>
   </>
 export default App

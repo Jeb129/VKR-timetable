@@ -24,7 +24,9 @@ const SchedulePage = () => {
     const [loading, setLoading] = useState(false);
 
     const targetOptions: SelectOption[] = useMemo(() => {
-        if (filterType === "classroom") return classrooms.map(r => ({ value: r.id, label: r.num }));
+        if (filterType === "classroom") {
+            return classrooms.map(r => ({ value: r.id, label: r.name || r.num }));
+        }
         if (filterType === "group") return groups.map(g => ({ value: g.id, label: g.name }));
         if (filterType === "teacher") return teachers.map(t => ({ value: t.id, label: t.name }));
         return [];
@@ -173,6 +175,7 @@ const SchedulePage = () => {
                             {group.items.map((mappedItem, index) => {
                                 const { start, end, type, extendedProps } = mappedItem;
                                 const event = extendedProps.event;
+                                
                                 const isBooking = type === "3";
                                 const isAdjustment = type === "2";
 
@@ -189,7 +192,7 @@ const SchedulePage = () => {
                                                 <h4 className="subject-name">
                                                     {isBooking 
                                                         ? `Бронь: ${event.description || 'Без описания'}`
-                                                        : `${event.type_name || ''} ${event.discipline_name}`
+                                                        : `${event.lesson_type || ''} ${event.discipline || 'Дисциплина не указана'}`
                                                     }
                                                 </h4>
                                                 <span className={`badge ${isAdjustment ? 'btn-orange' : ''}`} style={{fontSize: '10px'}}>
@@ -201,16 +204,23 @@ const SchedulePage = () => {
                                                 {!isBooking ? (
                                                     <>
                                                         <div className="details-text">
-                                                            👤 {event.teachers_list?.length ? event.teachers_list.join(', ') : 'Преподаватель не указан'}
+                                                            {/* Достаем имена из массива объектов teachers */}
+                                                            👤 {event.teachers?.length 
+                                                                ? event.teachers.map((t: any) => t.name).join(', ') 
+                                                                : 'Преподаватель не указан'}
                                                         </div>
                                                         <div className="details-text">
-                                                            👥 Группы: {event.groups_list?.length ? event.groups_list.join(', ') : 'Не указаны'}
+                                                            {/* Достаем имена из массива объектов study_groups */}
+                                                            👥 Группы: {event.study_groups?.length 
+                                                                ? event.study_groups.map((g: any) => g.name).join(', ') 
+                                                                : 'Не указаны'}
                                                         </div>
                                                     </>
                                                 ) : (
                                                     <div className="details-text">👤 Ответственный: {event.user_name || '---'}</div>
                                                 )}
-                                                <div className="details-text">📍 Кабинет: {event.classroom_name}</div>
+                                                {/* В твоем сериализаторе поле называется classroom */}
+                                                <div className="details-text">📍 Кабинет: {event.classroom || '---'}</div>
                                             </div>
                                         </div>
                                     </div>

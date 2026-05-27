@@ -1,11 +1,12 @@
 from rest_framework import status, viewsets
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 from rest_framework.request import Request
 
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 
-from api.models import Lesson
+from api.models import Lesson, ScheduleScenario
 from api.serializers import LessonReadSerializer
 from api.serializers.schedule import LessonErrorSerializer
 from api.services.schedule.manager import ScheduleManager
@@ -153,9 +154,94 @@ class DraftLessonViewSet(viewsets.ViewSet):
             results.append(lesson_error)
 
         return Response(LessonErrorSerializer(results, many=True).data, status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=["get"], url_path="trash")
+    def trash(self, request, scenario_id):
+        """GET /api/scenario/{id}/draft/lessons/trash/ — список удаленных занятий"""
+        manager = ScheduleManager(scenario_id=scenario_id, user=request.user)
+        deleted_lessons = manager.get_deleted_lessons_draft()
+        return Response(LessonReadSerializer(deleted_lessons, many=True).data)
 
     @action(detail=True, methods=["delete"])
     def clear(self,request,scenario_id,pk=None):
         lesson = ScheduleManager(scenario_id,request.user).clear_lessons(pk)
         print(pk, LessonReadSerializer(lesson).data)
         return Response(LessonReadSerializer(lesson).data,status=status.HTTP_200_OK)
+    
+    @action(detail=False, methods=["get"], url_path="summary")
+    def summary(self, request, scenario_id):
+        print(f"\n[DEBUG] === Начало Summary для сценария {scenario_id} ===")
+        
+        try:
+            scenario = get_object_or_404(ScheduleScenario, id=scenario_id)
+            storage = ScheduleManager(scenario_id, request.user).storage
+            manager = ScheduleManager(scenario_id=scenario_id, user=request.user).build_context(draft=True)
+            
+            print("[DEBUG] Получение всех уроков черновика...")
+            all_lessons = list(manager.get_lessons_draft())
+            
+            # --- ИСПРАВЛЕННАЯ ЛОГИКА ОПРЕДЕЛЕНИЯ ИЗМЕНЕНИЙ ---
+            # Получаем списки ID из Redis
+            updated_ids = [str(k) for k in storage.get_updated().keys()]
+            
+            changes = []
+            for l in all_lessons:
+                # Урок считается "изменением", если:
+                # 1. Он только что создан (у него есть флаг draft_created, который ставит DraftOverlayEngine)
+                # 2. Его ID есть в списке обновленных в Redis
+                is_new = getattr(l, 'draft_created', False)
+                is_updated = str(l.id) in updated_ids
+                
+                if is_new or is_updated:
+                    changes.append(l)
+            
+            print(f"[DEBUG] Изменений найдено: {len(changes)}")
+            
+            print("[DEBUG] Получение удаленных...")
+            deleted = manager.get_deleted_lessons_draft()
+            
+            print("[DEBUG] Запуск глобальной проверки ошибок...")
+            errors = manager.check_scenario_draft()
+            active_errors = [e for e in errors if e.errors]
+            
+            print(f"[DEBUG] Уроков с ошибками: {len(active_errors)}")
+
+            return Response({
+                "changes": LessonReadSerializer(changes, many=True).data,
+                "deleted": LessonReadSerializer(deleted, many=True).data,
+                "errors": LessonErrorSerializer(active_errors, many=True).data,
+                "has_changes": len(changes) > 0 or deleted.exists()
+            }, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            print(f"[DEBUG] ОШИБКА: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+    # @action(detail=False, methods=["get"], url_path="summary")
+    # def summary(self, request, scenario_id):
+    #     """
+    #     GET /api/scenario/{id}/draft/lessons/summary/
+    #     Один запрос для страницы подтверждения.
+    #     """
+    #     manager = ScheduleManager(scenario_id=scenario_id, user=request.user).build_context(draft=True)
+    #     # 1. Получаем пары этого сценария из черновика (Redis + БД)
+    #     all_lessons = manager.get_lessons_draft()
+    #     # 2. Фильтруем только на измененые или новые
+    #     changes = [ l for l in all_lessons  if hasattr(l, 'draft_originals') or hasattr(l, 'draft_created')  ]
+        
+    #     # 3. Получаем список удаленных (те, что в корзине)
+    #     deleted = manager.get_deleted_lessons_draft()
+        
+    #     # 4. Запускаем проверку конфликтов по всему сценарию
+    #     errors = manager.check_scenario_draft()
+    #     # Оставляем только те LessonError, где список ошибок не пуст
+    #     active_errors = [e for e in errors if e.errors]
+
+    #     return Response({
+    #         "changes": LessonReadSerializer(changes, many=True).data,
+    #         "deleted": LessonReadSerializer(deleted, many=True).data,
+    #         "errors": LessonErrorSerializer(active_errors, many=True).data,
+    #         "has_changes": len(changes) > 0 or deleted.exists()
+    #     }, status=status.HTTP_200_OK)

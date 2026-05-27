@@ -2,21 +2,25 @@ import { ChangeLogItem } from "@/components/schedule_editor/ChangeLogItem";
 import { GridCell } from "@/components/schedule_editor/GridCell";
 import LessonErrorItem from "@/components/schedule_editor/LessonError";
 import SearchSelect from "@/components/UI/SearchSelect";
+import { useModal } from "@/context/ModalContext";
+import { DeletedLogItem } from "@/components/schedule_editor/DeletedLogItem";
+import DeleteLessonModal from "@/components/schedule_editor/DeleteLessonModal";
 import { useScheduleEditor } from "@/hooks/useScheduleEditor";
 import { dbService } from "@/services/crud";
 import { scheduleDraftService } from "@/services/schedule_editor";
 import "@/styles/Editor.css";
 import { DAYS } from "@/types/enums";
-import { type Timeslot } from "@/types/schedule";
+import { type Timeslot, type Lesson  } from "@/types/schedule";
 import { type SelectOption } from "@/types/ui";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState,useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 
 const ScheduleEditorPage = () => {
     const { scenarioId } = useParams();
     const navigate = useNavigate();
     const sId = Number(scenarioId);
-
+    const { openModal, closeModal } = useModal();
+    
     const { 
         lessonsLookup, 
         lessonErrors, 
@@ -43,7 +47,39 @@ const ScheduleEditorPage = () => {
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [draggingId, setDraggingId] = useState<string | null>(null);
 
-    const [activeTab, setActiveTab] = useState<"errors" | "changes">("errors");
+    const [loading, setLoading] = useState(false);
+
+    // Новое состояние для корзины
+    const [deletedLessons, setDeletedLessons] = useState<Lesson[]>([]);
+    const [activeTab, setActiveTab] = useState<"errors" | "changes" | "trash">("errors");
+    
+    const switchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+    // Функция для запуска таймера переключения недели
+    const handleDragOverEdge = (targetWeek: number) => {
+        if (currentWeek === targetWeek) return;
+
+        // Если таймер еще не запущен - запускаем
+        if (!switchTimerRef.current) {
+            switchTimerRef.current = setTimeout(() => {
+                setCurrentWeek(targetWeek as 1 | 2);
+                switchTimerRef.current = null;
+            }, 600); // Задержка 0.6 секунды
+        }
+    };
+
+    // Очистка таймера, если пользователь увел мышку от края
+    const clearSwitchTimer = () => {
+        if (switchTimerRef.current) {
+            clearTimeout(switchTimerRef.current);
+            switchTimerRef.current = null;
+        }
+    };
+
+    // Очищаем таймер при размонтировании компонента для безопасности
+    useEffect(() => {
+        return () => clearSwitchTimer();
+    }, []);
 
     // 1. загрузка справочников
     useEffect(() => {
@@ -54,7 +90,7 @@ const ScheduleEditorPage = () => {
             const [gr, tr, rm] = await Promise.all([
                 dbService.list("groups"),
                 dbService.list("teachers"),
-                dbService.list("classrooms") // Добавили аудитории
+                dbService.list("classrooms"), // Добавили аудитории
             ]);
             setGroups(gr);
             setTeachers(tr);
@@ -85,12 +121,21 @@ const ScheduleEditorPage = () => {
     // 3. Загрузка данных о занятиях
     const loadDraft = useCallback(async () => {
         if (!sId || !targetId) return;
-        const filters: any = { with_errors: true };
-        if (filterType === "group") filters.group_id = targetId;
-        if (filterType === "teacher") filters.teacher_id = targetId;
-        if (filterType === "classroom") filters.classroom_id = targetId;
-        
-        await loadLessons(filters);
+
+        setLoading(true); 
+            const filters: any = { with_errors: true };
+            if (filterType === "group") filters.group_id = targetId;
+            if (filterType === "teacher") filters.teacher_id = targetId;
+            if (filterType === "classroom") filters.classroom_id = targetId;
+
+            const [trashData] = await Promise.all([
+                scheduleDraftService.getTrash(sId), // Запрос в корзину
+                loadLessons(filters)                
+            ]);
+
+            console.log("Удаленные пары подгружены:", trashData);
+            setDeletedLessons([...trashData]);
+
     }, [sId, targetId, filterType, loadLessons]);
 
     useEffect(() => { loadDraft(); }, [loadDraft]);
@@ -112,20 +157,39 @@ const ScheduleEditorPage = () => {
             await moveLesson(lessonId, targetSlot);
     };
 
-    const handleDelete = async (lessonId: string) => {
-        if (!window.confirm("Удалить это занятие?")) return;
-        try {
-            await scheduleDraftService.deleteLesson(sId, lessonId);
-            loadDraft();
-        } catch (err) { alert("Ошибка при удалении"); }
+    const handleDelete = (lesson: Lesson) => {
+        openModal({
+            title: "Подтверждение удаления",
+            content: (
+                <DeleteLessonModal 
+                    lesson={lesson} 
+                    onConfirm={async () => {
+                        try {
+                            // Выполняем удаление на сервере
+                            await scheduleDraftService.deleteLesson(sId, lesson.id);
+                            closeModal();
+                            setTimeout(() => loadDraft(), 100);
+                            
+                        } catch (err) {
+                            alert("Не удалось удалить занятие");
+                        }
+                    }}
+                    onCancel={closeModal}
+                />
+            )
+        });
     };
 
-    const handleCommit = async () => {
-        try {
-            await dbService.commitDraft(sId);
-            alert("Расписание опубликовано!");
-            loadDraft();
-        } catch (err) { alert("Ошибка публикации"); }
+    // 4. Логика восстановления из корзины
+    const handleRestore = async (lessonId: string) => {
+        await revertLesson(lessonId); // Revert удаляет запись из deleted в Redis
+        loadDraft();
+    };
+
+    // 5. Публикация 
+    const handleCommit = () => {
+        // Просто уходим на страницу ревью, передавая ID сценария
+        navigate(`/ScheduleEditor/${sId}/review`);
     };
 
     return (
@@ -161,7 +225,23 @@ const ScheduleEditorPage = () => {
                     </div>
 
                     {/* МАТРИЦА */}
-                    <div className="card p-0 overflow-x-auto shadow-sm">
+                    <div className="card p-0 overflow-x-auto shadow-sm" style={{ position: 'relative' }}>
+                        <div 
+                            className={`drag-edge-zone left ${currentWeek === 2 ? 'active' : ''}`}
+                            onDragOver={(e) => { e.preventDefault(); handleDragOverEdge(1); }}
+                            onDragLeave={clearSwitchTimer}
+                        >
+                            <div className="edge-label">ЧИСЛИТЕЛЬ</div>
+                        </div>
+
+                        <div 
+                            className={`drag-edge-zone right ${currentWeek === 1 ? 'active' : ''}`}
+                            onDragOver={(e) => { e.preventDefault(); handleDragOverEdge(2); }}
+                            onDragLeave={clearSwitchTimer}
+                        >
+                            <div className="edge-label">ЗНАМЕНАТЕЛЬ</div>
+                        </div>
+
                         <table className="editor-grid">
                             <thead>
                                 <tr>
@@ -192,7 +272,7 @@ const ScheduleEditorPage = () => {
                                                     onDragStart={(e, id) => { setDraggingId(id); e.dataTransfer.setData("lessonId", id); }}
                                                     onDragEnd={() => setDraggingId(null)}
                                                     onDrop={onDrop}
-                                                    onDelete={handleDelete}
+                                                    onDelete={() => lesson && handleDelete(lesson)}
                                                     onClick={() => lesson && navigate(`/admin/edit-lesson/${lesson.id}`)}
                                                 />
                                             );
@@ -203,30 +283,6 @@ const ScheduleEditorPage = () => {
                         </table>
                     </div>
                 </div>
-
-                {/* САЙДБАР КОНФЛИКТОВ */}
-                {/* <div className={`error-sidebar ${isSidebarOpen ? '' : 'closed'}`}>
-                    <div className="sidebar-trigger-tab" onClick={() => setIsSidebarOpen(!isSidebarOpen)}>
-                        {lessonErrors.some(le => le.errors.length > 0) ? '⚠️' : '▶'}
-                    </div>
-
-                    <div className="p-2 border-bottom flex-row space-between align-center">
-                        <h3 className="text-primary" style={{fontSize: '1rem'}}>Конфликты</h3>
-                        <button className="close-sidebar-btn" onClick={() => setIsSidebarOpen(false)}>×</button>
-                    </div>
-
-                    {isChecking && <div className="checking-banner">Проверка...</div>}
-
-                    <div className="flex-col scroll-y f-1">
-                        {lessonErrors.map((val, i) => (
-                            val.errors?.length > 0 && 
-                            <LessonErrorItem key={val.lesson.id} lesson={val.lesson} errors={val.errors} />
-                        ))}
-                        {!isChecking && lessonErrors.every(le => le.errors.length === 0) && (
-                            <div className="p-3 text-center text-muted">Конфликтов не обнаружено</div>
-                        )}
-                    </div>
-                </div> */}
                 <div className={`error-sidebar ${isSidebarOpen ? '' : 'closed'}`}>
                     {/* Вкладки */}
                     <div className="sidebar-tabs flex-row">
@@ -241,6 +297,9 @@ const ScheduleEditorPage = () => {
                             onClick={() => setActiveTab('changes')}
                         >
                             Изменения ({draftChanges.length})
+                        </button>
+                        <button className={`tab-btn f-1 ${activeTab === 'trash' ? 'active' : ''}`} onClick={() => setActiveTab('trash')}>
+                            Корзина ({deletedLessons.length})
                         </button>
                     </div>
 
@@ -257,6 +316,11 @@ const ScheduleEditorPage = () => {
                                     onRevert={revertLesson}
                                 />
                             ))
+                        )}
+                        {activeTab === 'trash' && (
+                            deletedLessons.length > 0 
+                            ? deletedLessons.map(l => <DeletedLogItem key={l.id} lesson={l} onRestore={handleRestore} />)
+                            : <div className="text-center p-4 text-muted">Корзина пуста</div>
                         )}
 
                         {/* Пустые состояния */}
