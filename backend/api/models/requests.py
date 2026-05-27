@@ -1,7 +1,4 @@
 # Модели, связанные с заявками
-
-from tkinter import CASCADE
-
 from django.db import models
 
 from api.models import enums
@@ -64,22 +61,19 @@ class Booking(Request):
 
 # Корректировка расписания позволяет либо снять, либо переместить занятие в сетке
 # Заменяет timeslot в занятии на timeslot в записи
-# Для снятия нужно создаь запись с пустым timeslot
+# Для снятия нужно создать запись с пустым timeslot
 # Перенос между днями создает 2 записи:
 # С пустым слотом, чтобы снять занятие с одного дня
 # С измененным, чтобы поставить в другой день\
 
 
 class ScheduleAdjustment(models.Model):
-    request = models.ForeignKey(Request, on_delete=models.CASCADE)
+    request = models.ForeignKey(Request,null=False, on_delete=models.CASCADE)
     # Определяеем дату изменения
     date = models.DateField()
     # Определяем изменяемое занятие
     lesson = models.ForeignKey(Lesson, on_delete=models.CASCADE)
 
     # Новое время занятия. Null если нужно снять занятие
-    timeslot = models.ForeignKey(Timeslot, on_delete=models.CASCADE)
-
-    # def save(self, *args, **kwargs):
-    #     self.request_type = enums.RequestType.SCHEDULE_ADJUSTMENT
-    #     super().save(*args, **kwargs)
+    timeslot = models.ForeignKey(Timeslot,null=True, on_delete=models.CASCADE)
+    classroom = models.ForeignKey(Classroom,null=True, on_delete=models.CASCADE)
