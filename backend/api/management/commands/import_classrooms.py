@@ -17,7 +17,7 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f"Файл не найден: {file_path}"))
             return
 
-        self.stdout.write("Начинаю импорт...")
+        self.stdout.write(f"Начинаю импорт файла {file_path}...")
         # , encoding="utf-8"
         with open(file_path, mode="r", encoding="utf-8") as f:
             reader = csv.DictReader(f)
