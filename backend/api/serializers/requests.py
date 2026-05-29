@@ -11,6 +11,7 @@ from api.models import (
     enums,
     BookingType
 )
+from api.services.schedule.mapper import ScheduleMapper
 
 
 class ConstraintSerializer(serializers.ModelSerializer):
@@ -40,6 +41,60 @@ class BookingTypeSerializer(serializers.ModelSerializer):
         model = BookingType
         fields = ['id', 'name']
 
+class BookingReadSerializer(serializers.ModelSerializer):
+    # Разворачиваем информацию о пользователе, комнате и типе
+    user_name = serializers.CharField(source='user.username', read_only=True)
+    user_email = serializers.CharField(source='user.email', read_only=True)
+    classroom_name = serializers.CharField(source='classroom.name', read_only=True)
+    booking_type_name = serializers.CharField(source='booking_type.name', read_only=True)
+    status_label = serializers.CharField(source='get_status_display', read_only=True)
+
+    class Meta:
+        model = Booking
+        fields = [
+            'id', 'user_email', 'description', 'created_at', 
+            'admin_comment', 'status', 'status_label',
+            'classroom', 'classroom_name', 
+            'booking_type', 'booking_type_name',
+            'date_start', 'date_end'
+        ]
+
+class BookingCreateUpdateSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Booking
+        # Доступны только поля Booking и описание из Request
+        fields = ['classroom', 'booking_type', 'date_start', 'date_end', 'description']
+
+    def validate(self, data):
+        instance = self.instance
+        start = data.get('date_start', getattr(instance, 'date_start', None))
+        end = data.get('date_end', getattr(instance, 'date_end', None))
+        classroom = data.get('classroom', getattr(instance, 'classroom', None))
+
+        # Если статус меняется на "Отклонено", пропускаем сложные проверки наложений
+        if data.get('status') == 2: 
+            return data
+
+        # Проверка логики времени 
+        if not(start and end):
+            raise serializers.ValidationError("Должны быть указаны начало и конец мероприятия")
+
+        if start >= end:
+            raise serializers.ValidationError("Время начала должно быть меньше времени окончания.")
+        
+        events = ScheduleMapper(
+            start,end,
+            classroom_id=classroom.id
+        ).get_schedule()
+        if len(events) > 0:
+            raise serializers.ValidationError("Аудитория уже занята в это время")
+
+        return data
+
+    
+class BookingActionSerializer(serializers.Serializer):
+    admin_comment = serializers.CharField(required=True, min_length=5)
+
 class BookingSerializer(serializers.ModelSerializer):
     user_name = serializers.ReadOnlyField(source="user.username")
     classroom_num = serializers.ReadOnlyField(source="classroom.num")
@@ -58,7 +113,7 @@ class BookingSerializer(serializers.ModelSerializer):
             "status",
             "admin_comment",
         ]
-        read_only_fields = ["id", "user", "user_name", "classroom_num"]
+        read_only_fields = ["id", "user", "user_name", "classroom_num",""]
 
     def create(self, validated_data):
         validated_data["user"] = self.context["request"].user

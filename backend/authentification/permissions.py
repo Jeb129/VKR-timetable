@@ -60,3 +60,19 @@ class IsBookingModerator(permissions.IsAuthenticated):
         if not super().has_permission(request, view):
             return False
         return bool(request.user.is_booking_moderator)
+    
+
+class IsOwner(permissions.BasePermission):
+    """
+    Разрешает доступ только владельцу объекта.
+    """
+    def has_object_permission(self, request, view, obj):
+        return obj.user == request.user
+
+
+class IsOwnerAndPending(permissions.BasePermission):
+    def has_object_permission(self, request, view, obj):
+        if request.user.is_booking_moderator: # Модератор может всё
+            return True
+        # Обычный пользователь - только если он владелец И статус "На модерации"
+        return obj.user == request.user and obj.status == 0

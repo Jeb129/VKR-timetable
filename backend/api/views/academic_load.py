@@ -1,5 +1,5 @@
 from rest_framework.views import APIView
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAdminUser
 from rest_framework.response import Response
 from rest_framework import status
 from django.utils import timezone
@@ -13,6 +13,7 @@ from io import BytesIO
 from api.serializers import ExcelUploadSerializer, ValidationMeassageSerializer
 from api.services.data_import.excel import import_excel
 from api.services.data_import.loaders import AcademicLoadReader, export_loading
+from authentification.permissions import IsScheduleModerator
 
 # твои функции
 # from .excel import import_excel, export_excel
@@ -24,7 +25,7 @@ class ExcelAPIView(APIView):
     GET   -> выгрузка Excel
     """
 
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsScheduleModerator,IsAdminUser]
 
     def post(self, request):
             serializer = ExcelUploadSerializer(data=request.data)

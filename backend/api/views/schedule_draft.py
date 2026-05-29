@@ -1,9 +1,6 @@
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
-from rest_framework.request import Request
-
-from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 
 from api.models import Lesson, ScheduleScenario
@@ -11,13 +8,14 @@ from api.serializers import LessonReadSerializer
 from api.serializers.schedule import LessonErrorSerializer
 from api.services.schedule.manager import ScheduleManager
 
+from authentification.permissions import IsScheduleModerator
 from config.utils import normalize_diff
 
 class DraftLessonViewSet(viewsets.ViewSet):
     """
     Контроллер для работы с черновыми Lesson.
     """
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsScheduleModerator]
 
     def list(self, request,scenario_id):
         """GET /draft/lessons/ — список черновиков"""
