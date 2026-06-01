@@ -18,7 +18,7 @@ class Request(models.Model):
     )
     status = models.IntegerField(
         choices=enums.RequestStatus.choices,
-        default=enums.RequestStatus.ON_MODERATION,
+        default=enums.RequestStatus.PENDING,
         db_index=True,
     )
     request_type = models.IntegerField(choices=enums.RequestType.choices, null=True)

@@ -7,7 +7,7 @@ from django.db import models
 class RequestStatus(models.IntegerChoices):
     """Статусы заявок"""
 
-    ON_MODERATION = 0, "На модерации"
+    PENDING = 0, "На модерации"
     VERIFIED = 1, "Одобрена"
     REJECTED = 2, "Отклонена"
     CANCELED = 3, "Отменена"
