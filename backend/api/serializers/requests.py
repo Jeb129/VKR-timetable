@@ -114,9 +114,14 @@ class BookingSerializer(serializers.ModelSerializer):
 
 class ScheduleAdjustmentSerializer(serializers.ModelSerializer):
     # текстовые поля для удобства админа
-    user_name = serializers.ReadOnlyField(source="user.username")
+    user = serializers.ReadOnlyField(source="request.user.id")
+    user_name = serializers.ReadOnlyField(source="request.user.username")
+    description = serializers.ReadOnlyField(source="request.description")
+    status = serializers.ReadOnlyField(source="request.status")
+    admin_comment = serializers.ReadOnlyField(source="request.admin_comment")
+    # информация о паре и преподавателе
     lesson_name = serializers.ReadOnlyField(source="lesson.discipline.name")
-    teacher_name = serializers.ReadOnlyField(source="user.teacher.name")
+    teacher_name = serializers.ReadOnlyField(source="request.user.teacher.name")
     # Информация о новом слоте
     new_time = serializers.ReadOnlyField(source="timeslot.time_start")
     new_order = serializers.ReadOnlyField(source="timeslot.order_number")

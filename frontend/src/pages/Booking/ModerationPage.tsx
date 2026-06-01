@@ -71,138 +71,132 @@ const ModerationPage = () => {
         }
     };
 
-    // Вспомогательная функция для рендера зоны отказа (вынеси её внутрь компонента перед return)
-    function renderRejectBox(id: number) {
-        return (
-            <div className="mt-2 p-2 rounded-md fade-in" style={{ border: '2px solid var(--p-red)', backgroundColor: '#fff5f5' }}>
-                <label className="filter-label">Причина отказа (будет отправлена в письме):</label>
-                <textarea 
-                    className="input-styled mt-1" 
-                    rows={3}
-                    autoFocus
-                    value={adminComment}
-                    onChange={e => setAdminComment(e.target.value)}
-                    placeholder="Например: Аудитория занята другим мероприятием..."
-                />
-                <div className="flex-row gap-2 mt-1">
-                    <button className="btn btn-red f-1" onClick={() => handleReject(id)}>Подтвердить отклонение</button>
-                    <button className="btn btn-outline f-1" onClick={() => {setRejectingId(null); setAdminComment("");}}>Отмена</button>
-                </div>
-            </div>
-        );
-    }
+    const formatDate = (d: string) => new Date(d).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+    const formatTime = (d: string) => new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
     return (
         <div className="flex-col bg-main min-h-screen">
-            {/* ХЕДЕР С ТАБАМИ */}
-            <nav className="navbar">
+            <nav className="navbar flex-row space-between align-center">
                 <div className="flex-row align-center gap-3">
-                    <div className="logo-white" onClick={() => navigate("/")}>КГУ • МОДЕРАЦИЯ</div>
-                    <div className="flex-row gap-1 ml-2">
-                        <button 
-                            className={`btn nav-btn ${tab === "bookings" ? "btn-primary" : ""}`} 
-                            onClick={() => { setTab("bookings"); setRejectingId(null); }}
-                        >
+                    <div className="logo-white" onClick={() => navigate("/")} style={{cursor: 'pointer'}}>КГУ • МОДЕРАЦИЯ</div>
+                    <div className="flex-row gap-1">
+                        <button className={`btn nav-btn ${tab === "bookings" ? "btn-primary" : ""}`} onClick={() => setTab("bookings")}>
                             Бронирования ({bookings.length})
                         </button>
-                        <button 
-                            className={`btn nav-btn ${tab === "adjustments" ? "btn-primary" : ""}`} 
-                            onClick={() => { setTab("adjustments"); setRejectingId(null); }}
-                        >
-                            Переносы пар ({adjustments.length})
+                        <button className={`btn nav-btn ${tab === "adjustments" ? "btn-primary" : ""}`} onClick={() => setTab("adjustments")}>
+                            Переносы ({adjustments.length})
                         </button>
                     </div>
                 </div>
                 <button className="btn nav-btn" onClick={() => navigate("/profile")}>В профиль</button>
             </nav>
 
-            <div className="profile-wrapper flex-col gap-2">
-                <div className="flex-row space-between align-center mb-1">
-                    <h2 className="text-primary">
-                        {tab === "bookings" ? "Заявки на бронирование" : "Заявки на перенос занятий"}
-                    </h2>
-                    {error && (
-                        <div className="error fade-in" style={{ margin: 0 }} onClick={() => setError(null)}>
-                            {error}
-                        </div>
-                    )}
-                </div>
+            <div className="moderation-wrapper flex-col gap-2">
+                {error && <div className="error mb-2" onClick={() => setError(null)}>{error}</div>}
 
                 {loading ? (
                     <div className="card text-center">Загрузка данных...</div>
                 ) : (
-                    <div className="flex-col gap-2 slide-up">
-                        {/* ЛОГИКА ОТОБРАЖЕНИЯ БРОНИРОВАНИЙ */}
-                        {tab === "bookings" && (
-                            bookings.length > 0 ? bookings.map(req => (
-                                <div key={req.id} className="card moderation-card">
+                    <div className="flex-col slide-up">
+                        {/* ВКЛАДКА БРОНИРОВАНИЙ */}
+                        {tab === "bookings" && bookings.map(req => (
+                            <div key={req.id} className="card moderation-card p-0 no-scroll">
+                                <div className="p-3">
                                     <div className="flex-row space-between align-start">
-                                        <div className="flex-col gap-1">
-                                            <div className="flex-row align-center gap-2">
-                                                <span className="badge-user">Пользователь: {req.user_name || req.user}</span>
-                                                <span className="text-muted">{new Date(req.date_start).toLocaleDateString()}</span>
+                                        <div className="flex-col f-1">
+                                            <div className="flex-row align-center">
+                                                <span className="badge-user">Пользователь: ({req.user_name})</span>
+                                                <span className="booking-type-tag">{req.booking_type_name}</span>
                                             </div>
-                                            <h3 className="mt-1">Аудитория {req.classroom_num}</h3>
-                                            <p className="time-range-text" style={{fontWeight: 800, fontSize: '1.2rem'}}>
-                                                {new Date(req.date_start).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})} — 
-                                                {new Date(req.date_end).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
-                                            </p>
-                                            <div className="reason-text p-1 bg-main rounded-md mt-1">
-                                                <strong>Цель:</strong> {req.description}
+                                            
+                                            <div className="request-info-grid">
+                                                <div className="info-item">
+                                                    <label>Аудитория</label>
+                                                    <span>{req.classroom_num}</span>
+                                                </div>
+                                                <div className="info-item">
+                                                    <label>Дата</label>
+                                                    <span>{formatDate(req.date_start)}</span>
+                                                </div>
+                                                <div className="info-item">
+                                                    <label>Время</label>
+                                                    <span>{formatTime(req.date_start)} — {formatTime(req.date_end)}</span>
+                                                </div>
+                                            </div>
+
+                                            <div className="reason-box">
+                                                <strong>Цель брони:</strong> {req.description}
                                             </div>
                                         </div>
 
                                         <div className="flex-row gap-1">
-                                            <button className="btn btn-green" onClick={() => handleApprove( req.id)}>Одобрить</button>
+                                            <button className="btn btn-green" onClick={() => handleApprove(req.id)}>Одобрить</button>
                                             <button className="btn btn-red" onClick={() => setRejectingId(req.id)}>Отклонить</button>
                                         </div>
                                     </div>
-
-                                    {rejectingId === req.id && renderRejectBox(req.id)}
                                 </div>
-                            )) : <div className="card text-center text-muted">Заявок на бронь нет</div>
-                        )}
+                                {rejectingId === req.id && (
+                                    <div className="reject-area fade-in">
+                                        <label className="filter-label">Укажите причину отказа:</label>
+                                        <textarea className="input-styled mt-1" rows={3} value={adminComment} onChange={e => setAdminComment(e.target.value)} autoFocus />
+                                        <div className="flex-row gap-2 mt-2">
+                                            <button className="btn btn-red f-1" onClick={() => handleReject(req.id)}>Подтвердить отклонение</button>
+                                            <button className="btn btn-outline f-1" onClick={() => setRejectingId(null)}>Отмена</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
 
-                        {/* ЛОГИКА ОТОБРАЖЕНИЯ ПЕРЕНОСОВ ПАР */}
-                        {tab === "adjustments" && (
-                            adjustments.length > 0 ? adjustments.map(adj => (
-                                <div key={adj.id} className="card moderation-card" style={{borderColor: 'var(--p-orange)'}}>
+                        {/* ВКЛАДКА ПЕРЕНОСОВ */}
+                        {tab === "adjustments" && adjustments.map(adj => (
+                            <div key={adj.id} className="card moderation-card card-adjustment p-0 no-scroll">
+                                <div className="p-3">
                                     <div className="flex-row space-between align-start">
-                                        <div className="flex-col gap-1 f-1">
-                                            <div className="flex-row align-center gap-2">
-                                                <span className="badge-user" style={{backgroundColor: 'var(--p-blue-light)'}}>
-                                                    Преподаватель: {adj.teacher_name || adj.user_name}
-                                                </span>
-                                            </div>
-                                            <h3 className="text-primary mt-1">{adj.lesson_name}</h3>
-                                            
-                                            {/* Сравнение БЫЛО / СТАНЕТ */}
-                                            <div className="flex-row gap-2 mt-1 align-center">
-                                                <div className="flex-col p-1 bg-main rounded-md" style={{minWidth: '150px'}}>
-                                                    <small className="text-muted">БЫЛО (день {adj.old_day})</small>
-                                                    <strong>{adj.old_time}</strong>
+                                        <div className="flex-col f-1">
+                                            <span className="badge-user">Преподаватель: {adj.teacher_name}</span>
+                                            <h3 className="mt-1 text-primary">{adj.lesson_name}</h3>
+
+                                            <div className="adjustment-flow mt-2">
+                                                <div className="flow-step">
+                                                    <label className="text-muted" style={{fontSize: '10px'}}>БЫЛО</label>
+                                                    <div style={{fontWeight: 700}}>День {adj.old_day}, {adj.old_time}</div>
                                                 </div>
-                                                <span style={{fontSize: '24px', color: 'var(--p-blue)'}}>→</span>
-                                                <div className="flex-col p-1 bg-white rounded-md" style={{minWidth: '180px', border: '2px solid var(--p-green)'}}>
-                                                    <small className="text-muted">НОВАЯ ДАТА: {new Date(adj.date).toLocaleDateString()}</small>
-                                                    <strong className="text-green">{adj.new_time} (пара {adj.new_order})</strong>
+                                                <div className="flow-arrow">→</div>
+                                                <div className="flow-step">
+                                                    <label className="text-muted" style={{fontSize: '10px'}}>СТАНЕТ</label>
+                                                    <div className="text-green" style={{fontWeight: 800}}>
+                                                        {formatDate(adj.date)}, {adj.new_time} (пара {adj.new_order})
+                                                    </div>
                                                 </div>
                                             </div>
 
-                                            <div className="reason-text p-1 bg-main rounded-md mt-1">
+                                            <div className="reason-box mt-2">
                                                 <strong>Причина переноса:</strong> {adj.description}
                                             </div>
                                         </div>
 
                                         <div className="flex-row gap-1">
-                                            <button className="btn btn-green" onClick={() => handleApprove( adj.id)}>Одобрить</button>
+                                            <button className="btn btn-green" onClick={() => handleApprove(adj.id)}>Подтвердить</button>
                                             <button className="btn btn-red" onClick={() => setRejectingId(adj.id)}>Отклонить</button>
                                         </div>
                                     </div>
-
-                                    {rejectingId === adj.id && renderRejectBox(adj.id)}
                                 </div>
-                            )) : <div className="card text-center text-muted">Заявок на перенос нет</div>
+                                {rejectingId === adj.id && (
+                                    <div className="reject-area fade-in">
+                                        <label className="filter-label">Причина отказа:</label>
+                                        <textarea className="input-styled mt-1" rows={3} value={adminComment} onChange={e => setAdminComment(e.target.value)} autoFocus />
+                                        <div className="flex-row gap-2 mt-2">
+                                            <button className="btn btn-red f-1" onClick={() => handleReject(adj.id)}>Подтвердить отклонение</button>
+                                            <button className="btn btn-outline f-1" onClick={() => setRejectingId(null)}>Отмена</button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+
+                        {((tab === "bookings" && bookings.length === 0) || (tab === "adjustments" && adjustments.length === 0)) && (
+                            <div className="card text-center text-muted">Заявок в этой категории нет</div>
                         )}
                     </div>
                 )}

@@ -14,6 +14,8 @@ import { type Timeslot, type Lesson  } from "@/types/schedule";
 import { type SelectOption } from "@/types/ui";
 import { useCallback, useEffect, useMemo, useState,useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
+import EditRoomModal from "@/components/schedule_editor/modals/EditRoomModal";
+import CreateLessonModal from "@/components/schedule_editor/modals/CreateLessonModal";
 
 const ScheduleEditorPage = () => {
     const { scenarioId } = useParams();
@@ -31,6 +33,8 @@ const ScheduleEditorPage = () => {
         getLookupKey,     
         moveLesson,
         revertLesson,
+        createLesson,
+        updateLessonFields,
         pendingIds // Теперь используем это для индикации на карточках
     } = useScheduleEditor(sId);
 
@@ -192,6 +196,44 @@ const ScheduleEditorPage = () => {
         navigate(`/ScheduleEditor/${sId}/review`);
     };
 
+    // Логика нажатия на "Плюс"
+    const handleAddClick = (slotId: number) => {
+        openModal({
+            title: "Новое занятие в черновике",
+            content: (
+                <CreateLessonModal 
+                    slotId={slotId}
+                    rooms={rooms}
+                    groups={groups}
+                    teachers={teachers}
+                    onCancel={closeModal}
+                    onConfirm={async (data) => {
+                        await createLesson(data);
+                        closeModal();
+                    }}
+                />
+            )
+        });
+    };
+
+    // Логика нажатия на существующую пару
+    const handleLessonClick = (lesson: Lesson) => {
+        openModal({
+            title: `Редактирование: ${lesson.discipline}`,
+            content: (
+                <EditRoomModal 
+                    lesson={lesson}
+                    rooms={rooms}
+                    onCancel={closeModal}
+                    onConfirm={async (newRoomId) => {
+                        await updateLessonFields(lesson.id, { classroom: newRoomId });
+                        closeModal();
+                    }}
+                />
+            )
+        });
+    };
+
     return (
         <div className="flex-col bg-main min-h-screen">
             <nav className="navbar">
@@ -273,7 +315,7 @@ const ScheduleEditorPage = () => {
                                                     onDragEnd={() => setDraggingId(null)}
                                                     onDrop={onDrop}
                                                     onDelete={() => lesson && handleDelete(lesson)}
-                                                    onClick={() => lesson && navigate(`/admin/edit-lesson/${lesson.id}`)}
+                                                    onClick={() => lesson ? handleLessonClick(lesson) : slot && handleAddClick(slot.id)}
                                                 />
                                             );
                                         })}

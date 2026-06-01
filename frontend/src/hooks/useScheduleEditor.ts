@@ -181,6 +181,33 @@ export const useScheduleEditor = (scenarioId: number) => {
         return lessons.filter(l => l.draft_info !== null);
     }, [lessons]);
 
+    // Для создания пар 
+    const createLesson = async (data: any) => {
+        setIsChecking(true);
+        try {
+            const response = await scheduleDraftService.createLesson(scenarioId, data);
+            // После создания перегружаем данные, чтобы увидеть новую карточку и ошибки
+            await loadLessons({}); 
+            return response;
+        } catch (err) {
+            console.error("Ошибка создания занятия", err);
+        } finally {
+            setIsChecking(false);
+        }
+    };
+
+    // Универсальный метод обновления (для смены аудитории)
+    const updateLessonFields = async (lessonId: string, diff: Record<string, any>) => {
+        setIsChecking(true);
+        try {
+            const response = await scheduleDraftService.updateLesson(scenarioId, lessonId, diff);
+            await loadLessons({});
+            return response;
+        } finally {
+            setIsChecking(false);
+        }
+    };
+
     return {
         lessons,
         lessonsLookup,
@@ -195,6 +222,8 @@ export const useScheduleEditor = (scenarioId: number) => {
         setLessons,
         checkAll,
         clearAll,
-        revertLesson
+        revertLesson,
+        createLesson,
+        updateLessonFields,
     };
 };
