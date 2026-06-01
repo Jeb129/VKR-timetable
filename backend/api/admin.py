@@ -56,7 +56,7 @@ class StudyGroupAdmin(admin.ModelAdmin):
 
 @admin.register(Teacher)
 class TeacherAdmin(admin.ModelAdmin):
-    list_display = ("name","post", "constraint_weight", "user")
+    list_display = ("name","post", "constraint_weight")
     search_fields = ("name",)
     ordering = ("name",)
 
