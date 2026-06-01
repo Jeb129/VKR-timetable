@@ -1,6 +1,9 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
+from api.models import Teacher, StudyGroup
+
+
 # Create your models here.
 
 class CustomUser(AbstractUser):
@@ -17,6 +20,9 @@ class CustomUser(AbstractUser):
 
     # ID из moodle которое вытягивается при подтверждении аккаунта
     moodle_id = models.IntegerField(null=True, blank=True, verbose_name="ID в Moodle")
+
+    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, blank=True)
+    study_group = models.ForeignKey(StudyGroup, on_delete=models.SET_NULL, null=True, blank=True)
 
     # Поля, которые будут спрашивать при создании суперпользователя
     # username остается, но он не используется как логин

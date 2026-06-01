@@ -1,5 +1,7 @@
 from rest_framework import permissions
 
+from api.models import enums
+
 class IsEmailVerified(permissions.IsAuthenticated):
     """
     1. Подтверждение email.
@@ -75,4 +77,18 @@ class IsOwnerAndPending(permissions.BasePermission):
         if request.user.is_booking_moderator: # Модератор может всё
             return True
         # Обычный пользователь - только если он владелец И статус "На модерации"
-        return obj.user == request.user and obj.status == 0
+        return obj.user == request.user and obj.status == enums.RequestStatus.PENDING
+    
+class IsTeacher(permissions.IsAuthenticated):
+    """
+    Проверят, является ли пользователь преподавателем
+    """
+    def has_permission(self, request, view):
+        return request.user.teacher is not None
+
+class IsStudent(permissions.IsAuthenticated):
+    """
+    Проверяет, является ли пользователь студентом
+    """
+    def has_permission(self, request, view):
+        return request.user.study_group is not None
