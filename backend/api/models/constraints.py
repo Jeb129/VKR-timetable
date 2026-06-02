@@ -46,6 +46,9 @@ class Constraint(models.Model):
     name = models.TextField(unique=True, verbose_name="имя метода")
     description = models.TextField(max_length=255, verbose_name="описание")
     weight = models.IntegerField(verbose_name="вес",help_text="Влияет на значение итоговой функции при генерации расписания")
+    is_active = models.BooleanField(default=True, 
+                                          verbose_name="Используется",
+                                          help_text="Будет ли выполняться проверка ограничения при генерации / редактироавнии")
     is_hard =models.BooleanField(default=False,
                                  verbose_name="запретить нарушения",
                                  help_text="Запрещает публикацию варианта расписания если есть хоть одно занятие, с нарушением такого ограничения")
