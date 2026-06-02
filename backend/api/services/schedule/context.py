@@ -1,7 +1,7 @@
 from collections import defaultdict
 from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Set, Tuple
-from api.models import Lesson, BuildingTravelTime, Timeslot,EquipmentRequirement,ClassroomPreference,ExcludedTimeslot
+from api.models import *
 from api.models.enums import RequestStatus
 from api.services.drafts.queryset import DraftFilters
 from config.utils import get_cached_M2M
@@ -14,6 +14,7 @@ class ScheduleContext:
     """
     # Метаданные
     scenario_id: int
+    generator: bool = False # Для генератора требуется построение достаточно тяжелых индексов, что бьет по скорости проверки в ручном редакторе. Поэтому параметр
 
     # Основные данные
     lessons: List[Lesson] = field(default_factory=list)
@@ -35,25 +36,82 @@ class ScheduleContext:
     # Требования к оборудованию {(discipline_id, lesson_type_id): Set[Equipment_objects]}
     requirements_cache: Dict[Tuple[int, int], Set[Any]] = field(default_factory=dict)
     # Предпочтение по аудиториям {(teacher_id, discipline_id, lesson_type_id): Classroom}
-    teacher_room_prefs: Dict[Tuple[int, int, int], Any] = field(default_factory=dict)
+    teacher_room_prefs: Dict[Tuple[int, int, int], Classroom] = field(default_factory=dict)
     # Исключенное время занятий {(teacher_id, timeslot_id)}
     teacher_excluded_slots: Set[Tuple[int, int]] = field(default_factory=set)
 
-    # --- Работа с индексами ---
+    # --- Индексы для OR-Tools (0..N) ---
+    room_to_idx: Dict[int, int] = field(default_factory=dict)
+    idx_to_room: Dict[int, Classroom] = field(default_factory=dict)
     
-    def _load_from_db(self):
-        self.lessons = list(
-                Lesson.objects.filter(scenario_id=self.scenario_id)
-                .select_related(
-                    "timeslot", 
-                    "classroom", 
-                    "classroom__building", 
-                    "discipline", 
-                    "lesson_type"
-                )
-                .prefetch_related("teachers", "study_groups","classroom__equipment")
-            )
-        
+    slot_to_idx: Dict[int, int] = field(default_factory=dict)
+    idx_to_slot: Dict[int, Timeslot] = field(default_factory=dict)
+    building_to_idx: Dict[int, int] = field(default_factory=dict)
+    
+    # Списки для add_element (индексы OR-Tools)
+    room_building_indices: List[int] = field(default_factory=list) # [room_idx] = bldg_idx
+    flat_travel_matrix: List[int] = field(default_factory=list)   # [b1*N + b2] = mins
+    flat_gap_matrix: List[int] = field(default_factory=list)      # [s1*N + s2] = mins
+
+    # Индексы для связи сущностей
+    teacher_to_l_ids: Dict[int, List[int]] = field(default_factory=lambda: defaultdict(list))
+    group_to_l_ids: Dict[int, List[int]] = field(default_factory=lambda: defaultdict(list))
+
+    # --- Работа с индексами ---
+    def _index_for_solver(self):
+        """Создает компактные индексы для OR-Tools"""
+        # Маппинг комнат
+        all_rooms = sorted(list(Classroom.objects.all()), key=lambda r: r.id)
+        for i, room in enumerate(all_rooms):
+            self.room_to_idx[room.id] = i
+            self.idx_to_room[i] = room
+
+        # Маппинг слотов
+        all_slots = sorted(list(Timeslot.objects.all()), key=lambda s: (s.week_num, s.day, s.order_number))
+        for i, slot in enumerate(all_slots):
+            self.slot_to_idx[slot.id] = i
+            self.idx_to_slot[i] = slot
+        num_slots = len(all_slots)
+
+        all_bldgs = sorted(list(set(r.building_id for r in all_rooms if r.building_id)))
+        for i, b_id in enumerate(all_bldgs):
+            self.building_to_idx[b_id] = i
+        num_bldgs = len(all_bldgs)
+
+        # 4. Таблица: Индекс комнаты -> Индекс здания
+        self.room_building_indices = [0] * len(all_rooms)
+        for r in all_rooms:
+            r_idx = self.room_to_idx[r.id]
+            b_idx = self.building_to_idx.get(r.building_id, 0)
+            self.room_building_indices[r_idx] = b_idx
+
+        # 5. Линеаризованная матрица перемещений (B1 * NumBldgs + B2)
+        self.flat_travel_matrix = [0] * (num_bldgs * num_bldgs)
+        for b1_id in all_bldgs:
+            for b2_id in all_bldgs:
+                mins = self.travel_map.get((b1_id, b2_id), 0)
+                idx = self.building_to_idx[b1_id] * num_bldgs + self.building_to_idx[b2_id]
+                self.flat_travel_matrix[idx] = mins
+
+        # 6. Линеаризованная матрица перерывов между слотами (S1 * NumSlots + S2)
+        self.flat_gap_matrix = [0] * (num_slots * num_slots)
+        for s1 in all_slots:
+            for s2 in all_slots:
+                s1_idx = self.slot_to_idx[s1.id]
+                s2_idx = self.slot_to_idx[s2.id]
+                
+                # Если слоты в один день
+                if s1.week_num == s2.week_num and s1.day == s2.day:
+                    t1 = self.slot_times[s1.id]
+                    t2 = self.slot_times[s2.id]
+                    # Время между концом ранней и началом поздней
+                    gap = max(0, t2[0] - t1[1]) if t2[0] > t1[1] else max(0, t1[0] - t2[1])
+                    self.flat_gap_matrix[s1_idx * num_slots + s2_idx] = gap
+                else:
+                    # Разные дни — перемещение всегда возможно (ставим большое число)
+                    self.flat_gap_matrix[s1_idx * num_slots + s2_idx] = 1440
+
+
     def _index_metadata(self):
         """Загружает вспомогательные справочники из БД"""
         
@@ -93,6 +151,7 @@ class ScheduleContext:
         ).values_list('teacher_id', 'timeslot_id')
         self.teacher_excluded_slots = set(excluded_data)
 
+
     def _sort_chains(self):
         for chain in self.teacher_day_chains.values():
             chain.sort(key=lambda x: x.timeslot.order_number)
@@ -104,17 +163,19 @@ class ScheduleContext:
         ts = lesson.timeslot
         if not ts: return
 
-        # Преподаватели
-        for teacher in lesson.teachers.all():
-            self.teacher_lookup[(teacher.id, ts.id)].append(lesson)
-            self.teacher_day_chains[(teacher.id, ts.week_num, ts.day)].append(lesson)
+        # Стандартные индексы для check()
+        for t in get_cached_M2M(lesson, "teachers"):
+            self.teacher_lookup[(t.id, ts.id)].append(lesson)
+            self.teacher_day_chains[(t.id, ts.week_num, ts.day)].append(lesson)
+            # Индекс для солвера
+            self.teacher_to_l_ids[t.id].append(lesson.id)
 
-        # Группы
-        for group in lesson.study_groups.all():
-            self.group_lookup[(group.id, ts.id)].append(lesson)
-            self.group_day_chains[(group.id, ts.week_num, ts.day)].append(lesson)
+        for g in get_cached_M2M(lesson, "study_groups"):
+            self.group_lookup[(g.id, ts.id)].append(lesson)
+            self.group_day_chains[(g.id, ts.week_num, ts.day)].append(lesson)
+            # Индекс для солвера
+            self.group_to_l_ids[g.id].append(lesson.id)
 
-        # Аудитории
         if lesson.classroom_id:
             self.classroom_lookup[(lesson.classroom_id, ts.id)].append(lesson)
 
@@ -152,12 +213,26 @@ class ScheduleContext:
 
         self._sort_chains()
 
-
+    def _load_from_db(self):
+        self.lessons = list(
+                Lesson.objects.filter(scenario_id=self.scenario_id)
+                .select_related(
+                    "timeslot", 
+                    "classroom", 
+                    "classroom__building", 
+                    "discipline", 
+                    "lesson_type"
+                )
+                .prefetch_related("teachers", "study_groups","classroom__equipment")
+            )
+        
     def __post_init__(self):
         if not self.lessons:
             self._load_from_db()
         self.rebuild_indexes()
         self._index_metadata()
+        if self.generator: 
+            self._index_for_solver()
 
     def update_lesson_location(self, lesson: Lesson, new_timeslot, new_classroom):
         """Обновление занятия из индекса"""

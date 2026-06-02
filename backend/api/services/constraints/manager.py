@@ -32,6 +32,7 @@ class ConstraintManager:
             
             if not constraint_class:
                 logger.warning("Класс для ограничения '%s' не найден в реестре.",config.name)
+                continue
 
             is_hard_able = config.is_hard and constraint_class._build_soft != BaseConstraint._build_hard 
             is_soft_able = not config.is_hard and constraint_class._build_soft != BaseConstraint._build_soft
