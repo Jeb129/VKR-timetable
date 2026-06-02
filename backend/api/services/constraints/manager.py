@@ -1,5 +1,5 @@
 import logging
-from typing import Dict, List
+from typing import Any, Dict, List
 
 from api.models import Lesson
 from api.services.constraints.meta import ConstraintError
@@ -39,23 +39,24 @@ class ConstraintManager:
 
 
             if not config.manual_only and not (is_hard_able or is_soft_able):
-                logger.error("Используемое для генерации ограничение '%s' отмечено как %s но метод %s в классе %s не реализован. Помечено как 'только для ручных проверок' (локально)",
+                logger.error("Используемое для генерации ограничение '%s' отмечено как %s но метод %s.%s в классе  не реализован. Помечено как 'только для ручных проверок' (локально)",
                             config.name,
                             "жесткое" if config.is_hard else "мягкое",
-                            "_build_hard" if config.is_hard else "_build_soft",
-                            constraint_class.__name__
+                            constraint_class.__name__,
+                            "_build_hard" if config.is_hard else "_build_soft"
                             )
                 config.manual_only = True
             
             if not config.generation_only and not is_manual_able:
-                logger.error("Метод check не реализован в классе '%s'. Ограничение '%s' помечено как 'только для генерации' (локально)",
+                logger.error("Метод '%s.check' не реализован. Ограничение '%s' помечено как 'только для генерации' (локально)",
                              constraint_class.__name__,
                              config.name
                              )
                 config.generation_only = True
 
             if config.manual_only and config.generation_only:
-                logger.error("Ограничение '%s' одновременно помечено как 'только для генерации' и 'только для ручных проверок'. Попускаем")
+                logger.warning("Ограничение '%s' одновременно помечено как 'только для генерации' и 'только для ручных проверок'", config.name)
+                continue
 
 
             # Создаем экземпляр класса, передавая ему конфиг из БД
@@ -65,7 +66,7 @@ class ConstraintManager:
             logger.debug(f"Ограничение '{config.name}' инициализировано.")
                 
 
-    def _select_constraints(
+    def _select_instances(
         self,
         *,
         name: str | None = None,
@@ -152,7 +153,7 @@ class ConstraintManager:
         if context is None:
             raise ValueError("context is None")
 
-        targets = self._select_constraints(
+        targets = self._select_instances(
             name=constraint_name,
             level=constraint_level,
             manual_only=manual_only,
@@ -174,3 +175,27 @@ class ConstraintManager:
                     data=str(err)
                 ))
         return errors
+    
+
+    def apply_to_solver(
+        self, 
+        model: Any, 
+        lesson_vars: Dict[int, Any], 
+        context: ScheduleContext
+    ):
+        """
+        Новый метод: Применяет все активные ограничения к модели OR-Tools.
+        Используется только в генераторе.
+        """
+        # Для солвера выбираем все, что не помечено как manual_only
+        solver_constraints = self._select_instances(generation_only=True)
+        
+        logger.info(f"Применение {len(solver_constraints)} ограничений к модели OR-Tools...")
+        for instance in solver_constraints:
+            try:
+                instance.apply_to_model(model, lesson_vars, context)
+            except NotImplementedError:
+                logger.error(f"Ограничение '{instance.config.name}' не реализует метод для генерации!")
+            except Exception as err:
+                logger.error(f"Критическая ошибка при сборке модели в '{instance.config.name}': {err}")
+                raise err
