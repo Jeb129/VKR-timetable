@@ -1,7 +1,7 @@
 from django.urls import path
 
 from authentification.views.auth import CookieTokenObtainPairView, CookieTokenRefreshView, CookieTokenVerifyView,LogoutView
-from authentification.views.modelView import CurrentUserView, RegisterView,MoodleVerifyView, MockMoodleAPIView
+from authentification.views.modelView import CurrentUserView, RegisterView,MoodleVerifyView
 
 urlpatterns = [
     path("login/", CookieTokenObtainPairView.as_view(), name="token_obtain_pair"),
@@ -11,5 +11,4 @@ urlpatterns = [
     path("verify/", CookieTokenVerifyView.as_view(), name="token_verify"),
     path("me/", CurrentUserView.as_view(), name="current_user"),
     path('moodle-verify/', MoodleVerifyView.as_view(), name='moodle_verify'),
-    path('mock-moodle/', MockMoodleAPIView.as_view()), # заглушка на тест
 ]

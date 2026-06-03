@@ -1,65 +1,64 @@
-import requests
 from rest_framework import status
-from django.conf import settings
 from rest_framework.generics import RetrieveAPIView
-from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
+from api.models import Teacher
+from authentification.permissions import IsEmailVerified
 from authentification.serializers import CustomUserSerializer
+from authentification.services.moodle import find_teacher_profile, moodle_get_profiles, moodle_get_user
 from authentification.services.user import register_user
 
-# Имитация API Moodle (Mock)
-class MockMoodleAPIView(APIView):
-    permission_classes = [AllowAny]
-    def get(self, request):
-        email = request.query_params.get("criteria[0][value]")
-        # Имитируем, что в Moodle всегда есть пользователь с таким email
-        return Response({
-            "users": [{
-                "id": 777,
-                "fullname": "Тестовый Студент КГУ",
-                "email": email
-            }]
-        })
-
-#  Логика верификации 
+#  Логика верификации
 class MoodleVerifyView(APIView):
     permission_classes = [IsAuthenticated]
+    # По идее подтверждение доступно только при подтвержденной почте
+    # permission_classes = [IsAuthenticated,IsEmailVerified]
+
 
     def post(self, request):
         user = request.user
-        
-        # Если токена нет в settings, шлем запрос на наш же Mock
-        moodle_url = getattr(settings, "MOODLE_URL", "http://localhost:8000/auth/mock-moodle/")
-        moodle_token = getattr(settings, "MOODLE_TOKEN", "fake-token")
-
-        params = {
-            "wstoken": moodle_token,
-            "wsfunction": "core_user_get_users",
-            "moodlewsrestformat": "json",
-            "criteria[0][key]": "email",
-            "criteria[0][value]": user.email,
-        }
-
         try:
-            response = requests.get(moodle_url, params=params, timeout=10)
-            data = response.json()
+            # Находим Moodle ID по Email
+            m_user = moodle_get_user(user)
 
-            if "users" in data and len(data["users"]) > 0:
-                moodle_user = data["users"][0]
-                
-                # Привязываем статус "Внутренний пользователь" (internal_user)
-                user.internal_user = True
-                user.moodle_id = moodle_user["id"]
-                user.save()
+            if not m_user:
+                return Response(
+                    {"error":"Пользователь с таким Email не найден в Moodle"},
+                    status.HTTP_404_NOT_FOUND
+                )
+            m_id,m_fullname = m_user
 
-                return Response({"message": "Аккаунт успешно подтвержден через СДО Moodle!"})
-            
-            return Response({"error": "Email не найден в базе данных Moodle"}, status=404)
+            profiles = moodle_get_profiles(m_id)
+
+            is_teacher = find_teacher_profile(profiles) is not None
+
+            user.internal_user = True
+            user.moodle_id = m_id
+            msg = "Ваш профиль найден в системе Moodle"
+
+            if is_teacher:
+                # Ищем преподавателя по ФИО в нашей базе
+                teacher_obj = Teacher.objects.filter(name__icontains=m_fullname).first()
+                if teacher_obj:
+                    user.teacher = teacher_obj
+                    msg = f"Вы подтверждены как преподаватель: {m_fullname}"
+                else:
+                    msg = f"В Moodle вы учитель, но в базе расписания ФИО {m_fullname} не найдено."
+
+            user.save()
+            return Response(
+                {"message": msg, "is_teacher": is_teacher},
+                status=status.HTTP_200_OK
+            )
+
         except Exception as e:
-            return Response({"error": f"Ошибка связи с сервером подтверждения"}, status=502)
+            return Response(
+                {"error": f"Ошибка взаимодействии с Moodle: {str(e)}"}, 
+                status=status.HTTP_502_BAD_GATEWAY
+            )
 
 class RegisterView(APIView):
     def post(self, request):
@@ -90,7 +89,7 @@ class CurrentUserView(RetrieveAPIView):
         user.is_active = False
         user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
-    
+
 class UserView(APIView):
     permission_classes = [IsAuthenticated]
 

@@ -3,6 +3,8 @@ from authentification.models import CustomUser
 from rest_framework.validators import UniqueValidator
 from django.contrib.auth.password_validation import validate_password
 
+from config.utils import SimpleRelatedSerializer
+
 class RegisterSerializer(serializers.ModelSerializer):
     email = serializers.EmailField(
         required=True,
@@ -39,6 +41,8 @@ class RegisterSerializer(serializers.ModelSerializer):
 class CustomUserSerializer(serializers.ModelSerializer):
     is_internal = serializers.ReadOnlyField() # берется из @property модели
     is_moodle_linked = serializers.SerializerMethodField()
+    teacher = SimpleRelatedSerializer()
+    study_group = SimpleRelatedSerializer()
 
     class Meta:
         model = CustomUser
@@ -46,6 +50,8 @@ class CustomUserSerializer(serializers.ModelSerializer):
             'id',
             'email',
             "username",
+            "teacher",
+            "study_group",
             'is_email_verified',
             'is_internal',
             'is_moodle_linked',

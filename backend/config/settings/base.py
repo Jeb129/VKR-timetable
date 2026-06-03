@@ -196,6 +196,10 @@ REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 #     f"{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 # )
 
+MOODLE_TOKEN = os.getenv("MOODLE_TOKEN")
+MOODLE_URL = os.getenv("MOODLE_URL")
+
+
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST')
 EMAIL_PORT = os.getenv('EMAIL_PORT')
