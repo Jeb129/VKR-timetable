@@ -78,16 +78,6 @@ class RegisterView(APIView):
             "refresh": str(refresh),
         }, status=status.HTTP_201_CREATED)
 
-class LogoutView(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        try:
-            RefreshToken(request.data.get("refresh")).blacklist()
-        except Exception:
-            return Response({"detail": "Невалидный токен"}, status=400)
-        return Response({"detail": "Выход выполнен, сессия отозвана"})
-
 class CurrentUserView(RetrieveAPIView):
     permission_classes= [IsAuthenticated]
     serializer_class = CustomUserSerializer
@@ -101,7 +91,6 @@ class CurrentUserView(RetrieveAPIView):
         user.save()
         return Response(status=status.HTTP_204_NO_CONTENT)
     
-
 class UserView(APIView):
     permission_classes = [IsAuthenticated]
 
