@@ -5,9 +5,16 @@ from django.db import models
 from django.utils.translation import gettext_lazy as _
 
 
+class GenerationStatus(models.IntegerChoices):
+    SUCESS = 0, _("Готово")
+    IN_PROGRESS = 1, _("В процессе")
+    ERROR = 2, _("Ошибка")
+    IDLE = 3, _("Ожидание")
+
+
 class WeekCycle(models.IntegerChoices):
-    UPPER = 1, ("Числитель")
-    LOWER = 2, ("Знаменатель")
+    UPPER = 1, _("Числитель")
+    LOWER = 2, _("Знаменатель")
 
 class Weekday(models.IntegerChoices):
     """Дни недели"""

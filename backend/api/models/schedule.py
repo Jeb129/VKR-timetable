@@ -4,7 +4,7 @@ from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import RangeOperators
 from django.core.exceptions import ValidationError
 
-from api.models.enums import WeekCycle, Weekday
+from api.models.enums import GenerationStatus, WeekCycle, Weekday
 
 class Semester(models.Model):
     """Для отображения расписания в календаре"""
@@ -57,6 +57,7 @@ class ScheduleScenario(models.Model):
         Semester, on_delete=models.SET_NULL, null=True, verbose_name="семестр"
     )  # Для ограничения. Возможно сюр, но пока так
     is_active = models.BooleanField(default=False, verbose_name="действующий")
+    generation_status = models.IntegerField(null=True,choices=GenerationStatus.choices,verbose_name="Состояние генерации")
     total_penalty = models.IntegerField(default=0, verbose_name="штраф по ограничениям")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="время создания")
 
