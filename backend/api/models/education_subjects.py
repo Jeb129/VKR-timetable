@@ -1,7 +1,5 @@
 from django.db import models
 
-from authentification.models import CustomUser
-
 from api.models.buildings import Building
 
 
@@ -124,9 +122,6 @@ class Teacher(models.Model):
     )
     max_hours_per_week = models.PositiveSmallIntegerField(null=False,blank=True,default=35,verbose_name="Максимальная нагрузка в неделю")
     max_hours_per_day = models.PositiveSmallIntegerField(null=False,blank=True,default=10,verbose_name="Максимальная нагрузка в день")
-    user = models.OneToOneField(
-        CustomUser, on_delete=models.SET_NULL, null=True, blank=True
-    )
 
     class Meta:
         ordering = ["name","institute"]

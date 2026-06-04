@@ -15,6 +15,7 @@ from api.services.schedule.mapper import (
     MappedEvent,
     ScheduleMapper,
 )
+from authentification.permissions import IsScheduleModerator, IsTeacher
 
 logger = logging.getLogger("cheker")
 
@@ -157,17 +158,15 @@ class TeacherScheduleView(ScheduleView):
 
 
 class MyTeacherScheduleView(ScheduleView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsTeacher]
 
     def get_queryset(self) -> List[MappedEvent]:
         dt_f, dt_t = self.get_query_date()
-        # Берем пользователя из запроса (его определил JWT middleware)
         user = self.request.user
         try:
             teacher = user.teacher
         except Exception:
             raise ValueError("Ваш аккаунт не связан с профилем преподавателя")
-        # Вызываем маппер, используя ID найденного преподавателя
         return ScheduleMapper(
             date_from=dt_f,
             date_to=dt_t,
@@ -175,8 +174,25 @@ class MyTeacherScheduleView(ScheduleView):
         ).get_schedule()
 
 
+class MyGroupScheduleView(ScheduleView):
+    permission_classes = [IsTeacher]
+
+    def get_queryset(self) -> List[MappedEvent]:
+        dt_f, dt_t = self.get_query_date()
+        user = self.request.user
+        try:
+            study_group = user.study_group
+        except Exception:
+            raise ValueError("Ваш аккаунт не связан с профилем преподавателя")
+        return ScheduleMapper(
+            date_from=dt_f,
+            date_to=dt_t,
+            teacher_id=study_group.id
+        ).get_schedule()
+
+
 class ScheduleAdjustmentCreateView(APIView):
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsTeacher,IsScheduleModerator]
 
     def post(self, request):
         lesson_id = request.data.get("lesson_id")
@@ -205,7 +221,7 @@ class ScheduleAdjustmentCreateView(APIView):
 class ScheduleAdjustmentViewSet(viewsets.ModelViewSet):
     queryset = ScheduleAdjustment.objects.all().order_by("-request__created_at")
     serializer_class = ScheduleAdjustmentSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsScheduleModerator]
 
     def get_queryset(self):
         queryset = super().get_queryset()
