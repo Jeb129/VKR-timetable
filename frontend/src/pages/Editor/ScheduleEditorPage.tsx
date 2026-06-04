@@ -56,6 +56,9 @@ const ScheduleEditorPage = () => {
     // Новое состояние для корзины
     const [deletedLessons, setDeletedLessons] = useState<Lesson[]>([]);
     const [activeTab, setActiveTab] = useState<"errors" | "changes" | "trash">("errors");
+
+    const [disciplines, setDisciplines] = useState<any[]>([]);
+    const [lessonTypes, setLessonTypes] = useState<any[]>([]);
     
     const switchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -91,14 +94,18 @@ const ScheduleEditorPage = () => {
             const ts = await dbService.list("timeslots")
             setTimeslots(ts);
 
-            const [gr, tr, rm] = await Promise.all([
+            const [gr, tr, rm, ds, lt] = await Promise.all([
                 dbService.list("groups"),
                 dbService.list("teachers"),
                 dbService.list("classrooms"), // Добавили аудитории
+                dbService.list("disciplines"),
+                dbService.list("lesson-types"),
             ]);
             setGroups(gr);
             setTeachers(tr);
             setRooms(rm);
+            setDisciplines(ds);
+            setLessonTypes(lt);
         })();
     }, []);
 
@@ -206,6 +213,8 @@ const ScheduleEditorPage = () => {
                     rooms={rooms}
                     groups={groups}
                     teachers={teachers}
+                    disciplines={disciplines} // Передаем списки
+                    lessonTypes={lessonTypes}
                     onCancel={closeModal}
                     onConfirm={async (data) => {
                         await createLesson(data);

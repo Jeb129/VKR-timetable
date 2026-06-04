@@ -16,6 +16,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             password=validated_data["password"]
         )
 class CustomUserSerializer(serializers.ModelSerializer):
+    teacher_id = serializers.ReadOnlyField(source='teacher.id')
     class Meta:
         model = CustomUser
-        fields = ("id", "email","internal_user","username")
+        fields = ("id", "email","internal_user","username", "teacher_id")

@@ -8,9 +8,9 @@ from rest_framework.response import Response
 from datetime import datetime,time
 from django.utils import timezone
 from rest_framework.permissions import AllowAny,IsAuthenticated
-from api.models import Timeslot, ScheduleScenario, Lesson, ScheduleAdjustment
+from api.models import Timeslot, ScheduleScenario, Lesson, ScheduleAdjustment, Discipline, LessonType
 from api.serializers.schedule import ScheduleScenarioSerializer
-from api.serializers import MappedEventSerializer, TimeslotSerializer,ScheduleAdjustmentSerializer
+from api.serializers import MappedEventSerializer, TimeslotSerializer,ScheduleAdjustmentSerializer, DisciplineSerializer, LessonTypeSerializer
 from api.services.schedule.mapper import (
     MappedEvent,
     ScheduleMapper,
@@ -163,7 +163,6 @@ class MyTeacherScheduleView(ScheduleView):
         dt_f, dt_t = self.get_query_date()
         # Берем пользователя из запроса (его определил JWT middleware)
         user = self.request.user
-        # Находим связанного преподавателя через OneToOneField
         try:
             teacher = user.teacher
         except Exception:
@@ -236,3 +235,13 @@ class ScheduleAdjustmentViewSet(viewsets.ModelViewSet):
         obj.request.admin_comment = comment
         obj.request.save()
         return Response({'status': 'rejected'}, status=status.HTTP_200_OK)
+    
+class DisciplineViewSet(viewsets.ReadOnlyModelViewSet):
+        queryset = Discipline.objects.all().order_by("name")
+        serializer_class = DisciplineSerializer
+        permission_classes = [AllowAny]
+
+class LessonTypeViewSet(viewsets.ReadOnlyModelViewSet):
+        queryset = LessonType.objects.all().order_by("name")
+        serializer_class = LessonTypeSerializer
+        permission_classes = [AllowAny]
