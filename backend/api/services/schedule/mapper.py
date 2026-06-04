@@ -152,11 +152,11 @@ class ScheduleMapper:
             day_of_week = current_date.weekday() + 1
             parity = self._get_week_parity(current_date)
             week_idx = self._get_week_index(current_date)
-            print(
-                f"Проверка даты {str(current_date)}\n" 
-                f"Четность: {parity}\n"
-                f"Номер недели в семестре: {week_idx}"
-                )
+            # print(
+            #     f"Проверка даты {str(current_date)}\n" 
+            #     f"Четность: {parity}\n"
+            #     f"Номер недели в семестре: {week_idx}"
+            #     )
 
             # Собираем все события на этот день
             # Сначала проверяем корректировки (они могут добавить "чужие" занятия в этот день)
@@ -175,18 +175,18 @@ class ScheduleMapper:
             adjusted_lesson_ids_today = {l_id for (d, l_id) in adj_map if d == current_date}
             
             for lesson in all_lessons:
-                print(model_to_dict(lesson))
+                # print(model_to_dict(lesson))
                 # Если занятие сегодня по сетке
                 if lesson.timeslot.day == day_of_week and lesson.timeslot.week_num == parity:
-                    print("занятие сегодня по сетке")
+                    # print("занятие сегодня по сетке")
                     # Если на него НЕТ корректировки сегодня
                     if lesson.id not in adjusted_lesson_ids_today:
-                        print("на него НЕТ корректировки сегодня")
+                        # print("на него НЕТ корректировки сегодня")
                         # Проверяем фильтры и длительность
-                        print(
-                                "фильтры и длительность\n"
-                                f"{week_idx} <= {lesson.whole_weeks} = {week_idx <= lesson.whole_weeks}"
-                                  )
+                        # print(
+                        #         "фильтры и длительность\n"
+                        #         f"{week_idx} <= {lesson.whole_weeks} = {week_idx <= lesson.whole_weeks}"
+                        #           )
                         if self._event_matches_filters(lesson, lesson.classroom_id):
                             if not lesson.whole_weeks or week_idx <= lesson.whole_weeks:
                                 result.append(MappedEvent(
@@ -196,13 +196,13 @@ class ScheduleMapper:
                                     date_end=datetime.combine(current_date,lesson.timeslot.time_end)
                                 ))
             current_date += timedelta(days=1)
-        print(
-            f"Найдено занятий: {len(lessons_lookup)}",
-            f"Корректировок: {len(adj_map)}",
-            "результат:",
-            result,
-            sep="\n"
-        )
+        # print(
+        #     f"Найдено занятий: {len(lessons_lookup)}",
+        #     f"Корректировок: {len(adj_map)}",
+        #     "результат:",
+        #     result,
+        #     sep="\n"
+        # )
         return result
 
 

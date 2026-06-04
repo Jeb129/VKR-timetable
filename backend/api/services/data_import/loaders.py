@@ -53,7 +53,7 @@ class AcademicLoadReader:
         # Постобработка
         self.queue_groups = [] # Группы без подгруппы, для постобработки
         self.queue_flow = [] # Группы без номера группы и подгруппы (потоки), для постобработки
-        self.linked_groups = set() # Хранилище для отслеживания уже связанных групп (чтобы не дергать БД лишний раз)
+        self.sub_groups = {} # Хранилище для связываемых групп
 
     def _skip(self,idx,field,message):
         msg = ValidationMessage(
@@ -167,9 +167,13 @@ class AcademicLoadReader:
 
                 if mode == "subgroup":
                     # Создаем/находим конкретную подгруппу
-                    g_obj, created = StudyGroup.objects.get_or_create(
-                        group_num=g_num, sub_group_num=sub_g_num,
+                    filter = {
                         **base_filter,
+                        **{ "group_num":g_num}
+                    }
+                    g_obj, created = StudyGroup.objects.get_or_create(
+                        sub_group_num=sub_g_num,
+                        **filter,
                         defaults={"students_count": stud_count}
                     )
                     target_groups = [g_obj]
@@ -177,10 +181,17 @@ class AcademicLoadReader:
                         self.groups_created_counter += 1
                     else:
                         self.groups_exists_counter += 1
+                    
+                    key = set(filter.values())
+                    self.sub_groups[key] = filter
 
                 elif mode == "group":
                     # Ищем все подгруппы этой группы
-                    target_groups = list(StudyGroup.objects.filter(group_num=g_num, **base_filter))
+                    filter = {
+                        **base_filter,
+                        **{"group_num":g_num}
+                    }
+                    target_groups = list(StudyGroup.objects.filter(filter))
                     if not target_groups:
                         # Если подгрупп не было создано в 1-м цикле, создаем саму группу (sub_group=None)
                         g_obj, created = StudyGroup.objects.get_or_create(
@@ -193,16 +204,15 @@ class AcademicLoadReader:
                             self.groups_created_counter += 1
                         else:
                             self.groups_exists_counter += 1
-                    else:
-                        # --- ВОТ ЭТОТ МОМЕНТ: Связываем подгруппы между собой ---
-                        group_key = (sp_code, adm_year, g_num, l_form, l_stage)
-                        if group_key not in self.linked_groups:
-                            count = len(target_groups)
-                            for i in range(count):
-                                for j in range(i + 1, count):
-                                    # Благодаря symmetrical=True в модели, связь создастся в обе стороны
-                                    target_groups[i].sub_groups.add(target_groups[j])
-                            self.linked_groups.add(group_key)
+                    # else:
+                    #     # Связываем подгруппы между собой
+                    #     group_key = (sp_code, adm_year, g_num, l_form, l_stage)
+                    #     if group_key not in self.linked_groups:
+                    #         count = len(target_groups)
+                    #         for i in range(count):
+                    #             for j in range(i + 1, count):
+                    #                 target_groups[i].sub_groups.add(target_groups[j])
+                    #         self.linked_groups.add(group_key)
 
                 elif mode == "flow":
                     # Ищем ВСЕ группы этого потока (направление + год + форма + уровень)
@@ -271,6 +281,16 @@ class AcademicLoadReader:
         # --- ПРОХОД 3: ОБРАБОТКА ПОТОКОВ (уже есть все группы) ---
         for idx, norm in self.queue_flow:
             yield from self.process_row(idx, norm, mode="flow")
+
+        # Объединение подгрупп
+        for filter in self.sub_groups.values():
+            all_subs = list(StudyGroup.objects.filter(sub_group_num__isnull=False,**filter))
+            if not all_subs:
+                continue
+            count = len(all_subs)
+            for i in range(count):
+                for j in range(i + 1, count):
+                    all_subs[i].sub_groups.add(all_subs[j])
 
 
 def export_loading(target,queryset = None):
