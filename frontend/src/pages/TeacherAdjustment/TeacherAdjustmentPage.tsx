@@ -27,16 +27,21 @@ const TeacherAdjustmentPage = () => {
     const [events, setEvents] = useState<MappedEvent[]>([]);
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    // Загрузка справочников
+    // 1. Загрузка справочников
     useEffect(() => {
         const init = async () => {
-            const [ts, rooms] = await Promise.all([
-                dbService.list("timeslots"),
-                dbService.list("classrooms")
-            ]);
-            setTimeslots(ts);
-            setClassrooms(rooms);
+            try {
+                const [ts, rooms] = await Promise.all([
+                    dbService.list("timeslots"),
+                    dbService.list("classrooms")
+                ]);
+                setTimeslots(ts);
+                setClassrooms(rooms);
+            } catch (err) {
+                console.error("Ошибка загрузки справочников");
+            }
         };
         init();
     }, []);
@@ -53,27 +58,31 @@ const TeacherAdjustmentPage = () => {
         });
     }, [selectedDate]);
 
+    // 2. Загрузка расписания (Бэкенд сам поймет кто это по токену)
     const loadSchedule = async () => {
-        const teacherId = (user as any)?.teacher_id;
-        if (!teacherId) return;
+        if (!user?.internal_user) return;
+
         setLoading(true);
+        setError(null);
         try {
             const scheduleData = await dbService.list("schedule/teacher/my", {
                 date_from: weekDays[0].date,
                 date_to: weekDays[5].date
             });
             setEvents(scheduleData);
-        } finally { setLoading(false); }
+        } catch (err: any) {
+            // Если пришла ошибка 500/400 (например, не связан аккаунт)
+            setError(err.response?.data?.error || "Профиль преподавателя не связан с аккаунтом");
+            setEvents([]);
+        } finally { 
+            setLoading(false); 
+        }
     };
 
     useEffect(() => { loadSchedule(); }, [selectedDate, user]);
 
-    // --- ЛОГИКА ОТКРЫТИЯ МОДАЛКИ ЧЕРЕЗ КОНТЕКСТ ---
+    // --- МОДАЛКА ПЕРЕНОСА ---
     const openAdjustmentModal = (lesson: any, initialSlotId: number, initialDate: string) => {
-        // Создаем локальное состояние для формы ВНУТРИ функции, 
-        // которое будет обновляться при перерисовке контента модалки
-        // Но в React Context лучше передать отдельный компонент формы.
-        
         const AdjustmentForm = () => {
             const [formData, setFormData] = useState({
                 date: initialDate,
@@ -83,34 +92,27 @@ const TeacherAdjustmentPage = () => {
             });
 
             const handleSend = async () => {
-                if (!formData.reason.trim()) return alert("Укажите причину");
+                if (!formData.reason.trim()) return alert("Укажите причину переноса");
                 try {
                     await dbService.create("schedule/adjustment", {
                         lesson_id: lesson.id,
                         timeslot_id: formData.timeslot,
                         date: formData.date,
-                        classroom_id: formData.classroom, 
                         description: formData.reason
                     });
                     closeModal();
                     loadSchedule();
-                } catch (e) { alert("Ошибка сервера"); }
+                } catch (e) { alert("Ошибка при отправке заявки"); }
             };
 
             return (
                 <div className="flex-col gap-2">
                     <div className="flex-col">
                         <label className="filter-label">Дата переноса</label>
-                        <input 
-                            type="date" 
-                            className="input-styled" 
-                            value={formData.date}
-                            onChange={e => setFormData({...formData, date: e.target.value})}
-                        />
+                        <input type="date" className="input-styled" value={formData.date} onChange={e => setFormData({...formData, date: e.target.value})} />
                     </div>
-
                     <div className="flex-col">
-                        <label className="filter-label">Время (Таймслот)</label>
+                        <label className="filter-label">Время (Пара)</label>
                         <SearchSelect 
                             options={timeslots
                                 .filter(t => t.day === (new Date(formData.date).getDay() || 7)) 
@@ -120,68 +122,69 @@ const TeacherAdjustmentPage = () => {
                             onChange={val => setFormData({...formData, timeslot: Number(val)})}
                         />
                     </div>
-
                     <div className="flex-col">
                         <label className="filter-label">Аудитория</label>
-                        <SearchSelect 
-                            options={classrooms.map(c => ({ value: c.id, label: c.num }))}
-                            value={formData.classroom}
-                            onChange={val => setFormData({...formData, classroom: Number(val)})}
-                        />
+                        <SearchSelect options={classrooms.map(c => ({ value: c.id, label: c.num }))} value={formData.classroom} onChange={val => setFormData({...formData, classroom: Number(val)})} />
                     </div>
-
                     <div className="flex-col">
                         <label className="filter-label">Причина</label>
-                        <textarea 
-                            className="input-styled" 
-                            rows={3}
-                            value={formData.reason}
-                            onChange={e => setFormData({...formData, reason: e.target.value})}
-                        />
+                        <textarea className="input-styled" rows={3} value={formData.reason} onChange={e => setFormData({...formData, reason: e.target.value})} />
                     </div>
-
                     <button className="btn btn-green w-100 mt-1" onClick={handleSend}>Отправить заявку</button>
                 </div>
             );
         };
 
         openModal({
-            title: `Перенос: ${lesson.discipline_name}`,
+            title: `Перенос: ${lesson.discipline}`,
             width: '550px',
             content: <AdjustmentForm />
         });
     };
 
+    const onDragStart = (e: React.DragEvent, lessonId: number) => {
+        // Записываем ID пары в память браузера на время переноса
+        e.dataTransfer.setData("lessonId", String(lessonId));
+    };
+
     const onDrop = (e: React.DragEvent, slotId: number, date: string) => {
         e.preventDefault();
         const lessonId = Number(e.dataTransfer.getData("lessonId"));
-        const lesson = events.find(ev => ev.extendedProps.event.id === lessonId);
-        if (lesson) {
-            openAdjustmentModal(lesson.extendedProps.event, slotId, date);
+        const foundEvent = events.find(ev => ev.extendedProps.event.id === lessonId);
+        if (foundEvent) {
+            openAdjustmentModal(foundEvent.extendedProps.event, slotId, date);
         }
     };
 
-    const orderNumbers = Array.from(new Set(timeslots.map(t => t.order_number))).sort();
+    const orderNumbers = Array.from(new Set(timeslots.map(t => t.order_number))).sort((a,b) => a-b);
 
     return (
         <div className="flex-col bg-main min-h-screen">
             <nav className="navbar">
-                <div className="logo-white" onClick={() => navigate("/")}>КГУ • ПЕРЕНОС</div>
+                <div className="logo-white" onClick={() => navigate("/")} style={{cursor: 'pointer'}}>КГУ • ПЕРЕНОС</div>
                 <div className="flex-row gap-2 align-center">
-                    <input type="date" className="btn nav-btn" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+                    <input type="date" className="btn nav-btn" style={{background: 'white', color: 'var(--p-blue)'}} value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
                     <button className="btn nav-btn" onClick={() => navigate("/profile")}>В профиль</button>
                 </div>
             </nav>
 
             <div className="p-3 flex-col gap-2">
-                {loading ? <div className="card text-center">Загрузка...</div> : (
+                {error ? (
+                    <div className="card text-center p-4">
+                        <h3 className="text-orange">{error}</h3>
+                        <p className="text-muted">Убедитесь, что ваш аккаунт связан с преподавателем в базе данных.</p>
+                        <button className="btn btn-primary mt-2" onClick={() => navigate("/")}>Вернуться</button>
+                    </div>
+                ) : loading ? (
+                    <div className="card text-center p-4">Загрузка данных...</div>
+                ) : (
                     <div className="card p-0 overflow-x-auto shadow-sm">
                         <table className="editor-grid">
                             <thead>
                                 <tr>
                                     <th style={{width: '100px'}}>Пара</th>
                                     {weekDays.map(day => (
-                                        <th key={day.id}>{day.name}<br/><small>{new Date(day.date).toLocaleDateString('ru-RU')}</small></th>
+                                        <th key={day.id}>{day.name}<br/><small>{new Date(day.date).toLocaleDateString('ru-RU', {day: 'numeric', month: 'short'})}</small></th>
                                     ))}
                                 </tr>
                             </thead>
@@ -190,24 +193,61 @@ const TeacherAdjustmentPage = () => {
                                     <tr key={orderNum}>
                                         <td className="time-cell">
                                             <b>{orderNum}</b>
-                                            <div className="time-range">{timeslots.find(t => t.order_number === orderNum)?.time_start.substring(0,5)}</div>
+                                            <div className="time-range">
+                                                {timeslots.find(t => t.order_number === orderNum)?.time_start.substring(0, 5)}
+                                            </div>
                                         </td>
                                         {weekDays.map(day => {
+                                            // 1. Вычисляем чётность недели для текущей даты в колонке
                                             const weekNum = getISOWeek(new Date(day.date)) % 2 !== 0 ? 1 : 2;
-                                            const slot = timeslots.find(t => t.day === day.id && t.order_number === orderNum && t.week_num === weekNum);
-                                            const event = events.find(e => e.start.startsWith(day.date) && e.extendedProps.event.order === orderNum);
+                                            
+                                            // 2. Ищем доступный таймслот
+                                            const slot = timeslots.find(t => 
+                                                t.day === day.id && 
+                                                t.order_number === orderNum && 
+                                                t.week_num === weekNum
+                                            );
+
+                                            // 3. ИСПРАВЛЕННЫЙ ПОИСК СОБЫТИЯ
+                                            const event = events.find(e => {
+                                                const ev = e.extendedProps.event as any;
+                                                
+                                                // Отрезаем время, оставляем только YYYY-MM-DD
+                                                const eventDate = e.start.split('T')[0];
+                                                const matchesDate = eventDate === day.date;
+
+                                                // Проверяем номер пары (пробуем все варианты названий полей)
+                                                const actualOrder = ev.order || ev.timeslot?.order_number;
+                                                const matchesOrder = Number(actualOrder) === Number(orderNum);
+
+                                                return matchesDate && matchesOrder;
+                                            });
 
                                             return (
-                                                <td key={day.id} className={`grid-cell ${!slot ? 'disabled' : ''}`}
+                                                <td 
+                                                    key={day.id} 
+                                                    className={`grid-cell ${!slot ? 'disabled' : ''}`}
                                                     onDragOver={e => e.preventDefault()}
-                                                    onDrop={e => slot && onDrop(e, slot.id, day.date)}>
+                                                    onDrop={e => slot && onDrop(e, slot.id, day.date)}
+                                                >
                                                     {event ? (
-                                                        <div className="draggable-lesson card" draggable 
-                                                             onDragStart={e => e.dataTransfer.setData("lessonId", String(event.extendedProps.event.id))}>
-                                                            <div className="subject-short">{event.extendedProps.event.discipline_name}</div>
-                                                            <div className="info-short">{event.extendedProps.event.classroom_name}</div>
+                                                        <div 
+                                                            className="draggable-lesson card" 
+                                                            draggable 
+                                                            onDragStart={(e) => onDragStart(e, event.extendedProps.event.id)}
+                                                        >
+                                                            <div className="subject-short">
+                                                                {/* Используем discipline или discipline_name */}
+                                                                {(event.extendedProps.event as any).discipline || (event.extendedProps.event as any).discipline_name}
+                                                            </div>
+                                                            <div className="info-short">
+                                                                {/* Используем classroom или classroom_name */}
+                                                                {(event.extendedProps.event as any).classroom || (event.extendedProps.event as any).classroom_name}
+                                                            </div>
                                                         </div>
-                                                    ) : slot && <div className="empty-slot-plus">+</div>}
+                                                    ) : (
+                                                        slot && <div className="empty-slot-plus">+</div>
+                                                    )}
                                                 </td>
                                             );
                                         })}

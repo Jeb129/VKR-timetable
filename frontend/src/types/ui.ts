@@ -5,7 +5,8 @@ export interface SelectOption {
 
 export interface SearchSelectProps {
     options: SelectOption[];
-    value: string | number;
-    onChange: (value: string | number) => void;
+    value: string | number | (string | number)[]; 
+    onChange: (value: any) => void;
     placeholder?: string;
+    isMulti?: boolean; // Новый проп
 }

@@ -3,20 +3,34 @@ import Select from 'react-select';
 import type { SearchSelectProps, SelectOption } from "@/types/ui";
 import "@/styles/SearchSelect.css";
 
-const SearchSelect = ({ options, value, onChange, placeholder }: SearchSelectProps) => {
+const SearchSelect = ({ options, value, onChange, placeholder,isMulti  }: SearchSelectProps) => {
     // Реф для управления фокусом самого компонента
     const selectRef = useRef<any>(null);
     // Состояние для отслеживания, нажат ли сейчас поиск
     const [isFocused, setIsFocused] = useState(false);
 
-    const selectedOption = options.find(opt => opt.value === value) || null;
+    // Логика определения выбранных опций для одиночного и множественного режимов
+    const getSelectedOption = () => {
+        if (isMulti) {
+            // Если это массив, фильтруем опции. Если нет (например, пришло ""), возвращаем пустой массив
+            return options.filter(opt => (Array.isArray(value) ? value : []).includes(opt.value));
+        }
+        return options.find(opt => opt.value === value) || null;
+    };
 
-    const handleChange = (opt: any) => {
-        // Вызываем внешнюю функцию изменения (setSelectedTargetId)
-        onChange(opt ? (opt as SelectOption).value : "");
-        // Снимаем выделение с элемента после выбора
-        if (selectRef.current) {
-            selectRef.current.blur();
+    const handleChange = (newValue: any) => {
+        if (isMulti) {
+            // 2. БЕЗОПАСНАЯ ПРОВЕРКА: Если newValue это массив — мапим, если null/undefined — отдаем []
+            const selectedValues = Array.isArray(newValue) 
+                ? newValue.map((v: SelectOption) => v.value) 
+                : [];
+            onChange(selectedValues);
+        } else {
+            // Одиночный выбор
+            onChange(newValue ? (newValue as SelectOption).value : "");
+            if (selectRef.current) {
+                selectRef.current.blur();
+            }
         }
     };
 
@@ -26,12 +40,13 @@ const SearchSelect = ({ options, value, onChange, placeholder }: SearchSelectPro
             className="ksu-select-container"
             classNamePrefix="ksu-select"
             options={options}
-            value={selectedOption}
+            value={getSelectedOption()}
             onChange={handleChange}
             placeholder={placeholder || "Поиск..."}
+            isMulti={isMulti}
             isSearchable={true}
             noOptionsMessage={() => "Ничего не найдено"}
-            controlShouldRenderValue={!isFocused}
+            controlShouldRenderValue={isMulti ? true : !isFocused}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
         />
