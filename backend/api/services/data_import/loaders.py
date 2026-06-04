@@ -191,7 +191,7 @@ class AcademicLoadReader:
                         **base_filter,
                         **{"group_num":g_num}
                     }
-                    target_groups = list(StudyGroup.objects.filter(filter))
+                    target_groups = list(StudyGroup.objects.filter(**filter))
                     if not target_groups:
                         # Если подгрупп не было создано в 1-м цикле, создаем саму группу (sub_group=None)
                         g_obj, created = StudyGroup.objects.get_or_create(
@@ -317,7 +317,6 @@ def export_loading(target,queryset = None):
         # --- вычисление номера семестра ---
         # 26.04.2026 - Перенесено в property модели AcademicLoad
         
-
         row = [
             # load.id,
             # Направление
