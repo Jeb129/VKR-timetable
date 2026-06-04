@@ -43,7 +43,7 @@ class CustomUserSerializer(serializers.ModelSerializer):
     is_moodle_linked = serializers.SerializerMethodField()
     teacher = SimpleRelatedSerializer()
     study_group = SimpleRelatedSerializer()
-
+    
     class Meta:
         model = CustomUser
         fields = [

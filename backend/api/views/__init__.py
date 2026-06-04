@@ -5,7 +5,9 @@ from .schedule_view import (GroupScheduleView,
                             ScheduleScenarioViewSet, 
                             MyTeacherScheduleView, 
                             ScheduleAdjustmentCreateView,
-                            ScheduleAdjustmentViewSet)
+                            ScheduleAdjustmentViewSet,
+                            DisciplineViewSet,
+                            LessonTypeViewSet)
 from .booking import BookingViewSet, BookingTypeViewSet
 from .building import ClassroomViewSet
 from .schedule_draft import DraftLessonViewSet

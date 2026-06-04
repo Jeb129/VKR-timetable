@@ -7,10 +7,10 @@ from rest_framework.generics import ListAPIView
 from rest_framework.response import Response
 from datetime import datetime,time
 from django.utils import timezone
-from rest_framework.permissions import AllowAny
-from api.models import Timeslot, ScheduleScenario, Lesson, ScheduleAdjustment
+from rest_framework.permissions import AllowAny,IsAuthenticated
+from api.models import Timeslot, ScheduleScenario, Lesson, ScheduleAdjustment, Discipline, LessonType
 from api.serializers.schedule import ScheduleScenarioSerializer
-from api.serializers import MappedEventSerializer, TimeslotSerializer,ScheduleAdjustmentSerializer
+from api.serializers import MappedEventSerializer, TimeslotSerializer,ScheduleAdjustmentSerializer, DisciplineSerializer, LessonTypeSerializer
 from api.services.schedule.mapper import (
     MappedEvent,
     ScheduleMapper,
@@ -251,3 +251,13 @@ class ScheduleAdjustmentViewSet(viewsets.ModelViewSet):
         obj.request.admin_comment = comment
         obj.request.save()
         return Response({'status': 'rejected'}, status=status.HTTP_200_OK)
+    
+class DisciplineViewSet(viewsets.ReadOnlyModelViewSet):
+        queryset = Discipline.objects.all().order_by("name")
+        serializer_class = DisciplineSerializer
+        permission_classes = [AllowAny]
+
+class LessonTypeViewSet(viewsets.ReadOnlyModelViewSet):
+        queryset = LessonType.objects.all().order_by("name")
+        serializer_class = LessonTypeSerializer
+        permission_classes = [AllowAny]
