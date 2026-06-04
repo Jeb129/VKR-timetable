@@ -4,22 +4,25 @@ import re
 import logging
 from datetime import datetime, timedelta
 from django.core.management.base import BaseCommand
+
+# Импорты согласно вашей структуре
 from api.models import (
     Semester, 
-    ScheduleScenario, 
-    Timeslot,
     Lesson, 
+    ScheduleScenario, 
+    Timeslot, 
     Institute, 
     StudyProgram, 
     Discipline, 
     LessonType, 
     StudyGroup, 
-    Teacher,
+    Teacher, 
     Classroom)
 
 logger = logging.getLogger(__name__)
 
 def parse_group_info(group_code):
+    """Разбор шифра группы типа 24-ИСбо-1"""
     pattern = r"(\d{2})-([А-Яа-я]+)([бмса])([озо])-([\w\d]+)"
     match = re.search(pattern, group_code)
     if not match: return None
@@ -36,32 +39,42 @@ def parse_group_info(group_code):
     }
 
 def normalize_teacher_name(name):
-    if not name:
-        return name
-    # Убираем лишние пробелы по краям
+    """Удаление лишних пробелов в ФИО"""
+    if not name: return name
     name = name.strip()
-    #  Убираем пробелы между инициалами 
     name = re.sub(r'\.\s+(?=[А-Я])', '.', name)
-    # Заменяем множественные пробелы на один
     name = re.sub(r'\s+', ' ', name)
     return name
 
 class Command(BaseCommand):
-    help = 'Синхронизация расписания с защитой от блокировок и умным поиском данных'
+    help = 'Синхронизация расписания с автоматическим созданием семестра и защитой от None-полей'
         
     def handle(self, *args, **options):
-        # 1. Подготовка семестра и сценария
+        # 1. Авто-создание семестра и сценария
         import_dates = ["2026-03-30", "2026-04-06"]
-        first_date = datetime.strptime(import_dates[0], "%Y-%m-%d").date()
+        first_date_obj = datetime.strptime(import_dates[0], "%Y-%m-%d").date()
         
         semester, _ = Semester.objects.get_or_create(
-            date_start__lte=first_date, date_end__gte=first_date,
-            defaults={'name': f"Семестр {first_date.year}", 'date_start': first_date - timedelta(days=30), 'date_end': first_date + timedelta(days=120)}
-        )
-        scenario, _ = ScheduleScenario.objects.get_or_create(
-            name="EIOS Import", defaults={'is_active': True, 'semester': semester}
+            date_start__lte=first_date_obj, 
+            date_end__gte=first_date_obj,
+            defaults={
+                'name': f"Семестр импорта {first_date_obj.year}", 
+                'date_start': first_date_obj - timedelta(days=30), 
+                'date_end': first_date_obj + timedelta(days=150)
+            }
         )
         
+        scenario, _ = ScheduleScenario.objects.get_or_create(
+            name="EIOS Import", 
+            defaults={'is_active': True, 'semester': semester}
+        )
+        
+        # Если семестр изменился, обновляем привязку
+        if scenario.semester != semester:
+            scenario.semester = semester
+            scenario.save()
+
+        self.stdout.write(self.style.SUCCESS(f"Работаем в семестре: {semester.name}"))
         self.stdout.write(self.style.WARNING("Очистка старых данных сценария..."))
         Lesson.objects.filter(scenario=scenario).delete()
 
@@ -78,31 +91,28 @@ class Command(BaseCommand):
         for room in rooms:
             room_counter += 1
             if room_counter % 30 == 0:
-                self.stdout.write(self.style.MIGRATE_LABEL(f"Прогресс: {room_counter}/{total_rooms}. Ожидание 60 сек..."))
-                time.sleep(60)
+                self.stdout.write(self.style.MIGRATE_LABEL(f"Прогресс: {room_counter}/{total_rooms}. Ожидание 45 сек..."))
+                time.sleep(45)
 
             for sdate in import_dates:
                 url = f"https://eios.kosgos.ru/api/Rasp?idAudLine={room.eios_id}&sdate={sdate}"
                 self.stdout.write(f"Запрос {room.num} [{sdate}]...")
                 
                 success = False
-                for attempt in range(4): # 4 попытки на каждую ссылку
+                for attempt in range(4):
                     try:
-                        time.sleep(2.5) # Увеличенная пауза между запросами
-                        res = requests.get(url, headers=headers, timeout=25)
+                        time.sleep(2.0) # Задержка для предотвращения бана
+                        res = requests.get(url, headers=headers, timeout=20)
                         
                         if res.status_code == 429:
-                            self.stdout.write(self.style.ERROR(f"  [!] Бан 429. Ждем 30с..."))
-                            time.sleep(30)
+                            time.sleep(20)
                             continue
-                            
                         if res.status_code != 200:
-                            time.sleep(5)
                             continue
 
                         rasp_list = res.json().get('data', {}).get('rasp', [])
                         for item in rasp_list:
-                            # Парсинг дисциплины
+                            # Парсинг дисциплины и типа
                             disc_full = item.get('дисциплина', 'Неизвестно')
                             parts = disc_full.split(' ', 1)
                             type_abbr = parts[0].replace('.', '').strip()
@@ -111,31 +121,33 @@ class Command(BaseCommand):
                             discipline, _ = Discipline.objects.get_or_create(name=discipline_name)
                             l_type, _ = LessonType.objects.get_or_create(name=type_abbr)
 
-                            # ПРЕПОДАВАТЕЛЬ: Сначала ищем (мог быть из Excel)
+                            # ПРЕПОДАВАТЕЛЬ
                             teacher_fio = item.get('фиоПреподавателя')
                             teacher = None
                             if teacher_fio:
                                 clean_name = normalize_teacher_name(teacher_fio)
-        
-                                teacher, created = Teacher.objects.get_or_create(
-                                    name=clean_name, # Ищем по чистому имени
-                                    defaults={'constraint_weight': 1, 'institute': inst}
+                                teacher, _ = Teacher.objects.get_or_create(
+                                    name=clean_name,
+                                    defaults={
+                                        'constraint_weight': 1, 
+                                        'institute': inst,
+                                        'max_hours_per_week': 36,
+                                        'max_hours_per_day': 10
+                                    }
                                 )
-                                if not teacher:
-                                    teacher = Teacher.objects.create(name=teacher_fio, constraint_weight=1, institute=inst)
 
-                            # ГРУППА: Сначала ищем
+                            # ГРУППА
                             group_name = item.get('группа')
                             group = None
                             if group_name and group_name != "Не указана":
-                                # Пытаемся найти уже существующую группу по имени (шифру)
+                                # Сначала ищем по шифру (вдруг создана через Excel)
                                 group = StudyGroup.objects.filter(name=group_name).first()
                                 if not group:
                                     info = parse_group_info(group_name)
                                     if info:
                                         prog, _ = StudyProgram.objects.get_or_create(
                                             code=info['prog_code'][:8],
-                                            defaults={'name': f"Направление {info['prog_code']}", 'institute': inst}
+                                            defaults={'name': f"Программа {info['prog_code']}", 'institute': inst}
                                         )
                                         group = StudyGroup.objects.create(
                                             study_program=prog,
@@ -150,13 +162,21 @@ class Command(BaseCommand):
                             # ТАЙМСЛОТ
                             dt_obj = datetime.fromisoformat(item.get('дата').replace('Z', ''))
                             week_n = 1 if dt_obj.isocalendar()[1] % 2 != 0 else 2
-                            slot = Timeslot.objects.filter(day=item.get('деньНедели'), order_number=item.get('номерЗанятия'), week_num=week_n).first()
+                            slot = Timeslot.objects.filter(
+                                day=item.get('деньНедели'), 
+                                order_number=item.get('номерЗанятия'), 
+                                week_num=week_n
+                            ).first()
 
                             if slot:
-                                # Создаем ПАРУ (т.к. их нет в Excel)
+                                #  добавлено whole_weeks для устранения ошибки в маппере
                                 lesson, _ = Lesson.objects.get_or_create(
-                                    scenario=scenario, timeslot=slot, classroom=room,
-                                    discipline=discipline, lesson_type=l_type
+                                    scenario=scenario, 
+                                    timeslot=slot, 
+                                    classroom=room,
+                                    discipline=discipline, 
+                                    lesson_type=l_type,
+                                    defaults={'whole_weeks': 18} # По умолчанию семестр
                                 )
                                 if teacher: lesson.teachers.add(teacher)
                                 if group: lesson.study_groups.add(group)
@@ -165,11 +185,8 @@ class Command(BaseCommand):
                         success = True
                         break 
                         
-                    except (requests.exceptions.ConnectTimeout, requests.exceptions.ConnectionError):
-                        self.stdout.write(self.style.ERROR(f"  [!] Тайм-аут на {room.num}. Попытка {attempt+1}. Ждем 15с..."))
-                        time.sleep(15)
                     except Exception as e:
                         self.stdout.write(self.style.ERROR(f"  [ERR] {room.num}: {str(e)}"))
-                        break
+                        time.sleep(2)
 
-        self.stdout.write(self.style.SUCCESS('\nСинхронизация завершена успешно!'))
+        self.stdout.write(self.style.SUCCESS('\nСинхронизация завершена!'))

@@ -2,12 +2,13 @@
 
 .moderation-wrapper {
     padding: 2rem 2.5rem;
-    max-width: 1200px;
+    max-width: 1300px;
     margin: 0 auto;
 }
 
 .moderation-card:hover {
-    transform: translateX(5px);
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(44, 58, 179, 0.1);
 }
 
 .time-range-text {
@@ -28,7 +29,7 @@
 
 .reject-container {
     padding: 1.5rem;
-    background: #fff1f0;
+    background: var(--p-blue-light);
     border-radius: var(--radius-md);
     border: 1px solid var(--p-red);
     margin-top: 1.5rem;
@@ -38,9 +39,12 @@
     border-left-color: var(--p-red);
 }
 
+/* Общая карточка */
 .moderation-card {
     border-left: 8px solid var(--p-blue);
-    transition: var(--transition);
+    margin-bottom: 1.5rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+    background: var(--white);
 }
 
 .badge-user {
@@ -60,4 +64,75 @@
     border: 1px solid var(--border-color);
     font-size: 14px;
     color: var(--text-main);
+}
+
+.card-adjustment {
+    border-left-color: var(--p-orange);
+}
+
+/* Инфо-блоки */
+.request-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin: 1rem 0;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.info-item label {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    font-weight: 800;
+    margin-bottom: 4px;
+}
+
+.info-item span {
+    font-weight: 600;
+    color: var(--text-main);
+    font-size: 1.1rem;
+}
+
+.adjustment-flow {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    background: var(--bg-main);
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    border: 1px solid var(--border-color);
+}
+
+.flow-step {
+    flex: 1;
+}
+
+.flow-arrow {
+    font-size: 1.5rem;
+    color: var(--p-orange);
+    font-weight: 900;
+}
+
+/* Тип мероприятия */
+.booking-type-tag {
+    background: var(--p-blue-light);
+    color: var(--p-blue);
+    padding: 2px 10px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 800;
+    margin-left: 10px;
+}
+
+/* Поле отказа */
+.reject-area {
+    margin-top: 1.5rem;
+    padding: 1.5rem;
+    background: var(--white);
+    border-top: 2px solid var(--p-red);
+    border-radius: 0 0 var(--radius-lg) var(--radius-lg);
 }

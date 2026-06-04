@@ -8,12 +8,14 @@ export interface MappedEvent {
              id: number;
             discipline: string;     // Название дисциплины (строка)
             lesson_type: string;    // Тип занятия (строка)
+            lesson_name?: string;    // Название дисциплины для Adjustment
             classroom: string;       // Название аудитории (строка)
             teachers: SimpleEntity[]; // Массив объектов {id, name}
             study_groups: SimpleEntity[]; // Массив объектов {id, name}
             
             // Поля для бронирований
             description?: string;
+            classroom_name?: string;
             user_name?: string;
             status?: number;
             admin_comment?: string;

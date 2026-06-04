@@ -7,6 +7,8 @@ from api.models import (
     AcademicLoad,
     Timeslot,
     Lesson,
+    Discipline,
+    LessonType
 )
 from config.utils import SimpleRelatedSerializer
 
@@ -114,4 +116,22 @@ class LessonReadSerializer(serializers.ModelSerializer):
             "study_groups",
             "whole_weeks",
             "draft_info"
+        ]
+
+class DisciplineSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Discipline
+        fields = ["id", "name", "allow_merge_teachers"]
+
+
+class LessonTypeSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = LessonType
+        fields = [
+            "id", 
+            "name", 
+            "short_name", 
+            "allow_merge_teachers", 
+            "allow_merge_subgroups", 
+            "allow_merge_groups"
         ]

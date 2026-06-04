@@ -173,11 +173,14 @@ const SchedulePage = () => {
                             </div>
 
                             {group.items.map((mappedItem, index) => {
+                                console.log("DEBUG EVENT:", mappedItem.type, mappedItem.extendedProps.event);
                                 const { start, end, type, extendedProps } = mappedItem;
                                 const event = extendedProps.event;
                                 
-                                const isBooking = type === "3";
-                                const isAdjustment = type === "2";
+                                const isBooking = String(type) === "3" || (event && 'description' in event);
+                                const isAdjustment = String(type) === "2" && !isBooking;
+
+                                const displayClassroom = isBooking ? event.classroom_name : event.classroom;
 
                                 return (
                                     <div key={index} className="lesson-row-container fade-in">
@@ -195,32 +198,34 @@ const SchedulePage = () => {
                                                         : `${event.lesson_type || ''} ${event.discipline || 'Дисциплина не указана'}`
                                                     }
                                                 </h4>
-                                                <span className={`badge ${isAdjustment ? 'btn-orange' : ''}`} style={{fontSize: '10px'}}>
-                                                    {isBooking ? 'БРОНИРОВАНИЕ' : isAdjustment ? 'ЗАМЕНА' : 'ЗАНЯТИЕ'}
+                                                <span className={`badge ${isBooking ? 'btn-orange' : isAdjustment ? 'btn-orange' : ''}`}>
+                                                    {isBooking ? 'БРОНЬ' : isAdjustment ? 'ЗАМЕНА' : 'ЗАНЯТИЕ'}
                                                 </span>
                                             </div>
                                             
                                             <div className="flex-col gap-1">
-                                                {!isBooking ? (
+                                                {isBooking ? (
+                                                    // ДЛЯ БРОНИРОВАНИЯ
+                                                    <>
+                                                        <div className="details-text">👤 Ответственный: {event.user_name}</div>
+                                                        <div className="details-text">📝 Цель: {event.description}</div>
+                                                    </>
+                                                ) : (
+                                                    // ДЛЯ ОБЫЧНОГО УРОКА
                                                     <>
                                                         <div className="details-text">
-                                                            {/* Достаем имена из массива объектов teachers */}
                                                             👤 {event.teachers?.length 
                                                                 ? event.teachers.map((t: any) => t.name).join(', ') 
                                                                 : 'Преподаватель не указан'}
                                                         </div>
                                                         <div className="details-text">
-                                                            {/* Достаем имена из массива объектов study_groups */}
                                                             👥 Группы: {event.study_groups?.length 
                                                                 ? event.study_groups.map((g: any) => g.name).join(', ') 
                                                                 : 'Не указаны'}
                                                         </div>
                                                     </>
-                                                ) : (
-                                                    <div className="details-text">👤 Ответственный: {event.user_name || '---'}</div>
                                                 )}
-                                                {/* В твоем сериализаторе поле называется classroom */}
-                                                <div className="details-text">📍 Кабинет: {event.classroom || '---'}</div>
+                                                <div className="details-text">📍 Кабинет: {displayClassroom || '---'}</div>
                                             </div>
                                         </div>
                                     </div>

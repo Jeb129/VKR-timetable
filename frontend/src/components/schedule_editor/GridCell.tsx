@@ -73,7 +73,11 @@ export const GridCell = memo(({
                     />
                 </div>
             ) : (
-                <div className="empty-slot-plus flex-row justify-center align-center h-100">
+                <div 
+                    className="empty-slot-plus flex-row justify-center align-center h-100"
+                    onClick={onClick} 
+                    style={{ cursor: 'pointer' }}
+                >
                     +
                 </div>
             )}

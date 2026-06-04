@@ -6,7 +6,9 @@ from api.views import (
     ScheduleScenarioViewSet,
     StudyGroupViewSet,
     TeacherViewSet,
-    BookingTypeViewSet
+    BookingTypeViewSet,
+    DisciplineViewSet,
+    LessonTypeViewSet
     )
 
 router = DefaultRouter()
@@ -17,5 +19,7 @@ router.register(r'timeslots', TimeslotViewSet, basename='timeslot')
 router.register(r'scenarios', ScheduleScenarioViewSet, basename='scenario')
 router.register(r'groups', StudyGroupViewSet, basename='group')
 router.register(r'teachers', TeacherViewSet, basename='teacher')
+router.register(r'disciplines', DisciplineViewSet, basename='discipline')
+router.register(r'lesson-types', LessonTypeViewSet, basename='lesson-type')
 
 urlpatterns = router.urls
