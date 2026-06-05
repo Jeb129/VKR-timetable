@@ -71,10 +71,33 @@ class AcademicLoadAdmin(admin.ModelAdmin):
     autocomplete_fields = ["study_group", "teacher", "discipline"]
     # ordering = ["semester__date_start","study_group__name","discipline__name"]
     ordering = ["id"]
+    
+    actions = ['fast_delete_selected']
 
     @admin.display(description="Номер семестра")
     def semester_order(self, obj):
         return obj.semester_order
+
+
+    def get_actions(self, request):
+        # Удаляем стандартное удаление, чтобы случайно не запустить "медленный" процесс
+        actions = super().get_actions(request)
+        if 'delete_selected' in actions:
+            del actions['delete_selected']
+        return actions
+
+    @admin.action(description="БЫСТРОЕ УДАЛЕНИЕ (без проверки связей)")
+    def fast_delete_selected(self, request, queryset):
+        # .delete() на уровне QuerySet в Django работает гораздо быстрее,
+        # так как он минимизирует работу "коллектора" и делает массовое удаление.
+        count = queryset.count()
+        queryset.delete()
+        self.message_user(request, f"Успешно удалено {count} записей (включая их связи).")
+
+    # Также полезно для массовых операций
+    def delete_queryset(self, request, queryset):
+        """Переопределение для удаления через контекстное меню действий"""
+        queryset.delete()
 
 
 

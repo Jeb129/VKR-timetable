@@ -1,15 +1,18 @@
 import { useState } from "react"
-import { Navigate, useNavigate } from "react-router-dom"
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom"
 import type { LoginRequest } from "@/types/user"
 import { useAuth } from "@/context/AuthContext"
 import "@/styles/Auth.css";
 
 const LoginPage = () => {
   const { isAuthenticated, isLoading, login } = useAuth()
-  const redirectPath = localStorage.getItem("redirectAfterLogin")
+  const [searchParams] = useSearchParams(); // Хук для чтения параметров URL
+
+  const redirectPath = searchParams.get("next");
   // Если пользователь уже авторизован - перенаправляем
+
   if (!isLoading && isAuthenticated) {
-    return <Navigate to="/profile" replace />
+    return <Navigate to={redirectPath || "/profile"} replace />
   }
 
   const [loginError, setLoginError] = useState<string | null>(null)

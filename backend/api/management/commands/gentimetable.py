@@ -1,7 +1,10 @@
 from django.core.management.base import BaseCommand, CommandError
+from sqlalchemy import true
 from api.models import Semester, ScheduleScenario
 from api.services.schedule.generator import TimetableGenerator
 from django.utils import timezone
+
+from api.services.schedule.new_generator import ORToolsTimetableGenerator
 
 class Command(BaseCommand):
     help = 'Генерирует расписание для указанного семестра в новом сценарии'
@@ -32,18 +35,24 @@ class Command(BaseCommand):
 
         # 2. Запускаем генератор
         generator = TimetableGenerator(scenario.id)
+        generator = ORToolsTimetableGenerator(scenario.id)
         
         self.stdout.write("Начало генерации...")
         try:
-            lessons, final_penalty = generator.run(iterations=iterations)
-            
+            # lessons, final_penalty = generator.run(iterations=iterations)
+            success = generator.solve()
+            if success:
+                self.stdout.write("Удалось найти оптимальное решение")
+            else:
+                self.stdout.write("Не удалось найти оптимальное решение")
+
             # 3. Сохраняем
             self.stdout.write("Сохранение в базу данных...")
-            generator.commit(lessons)
+            generator.commit()
             
-            self.stdout.write(self.style.SUCCESS(
-                f"Успешно! Сгенерировано занятий: {len(lessons)}. Итоговый штраф: {final_penalty}"
-            ))
+            # self.stdout.write(self.style.SUCCESS(
+            #     f"Успешно! Сгенерировано занятий: {len(lessons)}. Итоговый штраф: {final_penalty}"
+            # ))
             
         except Exception as e:
             scenario.delete() # Удаляем пустой сценарий при ошибке

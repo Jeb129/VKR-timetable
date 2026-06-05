@@ -82,10 +82,9 @@ def generate_planned_lessons_bulk(semester, loads):
         lessons_in_cycle = max(min(math.ceil(raw_density), math.ceil(lessons_count)), 1)
 
         # whole_weeks — за сколько недель вычитаем. 
-        # Делим часы на "часы в неделю" (которых ровно lessons_in_cycle штук, т.к. пара=2ч, а цикл=2нед)
+        # Делим часы на "часы в неделю"
         calculated_weeks = math.ceil(any_load.whole_hours / lessons_in_cycle)
 
-        # Создаем объект в памяти (без сохранения)
         pl = PlannedLesson(
             semester=semester,
             discipline=any_load.discipline,
@@ -102,13 +101,9 @@ def generate_planned_lessons_bulk(semester, loads):
             'load_ids': {l.id for l in load_group}
         })
 
-    # 3. Сохранение в БД через одну транзакцию
     with transaction.atomic():
-        # Очищаем старые плановые занятия для этого семестра
         PlannedLesson.objects.filter(semester=semester).delete()
 
-        # Массовое создание PlannedLesson
-        # bulk_create возвращает объекты с уже заполненными ID (в PostgreSQL это работает по умолчанию)
         created_objects = PlannedLesson.objects.bulk_create(planned_lessons_to_create)
 
         # Подготавливаем списки для промежуточных таблиц (M2M)
@@ -141,34 +136,4 @@ def generate_planned_lessons_bulk(semester, loads):
         PLLoad.objects.bulk_create(loads_links, batch_size=500)
 
     return len(created_objects)
-
-
-def generate_planned_lessons_old(loads):
-    buckets = defaultdict(list)
-
-    # 1. Сгруппировать по ключу
-    for load in loads:
-        key = make_final_key(load)
-        buckets[key].append(load)
-    # 2. Построить черновики
-    for _, load_group in buckets.items():
-        any_load = load_group[0]
-
-        lessons_count = any_load.whole_hours / 2
-        weeks = lessons_count / max(any_load.whole_weeks,1)
-        weeks_2 = math.ceil(weeks*2)
-        whole_weeks =  math.ceil(any_load.whole_hours / max(weeks_2,1))
-
-        draft, created = PlannedLesson.objects.get_or_create(
-            semester = any_load.semester,
-            discipline=any_load.discipline,
-            lesson_type=any_load.lesson_type,
-            lessons_in_cycle=weeks_2,
-            whole_weeks=whole_weeks,
-        )
-        if created:
-            for l in load_group:
-                draft.study_groups.add(l.study_group)
-                draft.teachers.add(l.teacher)
-                draft.academic_loads.add(l)
     

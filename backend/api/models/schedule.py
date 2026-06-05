@@ -4,6 +4,8 @@ from django.contrib.postgres.constraints import ExclusionConstraint
 from django.contrib.postgres.fields import RangeOperators
 from django.core.exceptions import ValidationError
 
+from api.models.enums import GenerationStatus, WeekCycle, Weekday
+
 class Semester(models.Model):
     """Для отображения расписания в календаре"""
 
@@ -55,6 +57,7 @@ class ScheduleScenario(models.Model):
         Semester, on_delete=models.SET_NULL, null=True, verbose_name="семестр"
     )  # Для ограничения. Возможно сюр, но пока так
     is_active = models.BooleanField(default=False, verbose_name="действующий")
+    generation_status = models.IntegerField(null=True,choices=GenerationStatus.choices,verbose_name="Состояние генерации")
     total_penalty = models.IntegerField(default=0, verbose_name="штраф по ограничениям")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="время создания")
 
@@ -76,8 +79,14 @@ class ScheduleScenario(models.Model):
 
 
 class Timeslot(models.Model):
-    day = models.PositiveSmallIntegerField(verbose_name="день")  # 1-6
-    week_num = models.PositiveSmallIntegerField(verbose_name="номер недели в цикле")  # 1-2
+    day = models.PositiveSmallIntegerField(
+        choices=Weekday.choices, 
+        verbose_name="день недели"
+    )
+    week_num = models.PositiveSmallIntegerField(
+        choices=WeekCycle.choices, # На всякий ограничил 2 вариантами, т.к полноценный цикл я не везде писал 
+        verbose_name="номер недели в цикле"
+    )
     order_number = models.PositiveSmallIntegerField(default=1, verbose_name="номер пары")  # Номер пары
     time_start = models.TimeField(verbose_name="время начала")
     time_end = models.TimeField(verbose_name="время окончания")
@@ -87,6 +96,23 @@ class Timeslot(models.Model):
         verbose_name = "слот расписания"
         verbose_name_plural = "слоты расписания"
 
+        constraints = [
+            # Проверка, что время начала раньше времени окончания
+            models.CheckConstraint(
+                condition=models.Q(time_start__lt=models.F('time_end')),
+                name='timeslot_start_before_end'
+            ),
+            # Уникальность слота: не может быть двух "первых пар" в один день одной недели
+            models.UniqueConstraint(
+                fields=['day', 'week_num', 'order_number'],
+                name='unique_timeslot_order'
+            ),
+            # Ограничение значений (пн-сб: 1-6, недели: 1-2)
+            models.CheckConstraint(
+                condition=models.Q(day__gte=1, day__lte=7),
+                name='valid_day'
+            )
+        ]
+
     def __str__(self):
-        days = ["пн","вт","ср","чт","пт","сб","вм"]
-        return f"{self.order_number} пара ({"числитель" if self.week_num else "знаменатель"}, {days[self.day]})"
+        return f"{self.order_number} пара ({self.get_week_num_display()}, {self.get_day_display()})"

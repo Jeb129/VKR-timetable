@@ -20,9 +20,7 @@ const register = async (data: RegisterRequest): Promise<User> => {
 }
 
 const logout = async () => {
-  const refresh_token = getRefreshToken()
-  clearTokens() // Фронтенд разлогинивается вне зависимости от сервера
-  await privateApi.post("/auth/logout/", { refresh: refresh_token })
+  await privateApi.post("/auth/logout/")
 }
 
 const getCurrentUser  = async (): Promise<User> => {

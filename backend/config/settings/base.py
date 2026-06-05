@@ -30,12 +30,13 @@ LOG_DIR = Path(os.getenv("LOG_DIR",BASE_DIR/"logs")).resolve()
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-key")
 
-# SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+CORS_ALLOW_CREDENTIALS = True
+ALLOWED_HOSTS = ["localhost",'127.0.0.1']
 
-ALLOWED_HOSTS = []
-
-
+CORS_ALLOWED_ORIGINS = [
+    "http://127.0.0.1",
+    "http://localhost",
+]
 # Application definition
 
 INSTALLED_APPS = [
@@ -48,6 +49,7 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     # third-party
     "rest_framework",
+    "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
     # local
     "api",
@@ -144,8 +146,12 @@ STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 AUTH_USER_MODEL = "authentification.CustomUser"
 
 REST_FRAMEWORK = {
+    # "DEFAULT_AUTHENTICATION_CLASSES": (
+    #     "rest_framework_simplejwt.authentication.JWTAuthentication",
+    # )
+
     "DEFAULT_AUTHENTICATION_CLASSES": (
-        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "authentification.services.user.CustomJWTAuthentication", 
     )
 }
 
@@ -189,6 +195,10 @@ REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 #     f"redis://{f':{REDIS_PASSWORD}@' if REDIS_PASSWORD else ''}"
 #     f"{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
 # )
+
+MOODLE_TOKEN = os.getenv("MOODLE_TOKEN")
+MOODLE_URL = os.getenv("MOODLE_URL")
+
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST')
