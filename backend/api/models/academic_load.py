@@ -28,7 +28,7 @@ class Lesson(models.Model):
         verbose_name="слот расписания",
     )
     classroom = models.ForeignKey(
-        Classroom, on_delete=models.CASCADE, verbose_name="аудитория"
+        Classroom, on_delete=models.PROTECT, verbose_name="аудитория"
     )
     teachers = models.ManyToManyField(Teacher, verbose_name="преподаватели")
 
@@ -111,6 +111,12 @@ class AcademicLoad(models.Model):
     class Meta:
         verbose_name = "академическая нагрузка"
         verbose_name_plural = "академические нагрузки"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(whole_hours__gt=0) & models.Q(whole_weeks__gt=0),
+                name='load_values_positive'
+            )
+        ]
 
     def __str__(self):
         return f"{self.study_group} - {self.lesson_type} {self.discipline}"
@@ -149,6 +155,12 @@ class PlannedLesson(models.Model):
     class Meta:
         verbose_name = "плановое занятие"
         verbose_name_plural = "плановые занятия"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(lessons_in_cycle__gt=0),
+                name='lessons_in_cycle_positive'
+            )
+        ]
 
     def __str__(self):
         return f"{self.lesson_type} {self.discipline}"

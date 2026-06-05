@@ -39,8 +39,15 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
   }
 
   const refreshUser = async () => {
-    const u = await authService.getCurrentUser()
-    setUser(u)
+    try {
+      setIsLoading(true)
+      const u = await authService.getCurrentUser()
+      setUser(u)
+    } catch {
+      setUser(null)
+    } finally {
+      setIsLoading(false)
+    }
   }
 
   const login = async (data: LoginRequest) => {
@@ -62,17 +69,7 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
   }
 
   useEffect(() => {
-    const init = async () => {
-      try {
-        await refreshUser()
-      } catch {
-        setUser(null)
-      } finally {
-        setIsLoading(false)
-      }
-    }
-
-    init()
+    refreshUser()
   }, [])
 
   const value: AuthContextType = {

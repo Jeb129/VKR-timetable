@@ -16,8 +16,6 @@ class CustomUserCreationForm(UserCreationForm):
 
 class CustomUserChangeForm(UserChangeForm):
     """Форма редактирования пользователя"""
-    username = forms.CharField(required=False)
-
     class Meta:
         model = CustomUser
-        fields = ("username", "email")
+        fields = "__all__"

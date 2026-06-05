@@ -4,13 +4,19 @@ from django.db import models
 class Building(models.Model):
     name = models.CharField(max_length=50, verbose_name="наименование")
     short_name = models.CharField(max_length=5, verbose_name="сокращение")
-    address = models.CharField(max_length=255, verbose_name="адрес")
+    address = models.CharField(null=True,max_length=255, verbose_name="адрес")
     work_start_time = models.TimeField(verbose_name="начало рабочего дня")
     work_end_time = models.TimeField(verbose_name="конец рабочего дня")
 
     class Meta:
         verbose_name = "корпус"
         verbose_name_plural = "корпуса"
+        constraints = [
+            models.CheckConstraint(
+                condition=models.Q(work_start_time__lt=models.F('work_end_time')),
+                name='building_check_start_before_end'
+            ),
+        ]
 
     def __str__(self):
         return f"Корпус {self.short_name}"
@@ -65,6 +71,13 @@ class Classroom(models.Model):
     class Meta:
         verbose_name = "аудитория"
         verbose_name_plural = "аудитории"
+        constraints = [
+            # Уникальность номеров в корпусе
+            models.UniqueConstraint(
+                fields=['building', 'num'], 
+                name='classroom_unique_number'
+            ),
+        ]
 
     def save(self, *args, **kwargs):
         if not self.name and self.building:
@@ -93,6 +106,18 @@ class BuildingTravelTime(models.Model):
     )
 
     class Meta:
-        unique_together = ("from_building", "to_building")
         verbose_name = "время перехода между корпусами"
         verbose_name_plural = "время перехода между корпусами"
+
+        constraints = [
+            # Уникальность пары корпусов
+            models.UniqueConstraint(
+                fields=['from_building', 'to_building'], 
+                name='unique_building_travel'
+            ),
+            # Нельзя ехать из корпуса в тот же самый корпус
+            models.CheckConstraint(
+                condition=~models.Q(from_building=models.F('to_building')),
+                name='prevent_self_travel'
+            )
+        ]

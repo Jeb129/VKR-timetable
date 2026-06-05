@@ -1,4 +1,5 @@
 from django.db import models
+from numpy.linalg import cond
 
 from api.models.buildings import Building
 
@@ -88,7 +89,7 @@ class StudyGroup(models.Model):
         null=True, blank=True, verbose_name="Номер подгруппы"
     )
     name = models.CharField(max_length=50, verbose_name="Шифр")
-    students_count = models.PositiveIntegerField(verbose_name="Количество студентов")
+    students_count = models.PositiveIntegerField(default=1,verbose_name="Количество студентов")
 
     max_hours_per_week = models.PositiveSmallIntegerField(null=False,blank=True,default=35,verbose_name="Максимальная нагрузка в неделю")
     max_hours_per_day = models.PositiveSmallIntegerField(null=False,blank=True,default=10,verbose_name="Максимальная нагрузка в день")
@@ -97,6 +98,13 @@ class StudyGroup(models.Model):
         ordering = ["admission_year"]
         verbose_name = "учебная группа"
         verbose_name_plural = "учебные группы"
+        constraints = [
+            models.CheckConstraint(
+                    condition=models.Q(students_count__gt=0),
+                    name='group_students_count_positive'
+                ),
+        ]
+
 
     def __str__(self):
         return self.name

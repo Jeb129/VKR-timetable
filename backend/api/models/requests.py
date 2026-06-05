@@ -55,6 +55,15 @@ class Booking(Request):
     date_start = models.DateTimeField()
     date_end = models.DateTimeField()
 
+    class Meta:
+        constraints = [
+            # Время начала строго раньше времени конца
+            models.CheckConstraint(
+                condition=models.Q(date_start__lt=models.F('date_end')),
+                name='booking_start_before_end'
+            ),
+        ]
+
     def save(self, *args, **kwargs):
         self.request_type = enums.RequestType.BOOKING
         super().save(*args, **kwargs)
