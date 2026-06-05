@@ -77,5 +77,16 @@ export const scheduleDraftService = {
     // Сбросить всё
     clearAllDrafts: async (scenarioId: number): Promise<void> => {
         await privateApi.delete(`/api/scenario/${scenarioId}/draft/lessons/clear/`);
+    },
+
+    // этот метод отправит запрос на бэкенд для старта генерации
+    startGeneration: async (scenarioId: number, params: { iterations: number, cooling_rate: number }) => {
+        const res = await privateApi.post(`/api/scenario/${scenarioId}/generate/`, params);
+        return res.data;
+    },
+
+    getPlannedLessons: async (semesterId: number): Promise<any[]> => {
+        const res = await privateApi.get(`/api/planned-lessons/?semester=${semesterId}`);
+        return res.data;
     }
 };
