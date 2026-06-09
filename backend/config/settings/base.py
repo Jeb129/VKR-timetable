@@ -53,11 +53,14 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
+    "import_export",
     # local
     "api",
     'notification',
     "authentification",
+    'admin_reorder',
 ]
+
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -70,6 +73,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'admin_reorder.middleware.ModelAdminReorder',
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -190,3 +194,83 @@ EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL') == 'True'
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
+
+ADMIN_REORDER = (
+    # 0. Управление системой
+    {
+        'app': 'api', 
+        'label': 'Управление системой', 
+        'models': (
+            'api.SystemTask',
+        )
+    },
+    # 1. Инфраструктура
+    {
+        'app': 'api', 
+        'label': 'Инфраструктура', 
+        'models': (
+            'api.Building',
+            'api.Classroom',
+            'api.Equipment',
+            'api.Institute',
+        )
+    },
+    # 2. Учебный процесс
+    {
+        'app': 'api', 
+        'label': 'Учебный процесс', 
+        'models': (
+            'api.Teacher',
+            'api.StudyGroup',
+            'api.StudyProgram',
+            'api.Discipline',
+            'api.LessonType',
+            'api.AcademicLoad',
+        )
+    },
+    # 3. Расписание
+    {
+        'app': 'api', 
+        'label': 'Расписание', 
+        'models': (
+            'api.Semester',
+            'api.Timeslot',
+            'api.PlannedLesson',
+            'api.ScheduleScenario',
+            'api.Lesson',
+            'api.ScheduleAdjustment',
+        )
+    },
+    # 4. Ограничения
+    {
+        'app': 'api', 
+        'label': 'Ограничения', 
+        'models': (
+            'api.Constraint',
+            'api.BuildingPriority',
+            'api.EquipmentRequirement',
+        )
+    },
+    # 5. Заявки и модерация
+    {
+        'app': 'api', 
+        'label': 'Заявки и модерация', 
+        'models': (
+            'api.Request',
+            'api.ExcludedTimeslot',
+            'api.ClassroomPreference',
+            'api.ScheduleAdjustmentRequest',
+            'api.Booking',
+            'api.BookingType',
+        )
+    },
+    # 6. Пользователи
+    {
+        'app': 'authentification', 
+        'label': 'Пользователи', 
+        'models': (
+            'authentification.CustomUser',
+            'auth.Group', # Можно добавить стандартные группы сюда же
+        )
+    },
+)
