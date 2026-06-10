@@ -8,9 +8,9 @@ from .schedule_view import (GroupScheduleView,
                             ScheduleAdjustmentViewSet,
                             DisciplineViewSet,
                             LessonTypeViewSet)
-from .booking import BookingViewSet, BookingTypeViewSet
 from .building import ClassroomViewSet
 from .schedule_draft import DraftLessonViewSet
+from .requests import RequestViewSet
 from .lesson import StudyGroupViewSet, TeacherViewSet
 from .academic_load import ExcelAPIView
 from .statistics import BuildingLoadView

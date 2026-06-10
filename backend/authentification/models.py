@@ -4,14 +4,11 @@ from django.db import models
 from api.models import Teacher, StudyGroup
 
 
-# Create your models here.
-
 class CustomUser(AbstractUser):
     username = models.CharField(max_length=150, blank=True, null=True, unique=False, verbose_name="Логин")
     # переопределяем email → делаем уникальным
     email = models.EmailField(unique=True)
 
-    # Django будет использовать email как логин
     USERNAME_FIELD = "email"
     internal_user =  models.BooleanField(default=False,  null=False, blank=True, verbose_name="Внутренний пользователь")
     is_email_verified =  models.BooleanField(default=False,  null=False, blank=True, verbose_name="Подтвержденный email")
@@ -20,14 +17,11 @@ class CustomUser(AbstractUser):
 
     # PDN_allow =  models.BooleanField(default=False,  null=False, blank=True, verbose_name="Пользователь дал согласие на обработку ПДн")
 
-    # ID из moodle которое вытягивается при подтверждении аккаунта
     moodle_id = models.IntegerField(null=True, blank=True, verbose_name="ID в Moodle")
 
     teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Связанный преподаватель")
     study_group = models.ForeignKey(StudyGroup, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Связанная учебная группа")
 
-    # Поля, которые будут спрашивать при создании суперпользователя
-    # username остается, но он не используется как логин
     REQUIRED_FIELDS = ["username"]
 
     @property

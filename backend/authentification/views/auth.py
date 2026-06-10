@@ -30,6 +30,7 @@ class CookieTokenObtainPairView(TokenObtainPairView):
             )
             del response.data['access']
             del response.data['refresh']
+            response.data["detail"] ="Вход выполнен"
             
         return response
 
@@ -37,7 +38,7 @@ class CookieTokenRefreshView(TokenRefreshView):
     def post(self, request, *args, **kwargs):
         refresh_token = request.COOKIES.get('refresh_token')
         if not refresh_token:
-            return Response({"detail": "Refresh token missing"}, status=status.HTTP_401_UNAUTHORIZED)
+            return Response({"detail": "Токен обновления сессии не передан"}, status=status.HTTP_401_UNAUTHORIZED)
         
         request.data['refresh'] = refresh_token
 
@@ -68,7 +69,8 @@ class CookieTokenRefreshView(TokenRefreshView):
                 del response.data['refresh']
             
             del response.data['access']
-
+            response.data["detail"] ="Вход выполнен"
+        
         return response
 
 class CookieTokenVerifyView(TokenVerifyView):

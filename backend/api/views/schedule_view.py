@@ -9,8 +9,8 @@ from datetime import datetime,time
 from django.utils import timezone
 from rest_framework.permissions import AllowAny,IsAuthenticated
 from api.models import Timeslot, ScheduleScenario, Lesson, ScheduleAdjustment, Discipline, LessonType
-from api.serializers.schedule import ScheduleScenarioSerializer
 from api.serializers import MappedEventSerializer, TimeslotSerializer,ScheduleAdjustmentSerializer, DisciplineSerializer, LessonTypeSerializer
+from api.serializers.database import ScheduleScenarioSerializer
 from api.services.schedule.mapper import (
     MappedEvent,
     ScheduleMapper,
