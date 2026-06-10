@@ -29,6 +29,8 @@ LOG_DIR = Path(os.getenv("LOG_DIR",BASE_DIR/"logs")).resolve()
 
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY", "super-secret-key")
+MOODLE_TOKEN = os.getenv("MOODLE_TOKEN")
+
 
 CORS_ALLOW_CREDENTIALS = True
 ALLOWED_HOSTS = ["localhost",'127.0.0.1']
@@ -51,11 +53,14 @@ INSTALLED_APPS = [
     "rest_framework",
     "rest_framework_simplejwt.token_blacklist",
     "corsheaders",
+    "import_export",
     # local
     "api",
     'notification',
     "authentification",
+    'admin_reorder',
 ]
+
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -68,6 +73,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    'admin_reorder.middleware.ModelAdminReorder',
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -93,14 +99,16 @@ WSGI_APPLICATION = "config.wsgi.application"
 # Database
 # https://docs.djangoproject.com/en/6.0/ref/settings/#databases
 
-DATABASES = {
+from .databases import DATABASES, REDIS
+MOODLE_URL = os.getenv("MOODLE_URL")
+REDIS_URL = f"redis://:{REDIS["PASSWORD"]}@{REDIS["HOST"]}:{REDIS["PORT"]}/{REDIS["DB"]}"
+CACHES = {
     "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": os.getenv("POSTGRES_DB"),
-        "USER": os.getenv("POSTGRES_USER"),
-        "PASSWORD": os.getenv("POSTGRES_PASSWORD"),
-        "HOST": os.getenv("POSTGRES_HOST"),
-        "PORT": os.getenv("POSTGRES_PORT"),
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
+        }
     }
 }
 
@@ -143,17 +151,12 @@ STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "static"
 STATICFILES_STORAGE = "whitenoise.storage.CompressedManifestStaticFilesStorage"
 
-AUTH_USER_MODEL = "authentification.CustomUser"
-
 REST_FRAMEWORK = {
-    # "DEFAULT_AUTHENTICATION_CLASSES": (
-    #     "rest_framework_simplejwt.authentication.JWTAuthentication",
-    # )
-
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "authentification.services.user.CustomJWTAuthentication", 
     )
 }
+AUTH_USER_MODEL = "authentification.CustomUser"
 
 SIMPLE_JWT = {
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=int(os.getenv("ACCESS_TOKEN_LIFETIME_MINUTES","5"))),
@@ -184,22 +187,6 @@ SIMPLE_JWT = {
 }
 
 
-REDIS_HOST = os.getenv("REDIS_HOST", "localhost")
-REDIS_PORT = int(os.getenv("REDIS_PORT", "6379"))
-REDIS_DB = os.getenv("REDIS_DB", "1")
-REDIS_PASSWORD = os.getenv("REDIS_PASSWORD","123321")
-
-REDIS_URL = f"redis://:{REDIS_PASSWORD}@{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
-
-# REDIS_URL = (
-#     f"redis://{f':{REDIS_PASSWORD}@' if REDIS_PASSWORD else ''}"
-#     f"{REDIS_HOST}:{REDIS_PORT}/{REDIS_DB}"
-# )
-
-MOODLE_TOKEN = os.getenv("MOODLE_TOKEN")
-MOODLE_URL = os.getenv("MOODLE_URL")
-
-
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST')
 EMAIL_PORT = os.getenv('EMAIL_PORT')
@@ -208,12 +195,82 @@ EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD')
 EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL') == 'True'
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 
-CACHES = {
-    "default": {
-        "BACKEND": "django_redis.cache.RedisCache",
-        "LOCATION": REDIS_URL,
-        "OPTIONS": {
-            "CLIENT_CLASS": "django_redis.client.DefaultClient",
-        }
-    }
-}
+ADMIN_REORDER = (
+    # 0. Управление системой
+    {
+        'app': 'api', 
+        'label': 'Управление системой', 
+        'models': (
+            'api.SystemTask',
+        )
+    },
+    # 1. Инфраструктура
+    {
+        'app': 'api', 
+        'label': 'Инфраструктура', 
+        'models': (
+            'api.Building',
+            'api.Classroom',
+            'api.Equipment',
+            'api.Institute',
+        )
+    },
+    # 2. Учебный процесс
+    {
+        'app': 'api', 
+        'label': 'Учебный процесс', 
+        'models': (
+            'api.Teacher',
+            'api.StudyGroup',
+            'api.StudyProgram',
+            'api.Discipline',
+            'api.LessonType',
+            'api.AcademicLoad',
+        )
+    },
+    # 3. Расписание
+    {
+        'app': 'api', 
+        'label': 'Расписание', 
+        'models': (
+            'api.Semester',
+            'api.Timeslot',
+            'api.PlannedLesson',
+            'api.ScheduleScenario',
+            'api.Lesson',
+            'api.ScheduleAdjustment',
+        )
+    },
+    # 4. Ограничения
+    {
+        'app': 'api', 
+        'label': 'Ограничения', 
+        'models': (
+            'api.Constraint',
+            'api.BuildingPriority',
+            'api.EquipmentRequirement',
+        )
+    },
+    # 5. Заявки и модерация
+    {
+        'app': 'api', 
+        'label': 'Заявки и модерация', 
+        'models': (
+            'api.Request',
+            'api.ExcludedTimeslot',
+            'api.ClassroomPreference',
+            'api.ScheduleAdjustmentRequest',
+            'api.Booking',
+            'api.BookingType',
+        )
+    },
+    # 6. Пользователи
+    {
+        'app': 'authentification', 
+        'label': 'Пользователи', 
+        'models': (
+            'authentification.CustomUser',
+            'auth.Group', # Можно добавить стандартные группы сюда же
+        )
+    },
+)
