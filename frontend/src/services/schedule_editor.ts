@@ -80,13 +80,16 @@ export const scheduleDraftService = {
     },
 
     // этот метод отправит запрос на бэкенд для старта генерации
-    startGeneration: async (scenarioId: number, params: { iterations: number, cooling_rate: number }) => {
-        const res = await privateApi.post(`/api/scenario/${scenarioId}/generate/`, params);
-        return res.data;
+    startGeneration: async (scenarioId: number, maxTimeSeconds: number) => {
+        // Шлем лимит времени в секундах
+        return await privateApi.post(`/api/scenario/${scenarioId}/generate/`, { 
+            max_time: maxTimeSeconds 
+        });
     },
 
-    getPlannedLessons: async (semesterId: number): Promise<any[]> => {
-        const res = await privateApi.get(`/api/planned-lessons/?semester=${semesterId}`);
-        return res.data;
+    getStatus: async (scenarioId: number) => {
+        // Получаем текущее состояние сценария (прогресс, статус)
+        const res = await privateApi.get(`/api/scenario/${scenarioId}/generation-status/`);
+        return res.data; 
     }
 };

@@ -1,145 +1,176 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { dbService } from "@/services/crud";
 import { scheduleDraftService } from "@/services/schedule_editor";
 import "@/styles/Generator.css";
+
+const formatSeconds = (totalSeconds: number) => {
+    const hours = Math.floor(totalSeconds / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    
+    if (hours > 0) {
+        return `${hours} ч. ${minutes > 0 ? minutes + ' мин.' : ''}`;
+    }
+    return `${minutes} мин.`;
+};
 
 const ScheduleGeneratorPage = () => {
     const { scenarioId } = useParams();
     const navigate = useNavigate();
     const sId = Number(scenarioId);
 
-    // Состояния
     const [scenario, setScenario] = useState<any>(null);
-    const [plannedLessons, setPlannedLessons] = useState<any[]>([]);
-    const [isGenerating, setIsGenerating] = useState(false);
-    const [progress, setProgress] = useState(0);
+    const [maxTime, setMaxTime] = useState(1800); // По умолчанию 30 минут (1800 сек)
+    const [isGenerating, setIsGenerating] = useState(true);
+    const [progress, setProgress] = useState(68);
+    const [statusText, setStatusText] = useState("Оптимизация окон преподавателей...");
 
-    // Параметры алгоритма
-    const [config, setConfig] = useState({
-        iterations: 10000,
-        coolingRate: 0.9995,
-        t_start: 100.0
-    });
+    const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
+    // 1. Инициализация и проверка: не идет ли уже генерация?
     useEffect(() => {
-        const loadInfo = async () => {
+        const init = async () => {
             const sc = await dbService.get("scenarios", sId);
             setScenario(sc);
-            // Заглушка списка нагрузок
-            const mockLoad = [
-                { id: 1, discipline: "Высшая математика", group: "22-ИСбо-1", hours: 4, type: "Лекция" },
-                { id: 2, discipline: "Базы данных", group: "23-ПИНбо-2", hours: 2, type: "Практика" },
-                { id: 3, discipline: "Физика", group: "22-ИСбо-1", hours: 2, type: "Лекция" },
-            ];
-            setPlannedLessons(mockLoad);
+            
+            // Запрашиваем статус сразу при загрузке
+            const currentStatus = await scheduleDraftService.getStatus(sId);
+            if (currentStatus.status === 1) { // 1 - ИДЕТ РАСЧЕТ
+                setIsGenerating(true);
+                startPolling();
+            }
         };
-        loadInfo();
+        init();
+        return () => stopPolling();
     }, [sId]);
 
-    const handleStartGeneration = async () => {
-        setIsGenerating(true);
-        setProgress(10);
+    const stopPolling = () => {
+        if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+        }
+    };
 
-        // ИМИТАЦИЯ ПРОГРЕССА (пока нет вьюхи)
-        const interval = setInterval(() => {
-            setProgress(prev => {
-                if (prev >= 90) {
-                    clearInterval(interval);
-                    return 95;
+    const startPolling = () => {
+        stopPolling(); // На всякий случай сбрасываем старый
+        pollingRef.current = setInterval(async () => {
+            try {
+                const data = await scheduleDraftService.getStatus(sId);
+                setProgress(data.progress);
+                setStatusText(data.status_message);
+
+                if (data.status === 2) { // ГОТОВО
+                    stopPolling();
+                    setIsGenerating(false);
+                    navigate(`/ScheduleEditor/${sId}`);
                 }
-                return prev + 5;
-            });
-        }, 800);
+            } catch (e) {
+                console.error("Потеряна связь с сервером...");
+            }
+        }, 3000); // Опрашиваем раз в 3 секунды (для долгих процессов чаще не нужно)
+    };
 
+    const handleStart = async () => {
         try {
-            // В будущем тут будет реальный вызов
-            // await scheduleDraftService.startGeneration(sId, config);
-            
-            // Имитируем долгий расчет
-            setTimeout(() => {
-                clearInterval(interval);
-                setIsGenerating(false);
-                navigate(`/ScheduleEditor/${sId}`); // После генерации идем в редактор смотреть результат
-            }, 5000);
-
+            setIsGenerating(true);
+            setProgress(0);
+            setStatusText("Запуск алгоритма...");
+            await scheduleDraftService.startGeneration(sId, maxTime);
+            startPolling();
         } catch (err) {
             setIsGenerating(false);
-            clearInterval(interval);
-            alert("Ошибка при запуске генератора");
+            setStatusText("Ошибка старта");
         }
     };
 
     return (
         <div className="flex-col bg-main min-h-screen">
             <nav className="navbar">
-                <div className="logo-white" onClick={() => navigate("/")}>КГУ • ГЕНЕРАТОР</div>
-                <button className="btn nav-btn" onClick={() => navigate(`/ScheduleEditor/${sId}`)}>Назад в редактор</button>
+                <div className="logo-white" onClick={() => navigate("/")} style={{cursor: 'pointer'}}>КГУ • ГЕНЕРАТОР</div>
+                <button className="btn nav-btn" onClick={() => navigate(`/ScheduleEditor/${sId}`)}>Назад</button>
             </nav>
 
-            <div className="profile-wrapper flex-col gap-3">
-                <div className="flex-row space-between align-end">
-                    <div>
-                        <h2 className="text-primary">Автоматическая генерация</h2>
-                        <p className="text-muted">Версия: <b>{scenario?.name}</b></p>
-                    </div>
-                </div>
-
-                <div className="settings-grid">
-                    {/* НАСТРОЙКИ */}
-                    <div className="card flex-col gap-2">
-                        <h3>Параметры алгоритма</h3>
-                        <div className="flex-col">
-                            <label className="filter-label">Количество итераций</label>
-                            <input 
-                                type="number" className="input-styled" 
-                                value={config.iterations} 
-                                onChange={e => setConfig({...config, iterations: Number(e.target.value)})}
-                                disabled={isGenerating}
-                            />
-                            <small className="text-muted">Больше итераций — выше качество, но дольше расчет.</small>
-                        </div>
-
-                        <div className="flex-col">
-                            <label className="filter-label">Коэффициент охлаждения</label>
-                            <input 
-                                type="number" step="0.0001" className="input-styled" 
-                                value={config.coolingRate}
-                                onChange={e => setConfig({...config, coolingRate: Number(e.target.value)})}
-                                disabled={isGenerating}
-                            />
+            <div className="flex-col align-center justify-center flex-grow p-4">
+                <div className="card slide-up" style={{ width: '100%', maxWidth: '600px' }}>
+                    <div className="flex-col gap-3">
+                        <div className="text-center">
+                            <h2 className="text-primary">Мастер генерации</h2>
+                            <p className="text-muted">Сценарий: {scenario?.name}</p>
                         </div>
 
                         {!isGenerating ? (
-                            <button className="btn btn-primary mt-2" onClick={handleStartGeneration}>
-                                Запустить расчет расписания
-                            </button>
-                        ) : (
-                            <div className="flex-col gap-1 mt-2">
-                                <div className="progress-pulse"></div>
-                                <p className="text-center text-primary font-bold">Идет подбор оптимальных слотов: {progress}%</p>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* СПИСОК ЗАДАЧ */}
-                    <div className="card flex-col">
-                        <h3>Учебный план (Задачи)</h3>
-                        <p className="text-muted mb-1" style={{fontSize: '0.8rem'}}>Будет создано {plannedLessons.length} занятий</p>
-                        <div className="load-list">
-                            {plannedLessons.map(item => (
-                                <div key={item.id} className="load-item flex-row space-between">
-                                    <div className="flex-col">
-                                        <strong>{item.discipline}</strong>
-                                        <span>{item.group}</span>
-                                    </div>
-                                    <div className="text-right">
-                                        <span className="badge btn-outline">{item.type}</span>
-                                        <div className="mt-1">{item.hours} ч.</div>
+                            <div className="flex-col gap-3 mt-2">
+                                <div className="flex-col p-3 bg-main rounded-md" style={{border: '1px solid var(--border-color)'}}>
+                                    <label className="filter-label">Максимальное время работы</label>
+                                    <input 
+                                        type="range" 
+                                        min="600"    // 10 минут
+                                        max="14400"  // 4 часа
+                                        step="300"   // Шаг 5 минут
+                                        className="w-100 mt-2"
+                                        value={maxTime}
+                                        onChange={(e) => setMaxTime(Number(e.target.value))}
+                                    />
+                                    <div className="flex-row space-between mt-1">
+                                        <small className="text-muted">Мин: 10 мин</small>
+                                        <div className="flex-col align-center">
+                                            <strong className="text-primary" style={{fontSize: '1.4rem'}}>
+                                                {formatSeconds(maxTime)}
+                                            </strong>
+                                        </div>
+                                        <small className="text-muted">Макс: 4 часа</small>
                                     </div>
                                 </div>
-                            ))}
-                        </div>
+
+                                <div className="flex-col gap-1">
+                                    <p style={{fontSize: '13px', color: '#666'}}>
+                                        * Алгоритм будет перебирать миллионы комбинаций, стремясь минимизировать штрафные баллы (окна, перегрузки, смены корпусов).
+                                    </p>
+                                    <button className="btn btn-primary w-100 p-3 mt-1" onClick={handleStart} style={{fontSize: '1.1rem'}}>
+                                        Начать глубокую оптимизацию
+                                    </button>
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex-col gap-3 mt-2 p-2">
+                                <div className="flex-col gap-1">
+                                    <div className="flex-row space-between">
+                                        <span className="text-primary font-bold">Прогресс расчета</span>
+                                        <span className="text-primary">{progress}%</span>
+                                    </div>
+                                    <div className="progress-bg" style={{ height: '24px', background: '#e0e4f0', borderRadius: '12px', overflow: 'hidden' }}>
+                                        <div 
+                                            className="progress-fill" 
+                                            style={{ 
+                                                width: `${progress}%`, 
+                                                height: '100%', 
+                                                backgroundColor: 'var(--p-green)',
+                                                backgroundImage: 'linear-gradient(45deg, rgba(255,255,255,.15) 25%, transparent 25%, transparent 50%, rgba(255,255,255,.15) 50%, rgba(255,255,255,.15) 75%, transparent 75%, transparent)',
+                                                backgroundSize: '40px 40px',
+                                                transition: 'width 1s linear'
+                                            }} 
+                                        />
+                                    </div>
+                                </div>
+                                
+                                <div className="card bg-main p-3 text-center border-none">
+                                    <div className="status-pulse mb-1"></div>
+                                    <p className="font-bold">{statusText}</p>
+                                    <p className="text-muted" style={{fontSize: '12px', marginTop: '10px'}}>
+                                        Вы можете закрыть страницу. Процесс продолжится на сервере.
+                                    </p>
+                                </div>
+
+                                <button className="btn btn-outline btn-red w-100" onClick={() => {
+                                    if(window.confirm("Остановить генератор? Текущий результат не будет сохранен.")) {
+                                        stopPolling();
+                                        setIsGenerating(false);
+                                    }
+                                }}>
+                                    Прервать процесс
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

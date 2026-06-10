@@ -96,6 +96,9 @@ export interface Lesson {
     teachers: SimpleEntity[];
     study_groups: SimpleEntity[];
 
+    start: string; 
+    end: string;
+
     whole_weeks: number;
     draft_info: {is_new: boolean; changes: DraftChange[]} | null
 }
