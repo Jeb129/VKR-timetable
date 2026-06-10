@@ -77,5 +77,19 @@ export const scheduleDraftService = {
     // Сбросить всё
     clearAllDrafts: async (scenarioId: number): Promise<void> => {
         await privateApi.delete(`/api/scenario/${scenarioId}/draft/lessons/clear/`);
+    },
+
+    // этот метод отправит запрос на бэкенд для старта генерации
+    startGeneration: async (scenarioId: number, maxTimeSeconds: number) => {
+        // Шлем лимит времени в секундах
+        return await privateApi.post(`/api/scenario/${scenarioId}/generate/`, { 
+            max_time: maxTimeSeconds 
+        });
+    },
+
+    getStatus: async (scenarioId: number) => {
+        // Получаем текущее состояние сценария (прогресс, статус)
+        const res = await privateApi.get(`/api/scenario/${scenarioId}/generation-status/`);
+        return res.data; 
     }
 };

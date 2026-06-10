@@ -1,12 +1,16 @@
 export interface User {
-    id: number,
-    username: string,
-    email: string,
-    is_staff: boolean,
-    internal_user: boolean; 
-    moodle_id?: number | null;
+    id: number;
+    username: string;
+    email: string;
+    is_staff: boolean;
+    is_internal: boolean;       
+    is_moodle_linked: boolean;   
+    teacher: any | null;        
+    study_group: any | null;     
+    is_email_verified: boolean;
+    is_schedule_moderator: boolean;
+    is_booking_moderator: boolean;
 }
-
 export interface RegisterRequest {
     username: string,
     email: string,

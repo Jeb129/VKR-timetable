@@ -2,10 +2,11 @@ from rest_framework import status
 from rest_framework.generics import RetrieveAPIView
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
+from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from api.models import Teacher
+from api.models import Teacher, StudyGroup
 from authentification.permissions import IsEmailVerified
 from authentification.serializers import CustomUserSerializer
 from authentification.services.moodle import find_teacher_profile, moodle_get_profiles, moodle_get_user
@@ -29,6 +30,7 @@ class MoodleVerifyView(APIView):
                     {"error":"Пользователь с таким Email не найден в Moodle"},
                     status.HTTP_404_NOT_FOUND
                 )
+            
             m_id,m_fullname = m_user
 
             profiles = moodle_get_profiles(m_id)
@@ -96,3 +98,25 @@ class UserView(APIView):
     def get(self, request):
         serializer = CustomUserSerializer(request.user)
         return Response(serializer.data)
+
+class LinkGroupView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def patch(self, request):
+        user = request.user
+        group_id = request.data.get("study_group_id")
+
+        if not group_id:
+            return Response({"error": "ID группы не передан"}, status=400)
+            
+        # Проверяем, что пользователь действительно прошел Moodle
+        if not user.internal_user:
+            return Response({"error": "Сначала подтвердите аккаунт через Moodle"}, status=403)
+
+        from api.models.education_subjects import StudyGroup
+        group = get_object_or_404(StudyGroup, id=group_id)
+        
+        user.study_group = group
+        user.save()
+        
+        return Response({"message": f"Вы привязаны к группе {group.name}"}, status=200)
