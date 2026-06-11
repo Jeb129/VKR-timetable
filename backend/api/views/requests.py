@@ -1,17 +1,17 @@
-from django.db import transaction
 from django.db.models import Q
-from rest_framework import viewsets, status, permissions
+from rest_framework import permissions, status, viewsets
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
 from api.models import Request, enums
-from api.permissions import CanCreateRequestType
+from api.pagination import StandartPagination
+from api.permissions import CanCreateRequestType, IsModeratorOrOwner, IsRequestModerator
 from api.serializers import RequestSerializer
-from authentification.permissions import IsBookingModerator, IsOwnerAndPending, IsScheduleModerator
-
+from api.services.schedule.mapper import ScheduleMapper
 
 class RequestViewSet(viewsets.ModelViewSet):
     serializer_class = RequestSerializer
+    pagination_class = StandartPagination
 
     def get_permissions(self):
         """
@@ -21,10 +21,10 @@ class RequestViewSet(viewsets.ModelViewSet):
             return [CanCreateRequestType()]
         
         if self.action in ['update', 'partial_update', 'destroy']:
-            return [IsScheduleModerator | IsBookingModerator | IsOwnerAndPending()]
+            return [IsModeratorOrOwner()]
         
         if self.action in ['approve', 'reject']:
-            return [permissions.IsAuthenticated()]
+            return [IsRequestModerator()]
 
         # list, retrieve
         return [permissions.IsAuthenticated()]
@@ -61,6 +61,14 @@ class RequestViewSet(viewsets.ModelViewSet):
 
             queryset = queryset.filter(show_conditions)
 
+        status = self.request.query_params.get('status')
+        if status:
+            queryset = queryset.filter(status=status)
+
+        # Фильтр по типу заявки (?type=3)
+        req_type = self.request.query_params.get('type')
+        if req_type:
+            queryset = queryset.filter(type=req_type)
         # 3. Оптимизация (select_related из предыдущего совета)
         return queryset.select_related(
             'user', 'excludedtimeslot', 'classroompreference', 'booking'
@@ -69,15 +77,15 @@ class RequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         instance = self.get_object()
-        
-        # Проверка прав модератора в зависимости от типа заявки
-        is_schedule_type = instance.type != enums.RequestType.BOOKING
-        if is_schedule_type and not request.user.is_schedule_moderator:
-            return Response({"detail": "Вы не модератор расписания"}, status=403)
-        if instance.type == enums.RequestType.BOOKING and not request.user.is_booking_moderator:
-            return Response({"detail": "Вы не модератор бронирований"}, status=403)
 
-        # ... логика одобрения ...
+        if instance.type == enums.RequestType.BOOKING:
+            events = ScheduleMapper(instance.booking.date_start,instance.booking.date_end,classroom_id=instance.booking.classroom_id)
+            if events:
+                return Response(
+                    {"message":"Аудитория уже занята в это время"},
+                    status = status.HTTP_409_CONFLICT
+                )
+            
         instance.status = enums.RequestStatus.VERIFIED
         instance.admin_comment = request.data.get('admin_comment', '')
         instance.save()
@@ -86,16 +94,10 @@ class RequestViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def reject(self, request, pk=None):
         instance = self.get_object()
-        
-        is_schedule_type = instance.type != enums.RequestType.BOOKING
-        if is_schedule_type and not request.user.is_schedule_moderator:
-            return Response({"detail": "Вы не модератор расписания"}, status=403)
-        if instance.type == enums.RequestType.BOOKING and not request.user.is_booking_moderator:
-            return Response({"detail": "Вы не модератор бронирований"}, status=403)
-        
+
         admin_comment = request.data.get('admin_comment')
         if not admin_comment:
-            return Response({"admin_comment": "Обязателен для отказа"}, status=400)
+            return Response({"admin_comment": "Обязателен для отказа"}, status=status.HTTP_400_BAD_REQUEST)
             
         instance.status = enums.RequestStatus.REJECTED
         instance.admin_comment = admin_comment

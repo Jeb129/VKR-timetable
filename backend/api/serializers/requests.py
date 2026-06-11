@@ -131,6 +131,9 @@ class RequestSerializer(serializers.ModelSerializer):
 
     type = IdNameField(choices=enums.RequestType.choices)
     status = IdNameField(choices=enums.RequestStatus.choices, read_only=True)
+    can_approve = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
 
     details = RequestDetailsField(source="*")
 
@@ -144,9 +147,53 @@ class RequestSerializer(serializers.ModelSerializer):
             "type",
             "admin_comment",
             "created_at",
+            "can_approve",
+            "can_edit",
+            "can_delete",
             "details",
         ]
         read_only_fields = ["user", "status", "created_at"]
+
+    def _check_action_permission(self, obj, action_name):
+        view = self.context.get('view')
+        request = self.context.get('request')
+
+        if not view or not request or not request.user:
+            return False
+
+        # 1. Сохраняем текущее действие (обычно это 'list' или 'retrieve')
+        old_action = view.action
+        # 2. Подменяем действие на нужное нам
+        view.action = action_name
+        
+        try:
+            # 3. Запрашиваем у вьюсета список прав именно для этого действия
+            # Это сработает, даже если get_permissions переопределен!
+            permissions = view.get_permissions()
+            
+            # 4. Проверяем каждое разрешение
+            for permission in permissions:
+                if not permission.has_permission(request, view):
+                    return False
+                if not permission.has_object_permission(request, view, obj):
+                    return False
+            return True
+        finally:
+            # 5. Возвращаем действие назад, чтобы не сломать логику вьюсета
+            view.action = old_action
+
+    def get_can_edit(self, obj):
+        # Проверяем по действию 'update'
+        return self._check_action_permission(obj, 'update')
+
+    def get_can_delete(self, obj):
+        # Проверяем по действию 'destroy'
+        return self._check_action_permission(obj, 'destroy')
+
+    def get_can_approve(self, obj):
+        # ВАЖНО: читайте комментарий ниже про логику внутри метода
+        return self._check_action_permission(obj, 'approve')
+
 
     def to_representation(self, instance):
         ret = super().to_representation(instance)

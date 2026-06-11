@@ -1,15 +1,26 @@
-from rest_framework import status, viewsets
-from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from rest_framework.decorators import action
+import logging
+from datetime import datetime, time
+from typing import List
 
-from api.models import Lesson, ScheduleScenario
-from api.serializers import LessonReadSerializer
+from django.utils import timezone
+from rest_framework import status, viewsets
+from rest_framework.decorators import action
+from rest_framework.generics import ListAPIView
+from rest_framework.permissions import AllowAny
+from rest_framework.response import Response
+from rest_framework.views import Response
+
+from api.models import (Lesson, ScheduleScenario)
+from api.serializers import (LessonReadSerializer,
+                             MappedEventSerializer)
+from api.serializers.database import ScheduleScenarioSerializer
 from api.serializers.schedule import LessonErrorSerializer
 from api.services.schedule.manager import ScheduleManager
-
+from api.services.schedule.mapper import MappedEvent, ScheduleMapper
 from authentification.permissions import IsScheduleModerator
 from config.utils import normalize_diff
+
+logger = logging.getLogger("cheker")
 
 class DraftLessonViewSet(viewsets.ViewSet):
     """
@@ -166,52 +177,6 @@ class DraftLessonViewSet(viewsets.ViewSet):
         print(pk, LessonReadSerializer(lesson).data)
         return Response(LessonReadSerializer(lesson).data,status=status.HTTP_200_OK)
     
-    # @action(detail=False, methods=["get"], url_path="summary")
-    # def summary(self, request, scenario_id):
-    #     print(f"\n[DEBUG] === Начало Summary для сценария {scenario_id} ===")
-        
-    #     try:
-    #         scenario = get_object_or_404(ScheduleScenario, id=scenario_id)
-    #         storage = ScheduleManager(scenario_id, request.user).storage
-    #         manager = ScheduleManager(scenario_id=scenario_id, user=request.user).build_context(draft=True)
-            
-    #         print("[DEBUG] Получение всех уроков черновика...")
-    #         all_lessons = list(manager.get_lessons_draft())
-            
-    #         updated_ids = [str(k) for k in storage.get_updated().keys()]
-            
-    #         changes = []
-    #         for l in all_lessons:
-    #             is_new = getattr(l, 'draft_created', False)
-    #             is_updated = str(l.id) in updated_ids
-                
-    #             if is_new or is_updated:
-    #                 changes.append(l)
-            
-    #         print(f"[DEBUG] Изменений найдено: {len(changes)}")
-            
-    #         print("[DEBUG] Получение удаленных...")
-    #         deleted = manager.get_deleted_lessons_draft()
-            
-    #         print("[DEBUG] Запуск глобальной проверки ошибок...")
-    #         errors = manager.check_scenario_draft()
-    #         active_errors = [e for e in errors if e.errors]
-            
-    #         print(f"[DEBUG] Уроков с ошибками: {len(active_errors)}")
-
-    #         return Response({
-    #             "changes": LessonReadSerializer(changes, many=True).data,
-    #             "deleted": LessonReadSerializer(deleted, many=True).data,
-    #             "errors": LessonErrorSerializer(active_errors, many=True).data,
-    #             "has_changes": len(changes) > 0 or deleted.exists()
-    #         }, status=status.HTTP_200_OK)
-
-    #     except Exception as e:
-    #         print(f"[DEBUG] ОШИБКА: {str(e)}")
-    #         import traceback
-    #         traceback.print_exc()
-    #         return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
     @action(detail=False, methods=["get"], url_path="summary")
     def summary(self, request, scenario_id):
         """
@@ -238,3 +203,134 @@ class DraftLessonViewSet(viewsets.ViewSet):
             "errors": LessonErrorSerializer(active_errors, many=True).data,
             "has_changes": len(changes) > 0 or deleted.exists()
         }, status=status.HTTP_200_OK)
+
+
+class ScheduleScenarioViewSet(viewsets.ModelViewSet):
+    queryset = ScheduleScenario.objects.all().order_by("-created_at")
+    serializer_class = ScheduleScenarioSerializer
+    permission_classes = [AllowAny]
+
+    @action(detail=True, methods=['post'])
+    def copy(self, request, pk=None):
+        """
+        метод для глубокого копирования сценария вместе с уроками
+        URL: /api/scenarios/{id}/copy/
+        """
+        try:
+            original_scenario = self.get_object()
+            
+            # Создаем новый объект сценария на основе старого
+            new_scenario = ScheduleScenario.objects.create(
+                name=f"{original_scenario.name} (Копия)",
+                semester=original_scenario.semester,
+                is_active=False # Копия всегда создается неактивной
+            )
+
+            # Получаем все уроки оригинала
+            lessons = Lesson.objects.filter(scenario=original_scenario)
+            
+            for lesson in lessons:
+                # Сохраняем связи ManyToMany перед обнулением PK
+                teachers = list(lesson.teachers.all())
+                groups = list(lesson.study_groups.all())
+
+                # Клонируем объект урока
+                lesson.pk = None 
+                lesson.scenario = new_scenario
+                lesson.save()
+
+                # Восстанавливаем связи для нового объекта
+                lesson.teachers.set(teachers)
+                lesson.study_groups.set(groups)
+
+            logger.info(f"Сценарий {original_scenario.id} успешно скопирован в {new_scenario.id}")
+            
+            serializer = self.get_serializer(new_scenario)
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            
+        except Exception as e:
+            logger.error(f"Ошибка при копировании сценария: {str(e)}")
+            return Response({"error": "Не удалось скопировать сценарий"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+  
+
+class ScheduleView(ListAPIView):
+    serializer_class = MappedEventSerializer
+    permission_classes = [AllowAny]
+
+    def get_query_date(self):
+        dt = self.request.query_params.get("date")
+        dt_f = self.request.query_params.get("date_from")
+        dt_t = self.request.query_params.get("date_to")
+        
+        if dt:
+            # Парсим дату
+            date_obj = datetime.strptime(dt, "%Y-%m-%d")
+            # Начало дня (00:00:00)
+            start = timezone.make_aware(datetime.combine(date_obj, time.min))
+            # Конец дня (23:59:59), чтобы захватить все события за этот день
+            end = timezone.make_aware(datetime.combine(date_obj, time.max))
+            return start, end
+
+        if not dt_f or not dt_t:
+            raise ValueError("Не переданы параметры date_from / date_to")
+
+        # Парсим границы диапазона
+        df_obj = datetime.strptime(dt_f, "%Y-%m-%d")
+        dt_obj = datetime.strptime(dt_t, "%Y-%m-%d")
+
+        # Делаем их "осознанными" и устанавливаем время на начало и конец дня соответственно
+        start = timezone.make_aware(datetime.combine(df_obj, time.min))
+        end = timezone.make_aware(datetime.combine(dt_obj, time.max))
+
+        return start, end
+
+    def list(self, request, *args, **kwargs):
+        try:
+            logger.debug("запрос списка событий")
+            data = self.get_queryset()
+            serializer = self.get_serializer(data, many=True)
+            return Response(serializer.data)
+        except ValueError as e:
+            logger.exception(e)
+            return Response({"error": str(e)}, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            logger.exception(e)
+            return Response(
+                {"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
+
+
+class GroupScheduleView(ScheduleView):
+    def get_queryset(self) -> List[MappedEvent]:
+        dt_f, dt_t = self.get_query_date()
+        group_id = self.request.query_params.get("group_id")
+        return ScheduleMapper(
+            date_from=dt_f,
+            date_to=dt_t,
+            group_id=int(group_id)
+        ).get_schedule()
+
+
+class ClassroomScheduleView(ScheduleView):
+    def get_queryset(self) -> List[MappedEvent]:
+        dt_f, dt_t = self.get_query_date()
+        if dt_f == dt_t:
+            dt_t = datetime.combine(dt_t.date(),time.max)
+
+        classroom_id = self.request.query_params.get("classroom_id")
+        return ScheduleMapper(
+            date_from=dt_f,
+            date_to=dt_t,
+            classroom_id=int(classroom_id)
+        ).get_schedule()
+
+
+class TeacherScheduleView(ScheduleView):
+    def get_queryset(self) -> List[MappedEvent]:
+        dt_f, dt_t = self.get_query_date()
+        teacher_id = self.request.query_params.get("teacher_id")
+        return ScheduleMapper(
+            date_from=dt_f,
+            date_to=dt_t,
+            teacher_id=int(teacher_id)
+        ).get_schedule()

@@ -16,7 +16,7 @@ from api.services.data_import.loaders import AcademicLoadReader, export_loading
 from authentification.permissions import IsScheduleModerator
 
 # твои функции
-# from .excel import import_excel, export_excel
+# from .excel import import_excel, ort_excel
 logger = logging.getLogger("Load")
 
 class ExcelAPIView(APIView):

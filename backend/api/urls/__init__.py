@@ -2,7 +2,7 @@
 from django.urls import path, include
 from api.urls.database_set import router
 from api.views.t_view import TestDraftScenarioView
-from api.views.academic_load import ExcelAPIView
+from api.views.excel import ExcelAPIView
 from api.views.statistics import BuildingLoadView
 
 
