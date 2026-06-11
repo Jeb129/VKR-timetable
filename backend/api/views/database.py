@@ -1,7 +1,7 @@
 from rest_framework import viewsets, filters
 from api.models import *
 from api.pagination import StandartPagination
-from api.serializers import * # Предполагается, что сериализаторы в файле serializers.py
+from api.serializers import *
 
 class BaseReadOnlyViewSet(viewsets.ReadOnlyModelViewSet):
     """Базовый класс для ReadOnly ViewSet с общей конфигурацией"""
