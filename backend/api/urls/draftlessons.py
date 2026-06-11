@@ -7,5 +7,5 @@ router = DefaultRouter()
 router.register(r"lessons",DraftLessonViewSet,basename="lessons")
 
 urlpatterns =[
-    path("draft/",include(router.urls), name="draft"),
+    path("",include(router.urls), name="draft"),
 ]
