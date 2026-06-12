@@ -38,6 +38,8 @@ services:
       - "8000:8000"
     command: >
       sh -c "python manage.py collectstatic --noinput &&
+             python manage.py makemigrations api &&
+             python manage.py makemigrations authentification &&
              python manage.py migrate &&
              gunicorn --bind 0.0.0.0:8000 config.wsgi:application"
   frontend:
@@ -46,6 +48,5 @@ services:
     restart: "no"
     volumes:
       - ../frontend:/output
-    env_file: ../frontend/.env
     command: sh -c "cp -rp /app/dist/. /output/"
    
