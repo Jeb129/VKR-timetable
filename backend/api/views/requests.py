@@ -1,5 +1,7 @@
+from re import search
+
 from django.db.models import Q
-from rest_framework import permissions, status, viewsets
+from rest_framework import permissions, status, viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
@@ -12,6 +14,8 @@ from api.services.schedule.mapper import ScheduleMapper
 class RequestViewSet(viewsets.ModelViewSet):
     serializer_class = RequestSerializer
     pagination_class = StandartPagination
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ["user__email"]
 
     def get_permissions(self):
         """
@@ -79,7 +83,8 @@ class RequestViewSet(viewsets.ModelViewSet):
         instance = self.get_object()
 
         if instance.type == enums.RequestType.BOOKING:
-            events = ScheduleMapper(instance.booking.date_start,instance.booking.date_end,classroom_id=instance.booking.classroom_id)
+            events = ScheduleMapper(instance.booking.date_start,instance.booking.date_end,classroom_id=instance.booking.classroom_id).get_schedule()
+            print(events)
             if events:
                 return Response(
                     {"message":"Аудитория уже занята в это время"},
