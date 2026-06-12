@@ -1,7 +1,7 @@
 from django.urls import path
 
-from authentification.views.auth import CookieTokenObtainPairView, CookieTokenRefreshView, CookieTokenVerifyView,LogoutView
-from authentification.views.modelView import CurrentUserView, RegisterView,MoodleVerifyView, LinkGroupView
+from authentification.views.auth import CookieTokenObtainPairView, CookieTokenRefreshView, CookieTokenVerifyView,LogoutView, RegisterView
+from authentification.views.modelView import CurrentUserView,MoodleVerifyView, LinkGroupView
 
 urlpatterns = [
     path("login/", CookieTokenObtainPairView.as_view(), name="token_obtain_pair"),

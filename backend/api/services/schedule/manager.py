@@ -109,7 +109,9 @@ class ScheduleManager:
         """Поиск в контексте"""
         if self.context is None:
             raise ValueError("Не собран контекст поиска. Вызовите ScheduleManager.build_context() перед вызовом метода get_lessons_draft")
-        return self.context.filter(*args,**kwargs)
+        res = self.context.filter(*args,**kwargs)
+        print(len(res))
+        return res
     
     def update_lesson_draft(self,lesson_id, diff_data):
         """Вносит изменения в черновик расписания"""

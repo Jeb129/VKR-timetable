@@ -4,13 +4,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
-from rest_framework_simplejwt.tokens import RefreshToken
 
-from api.models import Teacher, StudyGroup
+
 from authentification.permissions import IsEmailVerified
 from authentification.serializers import CustomUserSerializer
 from authentification.services.moodle import find_teacher_profile, moodle_get_profiles, moodle_get_user
-from authentification.services.user import register_user
 
 #  Логика верификации
 class MoodleVerifyView(APIView):
@@ -61,23 +59,6 @@ class MoodleVerifyView(APIView):
                 {"error": f"Ошибка взаимодействии с Moodle: {str(e)}"}, 
                 status=status.HTTP_502_BAD_GATEWAY
             )
-
-class RegisterView(APIView):
-    def post(self, request):
-        user = register_user(request.data)
-
-        # формируем токены
-        refresh = RefreshToken.for_user(user)
-
-        return Response({
-            "user": {
-                "id": user.id,
-                "email": user.email,
-                "name": user.username,  # или другое поле имени
-            },
-            "access": str(refresh.access_token),
-            "refresh": str(refresh),
-        }, status=status.HTTP_201_CREATED)
 
 class CurrentUserView(RetrieveAPIView):
     permission_classes= [IsAuthenticated]
