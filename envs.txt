@@ -1,12 +1,39 @@
-# Переменная для указания файла настроек django
-# Находятся в backend/config/settings/
-# По умолчанию стоит prod Скрипт для запуска dev сервера переопределяет!!!!! Настройка нужна в основном для docker
+# /backend/.env
 DJANGO_SETTINGS_MODULE=config.settings.prod
 SECRET_KEY='super-secret-key'
+ACCESS_TOKEN_LIFETIME_MINUTES
+REFRESH_TOKEN_LIFETIME_DAYS
 
-# PostgreSQL
-POSTGRES_DB=database
+POSTGRES_DB=postgres
 POSTGRES_USER=postgres
 POSTGRES_PASSWORD=135246
-POSTGRES_HOST=localhost 
+POSTGRES_HOST=postgres 
 POSTGRES_PORT=5432
+
+REDIS_HOST
+REDIS_PASSWORD
+REDIS_PORT
+REDIS_DB
+
+DATA_FILES_DIR
+LOG_DIR
+
+MOODLE_TOKEN
+MOODLE_URL
+
+EMAIL_HOST
+EMAIL_PORT
+EMAIL_HOST_USER
+EMAIL_HOST_PASSWORD
+EMAIL_USE_SSL
+DEFAULT_FROM_EMAIL
+
+# /docker/.env Используются для сборки
+POSTGRES_USER: postgres
+POSTGRES_PASSWORD: postgres
+POSTGRES_DB: postgres
+
+REDIS_PASSWORD: password
+
+# /frontend/.env Для фронтенда
+VITE_API_URL
