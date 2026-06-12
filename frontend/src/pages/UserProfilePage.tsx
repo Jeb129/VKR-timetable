@@ -1,7 +1,6 @@
 import { useAuth } from "@/context/AuthContext";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect } from "react";
-import { dbService } from "@/services/crud"; 
 import { privateApi } from "@/services/axios";
 import { useModal } from "@/context/ModalContext"; 
 import GroupPicker from "@/components/profile/GroupPicker"; 
@@ -9,7 +8,6 @@ import type { MappedEvent } from "@/types/schedule";
 import "@/styles/Profile.css";
 import { scheduleViewService } from "@/services/schedule_view";
 import type { RequestInstance } from "@/types/request";
-import type { User } from "@/types/user";
 import { requestService } from "@/services/request";
 
 const UserProfilePage = () => {
@@ -99,7 +97,7 @@ const UserProfilePage = () => {
                 <div className="flex-row gap-10">
                     <button className="btn nav-btn" onClick={() => navigate("/")}>Главная</button>
                     <button className="btn nav-btn" onClick={() => navigate("/schedule")}>К расписанию</button>
-                    <button className="btn nav-btn btn-red" onClick={logout}>Выйти</button>
+                    <button className="btn nav-btn btn-red" onClick={() => {logout();navigate("/login",{ replace: true })}}>Выйти</button>
                 </div>
             </nav>
 

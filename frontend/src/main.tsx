@@ -8,12 +8,12 @@ import './index.css'
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <AuthProvider>
-      <ModalProvider>
-        <BrowserRouter>
+    <ModalProvider>
+      <BrowserRouter>
+        <AuthProvider>
           <App />
-        </BrowserRouter>
-      </ModalProvider>
-    </AuthProvider>
+        </AuthProvider>
+      </BrowserRouter>
+    </ModalProvider>
   </StrictMode>
 )

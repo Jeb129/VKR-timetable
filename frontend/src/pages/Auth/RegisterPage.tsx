@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { Navigate, useNavigate } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 import type { RegisterRequest } from "../../types/user"
 import { useAuth } from "@/context/AuthContext"
 import "@/styles/Auth.css";
@@ -7,12 +7,7 @@ import "@/styles/Auth.css";
 const RegisterPage = () => {
 
   const { isAuthenticated, isLoading, register } = useAuth()
-
-  // Если пользователь уже авторизован - перенаправляем
-  if (!isLoading && isAuthenticated) {
-    return <Navigate to="/profile" replace />
-  }
-  
+  const location = useLocation()
   const navigate = useNavigate()
 
   const [form, setForm] = useState<RegisterRequest>({
@@ -24,6 +19,15 @@ const RegisterPage = () => {
 
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+
+
+  const redirectedFrom = (location.state)?.from?.pathname
+  const from = redirectedFrom || "/profile"
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate, from]);
 
 const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -72,6 +76,7 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                 value={form.username}
                 onChange={handleChange}
                 required
+                autoComplete="username" 
               />
             </div>
             <div className="flex-col">
@@ -83,6 +88,7 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
                 value={form.email}
                 onChange={handleChange}
                 required
+                autoComplete="email" 
               />
             </div>
 
@@ -91,9 +97,11 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
               <input
                 className="focus-glow border"
                 name="password"
+                type="password"
                 value={form.password}
                 onChange={handleChange}
                 required
+                autoComplete="new-password" 
               />
             </div>
 
@@ -101,10 +109,12 @@ const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
               <label>Повтор пароля</label>
               <input
                 className="focus-glow border"
+                name="password_confirmation"
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
+                autoComplete="new-password" 
               />
             </div>
 
