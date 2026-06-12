@@ -2,70 +2,66 @@ from django.db import models
 
 
 from api.models.buildings import Equipment
-from api.models.education_subjects import Institute, StudyGroup,Teacher, Discipline, LessonType, Building
-from api.models.schedule import Semester
+from api.models.education_subjects import Institute, Discipline, LessonType, Building
 
 
 class EquipmentRequirement(models.Model):
-    discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE)
-    lesson_type = models.ForeignKey(LessonType, on_delete=models.CASCADE)
-    equipment = models.ForeignKey(Equipment, on_delete=models.CASCADE)
+    discipline = models.ForeignKey(
+        Discipline, on_delete=models.CASCADE, verbose_name="дисциплина"
+    )
+    lesson_type = models.ForeignKey(
+        LessonType, on_delete=models.CASCADE, verbose_name="вид занятия"
+    )
+    equipment = models.ForeignKey(
+        Equipment, on_delete=models.CASCADE, verbose_name="оборудование"
+    )
+
+    class Meta:
+        verbose_name = "требование к оснащению аудитории"
+        verbose_name_plural = "требования к оснащению аудиторий"
+
+    def __str__(self):
+        return f"{self.lesson_type.short_name} {self.discipline} - {self.equipment}"
 
 
 class BuildingPriority(models.Model):
-    institute = models.ForeignKey(Institute, on_delete=models.CASCADE)
-    building = models.ForeignKey(Building, on_delete=models.CASCADE)
-    weight = models.IntegerField()
-
-
-class AcademicLoad(models.Model):
-    """Объединенная модель нагрузки (задание для генератора)"""
-
-    # Семестр привязывает академическую нагрузку к конкретному временному промежутку
-    merge_key = models.CharField(null=True)
-    semester = models.ForeignKey(Semester, on_delete=models.SET_NULL, null=True)
-    discipline = models.ForeignKey(Discipline, on_delete=models.CASCADE)
-    lesson_type = models.ForeignKey(LessonType, on_delete=models.CASCADE)
-    teacher = models.ForeignKey(Teacher, on_delete=models.CASCADE, related_name="loads")
-    study_group = models.ForeignKey(
-        StudyGroup, on_delete=models.CASCADE, related_name="loads"
+    institute = models.ForeignKey(
+        Institute, on_delete=models.CASCADE, verbose_name="институт"
     )
-    control_type = models.CharField(null=True,max_length=20)
-    whole_hours = models.PositiveIntegerField()
-    whole_weeks = models.PositiveIntegerField()
+    building = models.ForeignKey(
+        Building, on_delete=models.CASCADE, verbose_name="клопус"
+    )
+    weight = models.IntegerField(verbose_name="приоритет",help_text="Влияет на значение итоговой функции при генерации расписания")
 
-    @property
-    def semester_order(self):
-        sem_order = 1 if self.semester.date_start.month < 7 else 0
-        sem_year = self.semester.date_start.year - self.study_group.admission_year
-
-        # Расчет семестра Осень 2022 для 22-ИСбо-1
-        # sem_order = 0 (сентябрь 9 месяц)
-        # sem_year = 2022 - 2022  = 0
-        # sem = 0 * 2 - 0 + 1 = 1
-
-        # Расчет семестра Весна 2023 для 22-ИСбо-1
-        # sem_order = 1 (январь 1 месяц)
-        # sem_year = 2023 - 2022  = 1
-        # sem = 1 * 2 - 1 + 1 = 8
-
-        # Расчет семестра Осень 2025 для 22-ИСбо-1
-        # sem_order = 0 (сентябрь 9 месяц)
-        # sem_year = 2025 - 2022  = 3
-        # sem = 3 * 2 - 0 + 1 = 7
-
-        # Расчет семестра Весна 2026 для 22-ИСбо-1
-        # sem_order = 1 (январь 1 месяц)
-        # sem_year = 2026 - 2022  = 4
-        # sem = 4 * 2 - 1 + 1 = 8
-        
-        return sem_year*2 - sem_order + 1
+    class Meta:
+        ordering = ["institute", "building"]
+        verbose_name = "приоритет корпусов"
+        verbose_name_plural = "приоритеты корпусов"
 
     def __str__(self):
-        return f"{self.study_group} - {self.lesson_type} {self.discipline}"
+        return f"{self.institute} - {self.building} ({self.weight})"
 
 
 class Constraint(models.Model):
-    name = models.TextField(unique=True)
-    description = models.TextField(max_length=255)
-    weight = models.IntegerField()
+    name = models.TextField(unique=True, verbose_name="имя метода")
+    description = models.TextField(max_length=255, verbose_name="описание")
+    weight = models.IntegerField(verbose_name="вес",help_text="Влияет на значение итоговой функции при генерации расписания")
+    is_active = models.BooleanField(default=True, 
+                                          verbose_name="Используется",
+                                          help_text="Будет ли выполняться проверка ограничения при генерации / редактироавнии")
+    is_hard =models.BooleanField(default=False,
+                                 verbose_name="запретить нарушения",
+                                 help_text="Запрещает публикацию варианта расписания если есть хоть одно занятие, с нарушением такого ограничения")
+    manual_only = models.BooleanField(default=False, 
+                                          verbose_name="Исключить при генерации",
+                                          help_text="При генерации расписания ограничение не будет учитываться")
+    generation_only = models.BooleanField(default=False, 
+                                          verbose_name="Исключить при ручных изменениях",
+                                          help_text="Информация о нарушении ограничения не будет выводиться при ручном редактировании расписания")
+
+    class Meta:
+        verbose_name = "ограничение"
+        verbose_name_plural = "ограничения"
+
+    def __str__(self):
+        return f"{self.description} ({self.name})"

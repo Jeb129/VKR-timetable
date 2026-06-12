@@ -2,7 +2,6 @@
 
 from .buildings import Building, BuildingTravelTime, Classroom, Equipment
 from .constraints import (
-    AcademicLoad,
     BuildingPriority,
     EquipmentRequirement,
     Constraint,
@@ -21,10 +20,15 @@ from .requests import (
     ClassroomPreference,
     ScheduleAdjustment,
     Booking,
+    BookingType,
 )
 from .schedule import (
     ScheduleScenario,
     Semester,
     Timeslot,
+)
+from .academic_load import (
+    AcademicLoad,
     Lesson,
+    PlannedLesson 
 )

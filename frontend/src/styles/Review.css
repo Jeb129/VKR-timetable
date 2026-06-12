@@ -1,0 +1,31 @@
+.border-red { border-color: var(--p-red) !important; }
+.border-green { border-color: var(--p-green) !important; }
+
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--p-blue-light);
+    border-top: 4px solid var(--p-blue);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.scroll-y {
+    overflow-y: auto;
+    padding-right: 5px;
+}
+
+/* Стилизация полосы прокрутки */
+.scroll-y::-webkit-scrollbar {
+    width: 6px;
+}
+.scroll-y::-webkit-scrollbar-thumb {
+    background: var(--border-color);
+    border-radius: 10px;
+}

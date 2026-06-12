@@ -1,11 +1,33 @@
+import type { RequestInstance } from "./request";
+
 export interface SelectOption {
     value: string | number;
     label: string;
 }
 
-export interface SearchSelectProps {
-    options: SelectOption[];
-    value: string | number;
-    onChange: (value: string | number) => void;
-    placeholder?: string;
+export interface SimpleEntity {
+    id: number;
+    name: string;
 }
+
+export interface RequestsPagination {
+  count: number;
+  results: RequestInstance[]
+}
+
+export interface RequestParams {
+  page?: number;
+  page_size?: number;
+  status?: number;
+  type?: number;
+  search?: string;
+}
+
+export interface PaginatedResponse<T> {
+    count: number;
+    next: string | null;
+    previous: string | null;
+    results: T[];
+}
+
+export type QueryParams = Record<string, string | number | boolean | undefined | null>;

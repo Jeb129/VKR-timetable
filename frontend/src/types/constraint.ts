@@ -1,11 +1,11 @@
-import type React from "react";
 import type { Lesson } from "./schedule";
 
 export interface ConstraintError {
     name: string;
     penalty: number;
     message: string;
-    data: any[] | null
+    data: any;
+    // data: Record<string,any> | any[] | null
 }
 
 export interface LessonError {

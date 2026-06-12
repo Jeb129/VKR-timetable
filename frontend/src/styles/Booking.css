@@ -31,3 +31,20 @@ input[type="time"].card {
 .fc-timegrid-slot {
     height: 3.5rem !important;
 }
+
+.preview-event-pulse {
+    background-color: var(--p-green) !important;
+    border: 2px solid white !important;
+    box-shadow: 0 0 15px rgba(46, 125, 50, 0.4);
+    z-index: 10;
+}
+
+/* Стилизация оранжевых блоков (Брони других людей) */
+.fc-event.var--p-orange {
+    opacity: 0.8;
+}
+
+/* Стилизация синих блоков (Уроки) */
+.fc-event.var--p-blue {
+    border-left: 5px solid rgba(255,255,255,0.3) !important;
+}

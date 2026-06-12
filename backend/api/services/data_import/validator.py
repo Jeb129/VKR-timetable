@@ -1,5 +1,4 @@
 import re
-import logging
 from dataclasses import dataclass
 
 CODE_REGEX = re.compile(r"^\d+\.\d+\.\d+$")
@@ -43,13 +42,13 @@ def parse_int_or_none(value):
         return None
 
 
-def validate_row(row, idx):
+def validate_load_row(row, idx):
     errors = []
 
     def err(field, message):
         errors.append(ValidationMessage(idx,"WARNING", field, message))
 
-    # Разбор полей (строго 22, как в выгрузке)
+    # Разбор полей
     (
         institute,
         code,
@@ -125,16 +124,16 @@ def validate_row(row, idx):
     # Недели
     weeks_int = parse_int_or_none(weeks)
     if weeks_int is None:
-        err("Нагрузка.Недели", "Должно быть целым числом >= 0")
-    elif weeks_int < 0:
-        err("Нагрузка.Недели", "Должно быть >= 0")
+        err("Нагрузка.Недели", "Должно быть целым числом >= 1")
+    elif weeks_int < 1:
+        err("Нагрузка.Недели", "Должно быть >= 1")
 
     # Часы
     hours_int = parse_int_or_none(hours)
     if hours_int is None:
-        err("Нагрузка.Часы", "Должно быть целым числом >= 0")
-    elif hours_int < 0:
-        err("Нагрузка.Часы", "Должно быть >= 0")
+        err("Нагрузка.Часы", "Должно быть целым числом >= 2")
+    elif hours_int < 2:
+        err("Нагрузка.Часы", "Должно быть >= 2")
 
     # Преподаватель ФИО
     if is_empty(teacher_name):
@@ -150,8 +149,8 @@ def validate_row(row, idx):
             err("Группа.Год", "Должен быть целым числом >= 0")
 
     # Номер группы (строка)
-    if is_empty(group_num):
-        err("Группа.Номер группы", "Обязательное поле")
+    # if is_empty(group_num):
+    #     err("Группа.Номер группы", "Обязательное поле")
     group_num_str = None if is_empty(group_num) else str(group_num).strip()
 
     # Подгруппа

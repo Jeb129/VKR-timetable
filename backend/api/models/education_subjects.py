@@ -1,16 +1,19 @@
 from django.db import models
-
-from authentification.models import CustomUser
+from numpy.linalg import cond
 
 from api.models.buildings import Building
 
 
 class Institute(models.Model):
-    name = models.CharField(max_length=255)
-    short_name = models.CharField(max_length=100)
+    name = models.CharField(max_length=255, verbose_name="Наименование")
+    short_name = models.CharField(max_length=100,verbose_name="Сокращение")
     buildings_priority = models.ManyToManyField(
-        Building, through="BuildingPriority", related_name="institutes_priority"
+        Building, through="BuildingPriority", related_name="institutes_priority", verbose_name="Предпочитаемые корпуса для занятий"
     )
+    class Meta:
+        ordering = ["short_name"]
+        verbose_name = "институт"
+        verbose_name_plural = "институты"
 
     def __str__(self):
         return self.short_name
@@ -18,7 +21,7 @@ class Institute(models.Model):
 
 class StudyProgram(models.Model):
     institute = models.ForeignKey(
-        Institute, on_delete=models.CASCADE, related_name="study_programs"
+        Institute, on_delete=models.CASCADE, related_name="study_programs",verbose_name="Институт"
     )
     code = models.CharField(max_length=8, blank=False, unique=True, verbose_name="Шифр")
     name = models.CharField(
@@ -29,6 +32,7 @@ class StudyProgram(models.Model):
     )
 
     class Meta:
+        ordering = ["code"]
         verbose_name = "направление подготовки"
         verbose_name_plural = "направления подготовки"
 
@@ -44,19 +48,29 @@ class StudyProgram(models.Model):
 
 
 class Discipline(models.Model):
-    name = models.CharField(max_length=255)
-    allow_merge_teachers = models.BooleanField(default=False)
+    name = models.CharField(max_length=255,verbose_name="Наименование")
+    allow_merge_teachers = models.BooleanField(default=False,verbose_name="Разрешить объединение преподавателей")
+    
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "дисциплина"
+        verbose_name_plural = "дисциплины"
 
     def __str__(self):
         return self.name
 
 
 class LessonType(models.Model):
-    name = models.CharField(max_length=50)
-    short_name = models.CharField(max_length=20,blank=True,null=True)
-    allow_merge_teachers = models.BooleanField(default=False)
-    allow_merge_subgroups = models.BooleanField(default=False)
-    allow_merge_groups = models.BooleanField(default=False)
+    name = models.CharField(max_length=50,verbose_name="Наименование")
+    short_name = models.CharField(max_length=20,blank=True,null=True,verbose_name="Сокращение")
+    allow_merge_teachers = models.BooleanField(default=False,verbose_name="Разрешить объединение преподавателей")
+    allow_merge_subgroups = models.BooleanField(default=False, verbose_name="Вся группа")
+    allow_merge_groups = models.BooleanField(default=False, verbose_name="Весь поток")
+
+    class Meta:
+        ordering = ["name"]
+        verbose_name = "вид занятия"
+        verbose_name_plural = "виды занятий"
 
     def __str__(self):
         return self.name
@@ -68,24 +82,35 @@ class StudyGroup(models.Model):
         StudyProgram, on_delete=models.CASCADE, verbose_name="Направление подготовки"
     )
     learning_form = models.CharField(max_length=20, verbose_name="Форма обучения")
-    learning_stage = models.CharField(max_length=20, verbose_name="Уровень подготовки")
+    learning_stage = models.CharField(max_length=100, verbose_name="Уровень подготовки")
     group_num = models.CharField(max_length=5, verbose_name="Номер группы")
     sub_groups = models.ManyToManyField("self", symmetrical=True, blank=True)
     sub_group_num = models.PositiveIntegerField(
         null=True, blank=True, verbose_name="Номер подгруппы"
     )
     name = models.CharField(max_length=50, verbose_name="Шифр")
-    students_count = models.PositiveIntegerField(verbose_name="Количество студентов")
+    students_count = models.PositiveIntegerField(default=1,verbose_name="Количество студентов")
+
+    max_hours_per_week = models.PositiveSmallIntegerField(null=False,blank=True,default=35,verbose_name="Максимальная нагрузка в неделю")
+    max_hours_per_day = models.PositiveSmallIntegerField(null=False,blank=True,default=10,verbose_name="Максимальная нагрузка в день")
 
     class Meta:
         ordering = ["admission_year"]
         verbose_name = "учебная группа"
         verbose_name_plural = "учебные группы"
+        constraints = [
+            models.CheckConstraint(
+                    condition=models.Q(students_count__gt=0),
+                    name='group_students_count_positive'
+                ),
+        ]
+
 
     def __str__(self):
         return self.name
 
     def save(self, *args, **kwargs):
+        # print(f"{str(self.admission_year)[-2:]}-{self.study_program.short_name}{self.learning_stage.lower()[0]}{self.learning_form.lower()[0]}-{self.group_num}{f" п/г {self.sub_group_num}" if self.sub_group_num else ""}")
         self.name = f"{str(self.admission_year)[-2:]}-{self.study_program.short_name}{self.learning_stage.lower()[0]}{self.learning_form.lower()[0]}-{self.group_num}{f" п/г {self.sub_group_num}" if self.sub_group_num else ""}"
         super().save(*args, **kwargs)
 
@@ -103,9 +128,8 @@ class Teacher(models.Model):
     constraint_weight = models.IntegerField(
         default=1, verbose_name="Коэффицент приоритета ограничений"
     )
-    user = models.OneToOneField(
-        CustomUser, on_delete=models.SET_NULL, null=True, blank=True
-    )
+    max_hours_per_week = models.PositiveSmallIntegerField(null=False,blank=True,default=35,verbose_name="Максимальная нагрузка в неделю")
+    max_hours_per_day = models.PositiveSmallIntegerField(null=False,blank=True,default=10,verbose_name="Максимальная нагрузка в день")
 
     class Meta:
         ordering = ["name","institute"]

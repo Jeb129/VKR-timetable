@@ -1,39 +1,88 @@
 import { useState, useRef } from 'react';
-import Select from 'react-select';
-import type { SearchSelectProps, SelectOption } from "@/types/ui";
+import type { SelectOption, SimpleEntity } from "@/types/ui";
 import "@/styles/SearchSelect.css";
+import { dbService } from '@/services/crud';
+import type { OptionsOrGroups, GroupBase } from 'react-select';
+import AsyncSelect from 'react-select/async';
 
-const SearchSelect = ({ options, value, onChange, placeholder }: SearchSelectProps) => {
-    // Реф для управления фокусом самого компонента
+interface SearchSelectProps {
+    model: string;
+    // @ts-ignore
+    onChange: (value: any) => void;
+    placeholder?: string;
+    isClearable?: boolean;
+    isMulti?: boolean;
+}
+
+const SearchSelect: React.FC<SearchSelectProps> = ({
+    model,
+    onChange,
+    placeholder,
+    isClearable = true,
+    isMulti = false
+}) => {
+    // @ts-ignore
     const selectRef = useRef<any>(null);
-    // Состояние для отслеживания, нажат ли сейчас поиск
-    const [isFocused, setIsFocused] = useState(false);
+    const [selectedOption, setSelectedOption] = useState<SelectOption | readonly SelectOption[] | null>(null);
+    /**
+     * loadOptions ожидает возврата Promise с типом OptionsOrGroups<SelectOption, GroupBase<SelectOption>>
+     */
 
-    const selectedOption = options.find(opt => opt.value === value) || null;
 
-    const handleChange = (opt: any) => {
-        // Вызываем внешнюю функцию изменения (setSelectedTargetId)
-        onChange(opt ? (opt as SelectOption).value : "");
-        // Снимаем выделение с элемента после выбора
-        if (selectRef.current) {
-            selectRef.current.blur();
+    const loadOptions = async (
+        inputValue: string
+    ): Promise<OptionsOrGroups<SelectOption, GroupBase<SelectOption>>> => {
+        try {
+            const data = await dbService.list<SimpleEntity>(model, {
+                search: inputValue,
+                page_size: 20
+            });
+
+            return data.results.map((item) => ({
+                value: item.id,
+                label: item.name ?? `ID: ${item.id}`
+            }));
+        } catch (e) {
+            console.error(`Ошибка справочника ${model}:`, e);
+            return [];
+        }
+    };
+
+    /**
+     * Типизация newValue зависит от того, включен ли isMulti
+     */
+    const handleChange = (newValue: SelectOption | readonly SelectOption[] | null) => {
+        setSelectedOption(newValue)
+        if (isMulti) {
+            const options = newValue as SelectOption[];
+            onChange(options ? options.map(opt => opt.value) : []);
+        } else {
+            const option = newValue as SelectOption;
+            onChange(option ? option.value : null);
         }
     };
 
     return (
-        <Select
+        <AsyncSelect<SelectOption, boolean, GroupBase<SelectOption>>
             ref={selectRef}
-            className="ksu-select-container"
-            classNamePrefix="ksu-select"
-            options={options}
+            cacheOptions
+            defaultOptions
+            loadOptions={loadOptions}
             value={selectedOption}
             onChange={handleChange}
-            placeholder={placeholder || "Поиск..."}
-            isSearchable={true}
-            noOptionsMessage={() => "Ничего не найдено"}
-            controlShouldRenderValue={!isFocused}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
+            placeholder={placeholder ?? (isMulti ? "Выберите несколько..." : "Поиск...")}
+            isMulti={isMulti}
+            isClearable={isClearable}
+
+            className="ksu-select-container"
+            classNamePrefix="ksu-select"
+
+            // Типизируем inputValue в функции сообщения
+            noOptionsMessage={({ inputValue }: { inputValue: string }) =>
+                !inputValue ? "Начните вводить текст..." : "Ничего не найдено"
+            }
+            loadingMessage={() => "Загрузка..."}
+            closeMenuOnSelect={!isMulti}
         />
     );
 };

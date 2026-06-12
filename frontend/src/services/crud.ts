@@ -1,69 +1,52 @@
-import { privateApi } from "./axios";
-
-const update = async (model: string, id: number, data: Record<string,any>) => {
-    const response = await privateApi.patch(
-        `/api/${model}/${id}/`,
-        data
-    )
-    return response.data
-}
-const search = async (model: string, data: Record<string,any>) => {
-    const response = await privateApi.post(
-        `/${model}/search/`,
-        data
-    )
-    return response.data
-}
-const create = async (model: string, data: Record<string, any>) => {
-    const response = await privateApi.post(`/api/${model}/`, data);
-    return response.data;
-};
-const list = async (model: string, params: Record<string, any> = {}) => {
-    const response = await privateApi.get(`/api/${model}/`, { params });
-    return response.data;
-};
-// Специальный метод для черновика (/api/scenario/ID/draft/?lesson_id=ID)
-const updateDraft = async (scenarioId: number, lessonId: number, data: Record<string, any>) => {
-    const response = await privateApi.put(
-        `/api/scenario/${scenarioId}/draft/?lesson_id=${lessonId}`, 
-        data
-    );
-    return response.data;
-};
-// Метод для публикации (/api/scenario/ID/draft/commit/)
-const commitDraft = async (scenarioId: number) => {
-    const response = await privateApi.post(`/api/scenario/${scenarioId}/draft/commit/`);
-    return response.data;
-};
-const get = async (model: string, id: number) => {
-    const response = await privateApi.get(
-        `/api/${model}/${id}/`
-    )
-    return response.data
-}
-
-// Метод для одобрения (POST /api/model/id/approve/)
-const approveRequest = async (model: string, id: number) => {
-    const response = await privateApi.post(`/api/${model}/${id}/approve/`);
-    return response.data;
-}
-
-// Метод для отклонения (POST /api/model/id/reject/)
-const rejectRequest = async (model: string, id: number, comment: string) => {
-    const response = await privateApi.post(`/api/${model}/${id}/reject/`, {
-        admin_comment: comment
-    });
-    return response.data;
-}
+import type { QueryParams, PaginatedResponse } from "@/types/ui";
+import { privateApi, publicApi } from "./axios";
 
 export const dbService = {
-    update,
-    get,
-    list,
-    create,
-    search,
-    updateDraft,
-    commitDraft,
-    approveRequest,
-    rejectRequest
-}
+    /**
+     * LIST - Получение списка объектов с пагинацией и фильтрами (GET)
+     */
+    list: async <T>(model: string, params: QueryParams = {}): Promise<PaginatedResponse<T>> => {
+        const response = await publicApi.get(`/api/${model}/`, { params });
+        return response.data;
+    },
+
+    /**
+     * GET - Получение одной конкретной записи по ID (GET)
+     */
+    get: async <T>(model: string, id: number | string): Promise<T> => {
+        const response = await publicApi.get(`/api/${model}/${id}/`);
+        return response.data;
+    },
+
+    /**
+     * SEARCH - Специализированный поиск (обычно POST /api/model/search/)
+     * Используется, если логика поиска слишком сложная для GET-параметров
+     */
+    search: async <T>(model: string, data: Record<string, any>): Promise<T[]> => {
+        const response = await publicApi.post(`/api/${model}/search/`, data);
+        return response.data;
+    },
+
+    /**
+     * CREATE - Создание новой записи (POST)
+     */
+    create: async <T>(model: string, data: Record<string, any>): Promise<T> => {
+        const response = await privateApi.post(`/api/${model}/`, data);
+        return response.data;
+    },
+
+    /**
+     * UPDATE - Частичное обновление существующей записи (PATCH)
+     */
+    update: async <T>(model: string, id: number | string, data: Record<string, any>): Promise<T> => {
+        const response = await privateApi.patch(`/api/${model}/${id}/`, data);
+        return response.data;
+    },
+
+    /**
+     * REMOVE - Удаление записи (DELETE)
+     */
+    remove: async (model: string, id: number | string): Promise<void> => {
+        await privateApi.delete(`/api/${model}/${id}/`);
+    },
+};

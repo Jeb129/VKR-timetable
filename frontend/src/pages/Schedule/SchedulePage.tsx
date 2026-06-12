@@ -1,85 +1,57 @@
 import { useState, useEffect, useMemo } from "react";
-import { type SelectOption } from "@/types/ui";
-import SearchSelect from "@/components/UI/SearchSelect";
 import { useNavigate } from "react-router-dom";
-import { dbService } from "@/services/crud";
-import { type MappedEvent, DAYS } from "@/types/schedule";
-import type { Classroom } from "@/types/classroom";
+import { type MappedEvent } from "@/types/schedule";
 import "@/styles/Schedule.css";
+import SearchSelect from "@/components/UI/SearchSelect";
+import { scheduleViewService } from "@/services/schedule_view";
 
 const SchedulePage = () => {
     const navigate = useNavigate();
-    
-    // Справочники
-    const [classrooms, setClassrooms] = useState<Classroom[]>([]);
-    const [groups, setGroups] = useState<any[]>([]);
-    const [teachers, setTeachers] = useState<any[]>([]);
 
     // Фильтры
     const [filterType, setFilterType] = useState<"classroom" | "group" | "teacher">("classroom");
-    const [targetId, setTargetId] = useState<string | number>("");
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+    const [targetId, setTargetId] = useState<number | null>(null);
     
+    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [events, setEvents] = useState<MappedEvent[]>([]);
     const [loading, setLoading] = useState(false);
 
-    const targetOptions: SelectOption[] = useMemo(() => {
-        if (filterType === "classroom") return classrooms.map(r => ({ value: r.id, label: r.num }));
-        if (filterType === "group") return groups.map(g => ({ value: g.id, label: g.name }));
-        if (filterType === "teacher") return teachers.map(t => ({ value: t.id, label: t.name }));
-        return [];
-    }, [filterType, classrooms, groups, teachers]);
+    // Маппинг типа фильтра на эндпоинты БД для поиска
+    const modelMapping = {
+        classroom: "classrooms",
+        group: "groups",
+        teacher: "teachers"
+    };
 
-    // 1. Загрузка всех справочников при старте
-    useEffect(() => {
-        const init = async () => {
-            try {
-                const [roomsData, groupsData, teachersData] = await Promise.all([
-                    dbService.list("classrooms"),
-                    dbService.list("groups"),
-                    dbService.list("teachers")
-                ]);
-                setClassrooms(roomsData);
-                setGroups(groupsData);
-                setTeachers(teachersData);
-                
-                if (roomsData.length > 0) setTargetId(roomsData[0].id);
-            } catch (err) {
-                console.error("Ошибка загрузки данных:", err);
-            }
-        };
-        init();
-    }, []);
-
-    // 2. Вычисление конца недели (Субботы)
+    // Вычисление конца недели (Субботы)
     const endOfWeekDate = useMemo(() => {
         const start = new Date(selectedDate);
-        const day = start.getDay(); // 0 (Вс) - 6 (Сб)
-        const diff = day === 0 ? -1 : 6 - day; // Сколько дней до субботы
+        const day = start.getDay(); 
+        const diff = day === 0 ? -1 : 6 - day; 
         const end = new Date(start);
         end.setDate(start.getDate() + diff);
         return end.toISOString().split('T')[0];
     }, [selectedDate]);
 
-    // 3. Загрузка расписания
+    // Загрузка расписания
     useEffect(() => {
         const fetchSchedule = async () => {
-            if (!targetId) return;
+            if (!targetId) {
+                setEvents([]);
+                return;
+            }
             
             setLoading(true);
             try {
-                // Выбираем путь в зависимости от типа фильтра
-                const apiPath = `schedule/${filterType}`;
-                const params = {
-                    [`${filterType}_id`]: targetId,
-                    date_from: selectedDate,
-                    date_to: endOfWeekDate
-                };
-
-                const data = await dbService.list(apiPath, params);
+                // Вызываем соответствующий метод сервиса (teacher, group или classroom)
+                const data = await scheduleViewService[filterType](
+                    targetId, 
+                    selectedDate, 
+                    endOfWeekDate
+                );
                 setEvents(data);
             } catch (err) {
-                console.error("Ошибка маппера:", err);
+                console.error("Ошибка при получении расписания:", err);
                 setEvents([]);
             } finally {
                 setLoading(false);
@@ -89,15 +61,14 @@ const SchedulePage = () => {
         fetchSchedule();
     }, [targetId, filterType, selectedDate, endOfWeekDate]);
 
-    // 4. Группировка событий по датам для вывода заголовков дней
+    // Группировка событий по датам
     const groupedEvents = useMemo(() => {
-        const groups: { [key: string]: MappedEvent[] } = {};
+        const groups: Record<string, MappedEvent[]> = {};
         events.forEach(event => {
             const dateKey = event.start.split('T')[0];
             if (!groups[dateKey]) groups[dateKey] = [];
             groups[dateKey].push(event);
         });
-        // Сортируем даты по порядку
         return Object.keys(groups).sort().map(date => ({
             date,
             items: groups[date].sort((a, b) => a.start.localeCompare(b.start))
@@ -120,7 +91,7 @@ const SchedulePage = () => {
     return (
         <div className="flex-col bg-main min-h-screen">
             <nav className="navbar">
-                <div className="logo-white" onClick={() => navigate("/schedule")}>КГУ</div>
+                <div className="logo-white pointer" onClick={() => navigate("/")}>КГУ</div>
                 <div className="nav-actions">
                     <button className="btn nav-btn" onClick={() => navigate("/profile")}>Профиль</button>
                     <button className="btn nav-btn btn-red" onClick={() => navigate("/login")}>Выход</button>
@@ -131,41 +102,50 @@ const SchedulePage = () => {
                 <div className="filter-group">
                     <label className="filter-label">Тип поиска</label>
                     <select 
-                        className="styled-select" 
+                        className="select-styled" 
                         value={filterType}
                         onChange={(e) => {
                             setFilterType(e.target.value as any);
-                            setTargetId(""); // сброс при смене типа
+                            setTargetId(null);
                         }}
                     >
-                        <option value="classroom">По аудитории</option>
-                        <option value="group">По группе</option>
-                        <option value="teacher">По преподавателю</option>
+                        <option value="classrooms">По аудитории</option>
+                        <option value="study_groups">По группе</option>
+                        <option value="teachers">По преподавателю</option>
                     </select>
                 </div>
 
                 <div className="filter-group f-2">
                     <label className="filter-label">Объект</label>
                     <SearchSelect 
-                        options={targetOptions}
-                        value={targetId}
-                        onChange={setTargetId}
+                        model={modelMapping[filterType]}
+                        onChange={(val) => {
+                            setTargetId(val);
+                        }}
+                        placeholder={`Выберите ${
+                            filterType === 'classroom' ? 'аудиторию' : 
+                            filterType === 'group' ? 'группу' : 'преподавателя'
+                        }...`}
                     />
                 </div>
 
                 <div className="filter-group" style={{ maxWidth: '200px' }}>
                     <label className="filter-label">Дата начала</label>
-                    <input type="date" className="input-styled" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+                    <input 
+                        type="date" 
+                        className="input-styled" 
+                        value={selectedDate} 
+                        onChange={(e) => setSelectedDate(e.target.value)} 
+                    />
                 </div>
             </div>
 
-            <div className="flex-col pb-40">
+            <div className="flex-col pb-40 m-2">
                 {loading ? (
-                    <div className="card text-center mx-2.5">Загрузка расписания...</div>
+                    <div className="card text-center">Загрузка расписания...</div>
                 ) : groupedEvents.length > 0 ? (
                     groupedEvents.map((group) => (
                         <div key={group.date} className="day-section">
-                            {/* Заголовок дня */}
                             <div className="day-header slide-up">
                                 {getDayName(group.date)}
                             </div>
@@ -173,8 +153,10 @@ const SchedulePage = () => {
                             {group.items.map((mappedItem, index) => {
                                 const { start, end, type, extendedProps } = mappedItem;
                                 const event = extendedProps.event;
-                                const isBooking = type === "3";
-                                const isAdjustment = type === "2";
+                                
+                                const isBooking = String(type) === "3";
+                                const isAdjustment = String(type) === "2";
+                                const displayClassroom = isBooking ? event.classroom_name : event.classroom;
 
                                 return (
                                     <div key={index} className="lesson-row-container fade-in">
@@ -189,28 +171,35 @@ const SchedulePage = () => {
                                                 <h4 className="subject-name">
                                                     {isBooking 
                                                         ? `Бронь: ${event.description || 'Без описания'}`
-                                                        : `${event.type_name || ''} ${event.discipline_name}`
+                                                        : `${event.lesson_type || ''} ${event.discipline || 'Дисциплина не указана'}`
                                                     }
                                                 </h4>
-                                                <span className={`badge ${isAdjustment ? 'btn-orange' : ''}`} style={{fontSize: '10px'}}>
-                                                    {isBooking ? 'БРОНИРОВАНИЕ' : isAdjustment ? 'ЗАМЕНА' : 'ЗАНЯТИЕ'}
+                                                <span className={`badge ${isBooking || isAdjustment ? 'badge-pending' : ''}`}>
+                                                    {isBooking ? 'БРОНЬ' : isAdjustment ? 'ЗАМЕНА' : 'ЗАНЯТИЕ'}
                                                 </span>
                                             </div>
                                             
                                             <div className="flex-col gap-1">
-                                                {!isBooking ? (
+                                                {isBooking ? (
                                                     <>
-                                                        <div className="details-text">
-                                                            👤 {event.teachers_list?.length ? event.teachers_list.join(', ') : 'Преподаватель не указан'}
-                                                        </div>
-                                                        <div className="details-text">
-                                                            👥 Группы: {event.groups_list?.length ? event.groups_list.join(', ') : 'Не указаны'}
-                                                        </div>
+                                                        <div className="text-muted small">👤 Ответственный: {event.user_name}</div>
+                                                        <div className="text-muted small">📝 Цель: {event.description}</div>
                                                     </>
                                                 ) : (
-                                                    <div className="details-text">👤 Ответственный: {event.user_name || '---'}</div>
+                                                    <>
+                                                        <div className="text-muted small">
+                                                            👤 {event.teachers?.length 
+                                                                ? event.teachers.map((t: any) => t.name).join(', ') 
+                                                                : 'Преподаватель не указан'}
+                                                        </div>
+                                                        <div className="text-muted small">
+                                                            👥 Группы: {event.study_groups?.length 
+                                                                ? event.study_groups.map((g: any) => g.name).join(', ') 
+                                                                : 'Не указаны'}
+                                                        </div>
+                                                    </>
                                                 )}
-                                                <div className="details-text">📍 Кабинет: {event.classroom_name}</div>
+                                                <div className="text-primary font-bold">📍 Кабинет: {displayClassroom || '---'}</div>
                                             </div>
                                         </div>
                                     </div>
@@ -219,7 +208,9 @@ const SchedulePage = () => {
                         </div>
                     ))
                 ) : (
-                    <div className="card text-center text-muted mx-2.5">Событий не найдено</div>
+                    <div className="card text-center text-muted">
+                        {targetId ? "Событий не найдено" : "Выберите объект для просмотра расписания"}
+                    </div>
                 )}
             </div>
         </div>

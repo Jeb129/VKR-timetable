@@ -1,81 +1,105 @@
+// components/schedule_editor/LessonCard.tsx
 import type { Lesson } from "@/types/schedule";
+import type { ConstraintError } from "@/types/constraint";
+import { CollapsibleList } from "@/components/UI/CollapsibleList";
 import "@/styles/LessonCard.css";
-import { WEEK_DAYS } from "@/types/enums";
 
 interface LessonCardProps {
-  lesson: Lesson;
-  maxListItems?: number;     // сколько элементов показывать
-  limitedHeight?: boolean;   // ограничивать ли высоту
-  onShowMoreTeachers?: () => void;
-  onShowMoreGroups?: () => void;
+    lesson: Lesson;
+    errors?: ConstraintError[];
+    isPending?: boolean;
+    isHighlighted?: boolean;
+    onDragStart?: (e: any, id: string) => void;
+    onClick?: () => void;
+    onDelete?: () => void;
 }
 
-export const LessonCard = ({
-  lesson,
-  maxListItems = 1,
-  limitedHeight = true,
-  onShowMoreTeachers,
-  onShowMoreGroups,
+export const LessonCard = ({ 
+    lesson, 
+    errors = [], 
+    isPending = false, 
+    isHighlighted = false,
+    onDragStart, 
+    onDelete, 
+    onClick 
 }: LessonCardProps) => {
-  const showTeachers = lesson.teachers_list || [];
-  const showGroups = lesson.groups_list || [];
+    
+    // Состояния валидации
+    const hasErrors = errors.length > 0;
+    const isHardError = errors.some(e => e.penalty >= 100);
 
-  const teachersVisible = showTeachers.slice(0, maxListItems);
-  const teachersHiddenCount = showTeachers.length - teachersVisible.length;
+    // Логика черновика на основе draft_info
+    const isNew = lesson.draft_info?.is_new || false;
+    // Занятие считается измененным, если есть объект draft_info и это не создание с нуля
+    const isModified = !!lesson.draft_info && !isNew;
 
-  const groupsVisible = showGroups.slice(0, maxListItems);
-  const groupsHiddenCount = showGroups.length - groupsVisible.length;
+    // Проверка изменения конкретного поля
+    const isFieldChanged = (fieldName: string) => 
+        lesson.draft_info?.changes.some(change => change.field === fieldName);
 
-  return (
-    <div className={`lesson-card flex-col gap-1 ${limitedHeight ? "limited" : ""}`}>
-      {/* Заголовок */}
-      <div className="lesson-card-title">
-        {lesson.type_name} {lesson.discipline_name}
-      </div>
+    return (
+        <div 
+            className={`
+                draggable-lesson card p-1 flex-col gap-1
+                ${hasErrors ? "has-error" : ""} 
+                ${isPending ? "is-pending" : ""}
+                ${isHighlighted ? "is-highlighted" : ""}
+                ${isNew ? "draft-new" : ""}
+                ${isModified ? "draft-modified" : ""}
+            `}
+            draggable={!isPending}
+            onDragStart={e => onDragStart?.(e, lesson.id)}
+            onClick={onClick}
+        >
+            {/* Индикаторы статуса в углу */}
+            <div className="card-indicators flex-row gap-1">
+                {isPending ? (
+                    <div className="checking-spinner flex-row align-center justify-center" title="Проверка...">⏳</div>
+                ) : hasErrors && (
+                    <div className={`error-icon flex-row align-center justify-center ${isHardError ? 'bg-red' : 'bg-orange'}`}>!</div>
+                )}
+            </div>
 
-      {/* Преподаватели */}
-      {teachersVisible.length > 0 && (
-        <div className="teacher-list mt-1">
-          {teachersVisible.map((t, idx) => (
-            <span className="lesson-card-sub" key={idx}>
-              👤 {t}
-            </span>
-          ))}
+            {/* Заголовок (Дисциплина) */}
+            <div className="flex-row space-between align-start w-100">
+                <div className={`subject-short truncate f-1 ${isFieldChanged('discipline') ? 'text-orange' : 'text-primary'}`}>
+                    {lesson.discipline}
+                </div>
+                {onDelete && (
+                    <button 
+                        className="delete-btn-mini ml-1" 
+                        onClick={(e) => { e.stopPropagation(); onDelete(); }}
+                    >
+                        ×
+                    </button>
+                )}
+            </div>
 
-          {teachersHiddenCount > 0 && (
-            <span
-              className="lesson-card-sub text-primary"
-              style={{ cursor: "pointer", fontWeight: 500 }}
-              onClick={onShowMoreTeachers}
-            >
-              …и ещё {teachersHiddenCount}
-            </span>
-          )}
+            {/* Список преподавателей */}
+            <CollapsibleList
+                items={lesson.teachers || []}
+                containerClassName={isFieldChanged('teachers') ? 'bg-orange-light' : ''}
+                renderItem={(t, idx) => (
+                    <span className="lesson-card-sub truncate" key={idx}>👤 {t.name}</span>
+                )}
+            />
+
+            <div className="lesson-divider w-100" />
+
+            {/* Подвал (Аудитория и Группы) */}
+            <div className="flex-row space-between align-center w-100 gap-1">
+                <div className={`room-short ${isFieldChanged('classroom') ? 'room-changed' : ''}`}>
+                    {lesson.classroom || "—"}
+                </div>
+                
+                <CollapsibleList 
+                    items={lesson.study_groups || []}
+                    containerClassName={`f-1 justify-end ${isFieldChanged('study_groups') ? 'bg-orange-light' : ''}`}
+                    renderItem={(g, idx) => (
+                        <span className="lesson-card-meta truncate" key={idx}>{g.name}</span>
+                    )}
+                />
+            </div>
         </div>
-      )}
-
-      <div className="lesson-divider" />
-      {/* Аудитория */}
-      <div className="lesson-card-meta">
-        Аудитория: {lesson.classroom_name ?? "—"}
-      </div>
-
-      {/* Группы */}
-      {groupsVisible.length > 0 && (
-        <div className="group-list mt-1">
-          Группы: {groupsVisible.join(", ")}
-
-          {groupsHiddenCount > 0 && (
-            <span
-              className="text-primary"
-              style={{ cursor: "pointer", fontWeight: 500, marginLeft: 6 }}
-              onClick={onShowMoreGroups}
-            >
-              …и ещё {groupsHiddenCount}
-            </span>
-          )}
-        </div>
-      )}
-    </div>
-  );
+    );
 };

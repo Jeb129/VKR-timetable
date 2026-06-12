@@ -7,9 +7,9 @@
     border: 1px solid var(--border-color) !important;
     border-radius: var(--radius-md) !important;
     min-height: 45px !important;
+    height: auto !important; 
     cursor: pointer !important;
     box-shadow: none !important;
-    transition: var(--transition) !important;
 }
 
 .ksu-select__control:hover {
@@ -55,4 +55,42 @@
 
 .ksu-select__placeholder {
     color: var(--text-muted) !important;
+}
+/* Контейнер для выбранных тэгов */
+.ksu-select__multi-value {
+    background-color: var(--p-blue) !important;
+    border-radius: 8px !important;
+    color: white !important;
+}
+
+/* Текст внутри тэга */
+.ksu-select__multi-value__label {
+    color: white !important;
+    font-size: 0.85rem !important;
+    padding: 3px 8px !important;
+}
+
+/* Кнопка удаления (крестик) на тэге */
+.ksu-select__multi-value__remove {
+    color: white !important;
+    cursor: pointer !important;
+}
+
+.ksu-select__indicator-separator {
+    display: none !important;
+}
+
+.ksu-select__multi-value__remove:hover {
+    background-color: rgba(255, 255, 255, 0.2) !important;
+    color: white !important;
+}
+
+.ksu-select__value-container {
+    padding: 2px 10px !important;
+    gap: 4px; 
+}
+/* Фикс высоты для мульти-выбора */
+.ksu-select__control {
+    height: auto !important;
+    min-height: 45px !important;
 }

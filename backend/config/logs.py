@@ -78,6 +78,11 @@ CONFIG = {
             "level": "DEBUG",
             "propagate": False,
         },
+        "generator": {
+            "handlers": ["console"],
+            "level": "DEBUG",
+            "propagate": False,
+        },
         "sql": {
             "handlers": ["console", "sql-file"],
             "level": "DEBUG",

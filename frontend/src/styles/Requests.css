@@ -1,0 +1,43 @@
+/* src/styles/Requests.css */
+
+.requests-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 1rem;
+}
+
+.requests-table th {
+  text-align: left;
+  padding: 1rem;
+  border-bottom: 2px solid var(--p-beige-border);
+  color: var(--p-blue);
+  font-family: 'Montserrat', sans-serif;
+  font-size: 0.9rem;
+}
+
+.requests-table td {
+  padding: 1rem;
+  border-bottom: 1px solid var(--p-beige-border);
+  vertical-align: top;
+}
+
+.requests-table tr:hover {
+  background-color: var(--p-blue-light);
+}
+
+/* Стили для содержимого деталей */
+.details-box {
+  background-color: var(--p-beige-bg);
+  border: 1px solid var(--p-beige-border);
+  border-radius: var(--radius-md);
+}
+
+/* Модификаторы для бейджей статуса */
+.badge-pending { background-color: var(--p-orange); color: white; }
+.badge-verified { background-color: var(--p-green); color: white; }
+.badge-rejected { background-color: var(--p-red); color: white; }
+
+.pagination-wrapper {
+  border-top: 1px solid var(--border-color);
+  background: var(--white);
+}

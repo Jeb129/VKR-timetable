@@ -1,0 +1,34 @@
+/* src/styles/ShortListView.css */
+
+.short-list-container {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 4px;
+    width: 100%;
+    overflow: hidden;
+}
+
+/* Элемент "...и еще N" */
+.short-list-more-trigger {
+    color: var(--p-blue);
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+    user-select: none;
+    transition: var(--transition);
+}
+
+.short-list-more-trigger:hover {
+    text-decoration: underline;
+    filter: brightness(1.2);
+}
+
+/* Утилита для обрезки текста внутри элементов списка, 
+   если они передаются как простые строки */
+.short-list-item-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
