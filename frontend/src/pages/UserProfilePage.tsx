@@ -6,9 +6,11 @@ import { privateApi } from "@/services/axios";
 import { useModal } from "@/context/ModalContext"; 
 import GroupPicker from "@/components/profile/GroupPicker"; 
 import type { MappedEvent } from "@/types/schedule"; 
-import type { BookingRequest } from "@/types/booking";
 import "@/styles/Profile.css";
 import { scheduleViewService } from "@/services/schedule_view";
+import type { RequestInstance } from "@/types/request";
+import type { User } from "@/types/user";
+import { requestService } from "@/services/request";
 
 const UserProfilePage = () => {
     const { user, logout, refreshUser } = useAuth();
@@ -17,7 +19,7 @@ const UserProfilePage = () => {
 
     // 1. ИСПРАВЛЕН ТИП: теперь тут MappedEvent
     const [myLessons, setMyLessons] = useState<MappedEvent[]>([]);
-    const [myBookings, setMyBookings] = useState<BookingRequest[]>([]);
+    const [myRequests, setMyRequests] = useState<RequestInstance[]>([]);
     const [isVerifying, setIsVerifying] = useState(false);
     const [verifyError, setVerifyError] = useState<string | null>(null);
 
@@ -26,19 +28,24 @@ const UserProfilePage = () => {
             const loadProfileData = async () => {
                 try {
                     const today = new Date().toISOString().split('T')[0];
-                    const teacherId = (user as any).teacher_id;
+                    const teacherId = user.teacher?.id;
+                    const studygroupId = user.study_group?.id;
+                    
+                    let tLessons: MappedEvent[] = []
+                    let sgLessons: MappedEvent[] = []
 
                     if (teacherId) {
-                        const lessonsData = await dbService.list("schedule/teacher", {
-                            teacher_id: teacherId,
-                            date_from: today,
-                            date_to: today
-                        });
-                        setMyLessons(lessonsData);
+                        tLessons = await scheduleViewService.teacher(teacherId,today,today)
                     }
+                    if (studygroupId) {
+                        sgLessons = await scheduleViewService.group(studygroupId,today,today)
+                    }
+                    setMyLessons([...tLessons,...sgLessons])
 
-                    const bookingsData = await dbService.list("bookings", { my: 'true' });
-                    setMyBookings(bookingsData);
+                    const reqData = (await requestService.getAll({
+                        search: user.email
+                    })).results
+                    setMyRequests(reqData)
                 } catch (err) {
                     console.error("Ошибка загрузки профиля:", err);
                 }

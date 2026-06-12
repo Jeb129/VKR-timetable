@@ -20,6 +20,7 @@ export interface RequestParams {
   page_size?: number;
   status?: number;
   type?: number;
+  search?: string;
 }
 
 export interface PaginatedResponse<T> {
