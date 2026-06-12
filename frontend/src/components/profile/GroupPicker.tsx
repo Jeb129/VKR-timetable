@@ -15,6 +15,7 @@ const GroupPicker = ({ onSuccess, onClose }: Props) => {
         if (!selectedId) return;
         setLoading(true);
         try {
+            // Отправляем ID выбранной группы на бэкенд
             await privateApi.patch("/auth/link-group/", { study_group_id: selectedId });
             onSuccess();
         } catch {
@@ -34,17 +35,13 @@ const GroupPicker = ({ onSuccess, onClose }: Props) => {
                 />
             </div>
             
-            <p className="text-muted" style={{ fontSize: '12px' }}>
-                Введите номер или направление, чтобы быстро найти свою группу в списке.
-            </p>
-
             <div className="flex-row gap-2 mt-2">
                 <button 
                     className="btn btn-green f-1" 
                     onClick={void handleSave} 
                     disabled={loading || !selectedId}
                 >
-                    {loading ? "Сохранение..." : "Привязать профиль"}
+                    {loading ? "Связывание..." : "Привязать профиль"}
                 </button>
                 <button className="btn btn-outline f-1" onClick={onClose}>Отмена</button>
             </div>

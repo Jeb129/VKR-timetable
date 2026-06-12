@@ -62,7 +62,7 @@ frontend/.cache/
 # ----------------------------
 # Docker
 # ----------------------------
-docker/*.env  # если есть отдельные env для docker
+docker/.env  # если есть отдельные env для docker
 docker/*.log
 docker/*.pid
 
@@ -79,7 +79,7 @@ redis/.env
 .idea/
 *.sublime-workspace
 *.sublime-project
-
+*.env
 # ----------------------------
 # Mac/Linux
 # ----------------------------
