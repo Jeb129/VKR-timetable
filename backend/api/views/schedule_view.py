@@ -190,6 +190,36 @@ class MyGroupScheduleView(ScheduleView):
             teacher_id=study_group.id
         ).get_schedule()
 
+# Используя это можно забить на MyGroupScheduleView и MyTeacherScheduleView. Не депнул просто пока что 
+class MyScheduleView(ScheduleView):
+    """
+    Автоматически определяет, кто делает запрос, и отдает расписание 
+    (для преподавателя или для студента по группе).
+    """
+    permission_classes = [IsAuthenticated]
+
+    def get_queryset(self) -> List[MappedEvent]:
+        dt_f, dt_t = self.get_query_date()
+        user = self.request.user
+
+        # Если пользователь преподаватель
+        if user.teacher:
+            return ScheduleMapper(
+                date_from=dt_f,
+                date_to=dt_t,
+                teacher_id=user.teacher.id
+            ).get_schedule()
+
+        # Если пользователь студент привязавший группу
+        if user.study_group:
+            return ScheduleMapper(
+                date_from=dt_f,
+                date_to=dt_t,
+                group_id=user.study_group.id
+            ).get_schedule()
+
+        # Если ни к чему не привязан — пустой список
+        return []
 
 class ScheduleAdjustmentCreateView(APIView):
     permission_classes = [IsTeacher,IsScheduleModerator]

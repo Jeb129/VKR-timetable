@@ -7,7 +7,8 @@ from .schedule_view import (GroupScheduleView,
                             ScheduleAdjustmentCreateView,
                             ScheduleAdjustmentViewSet,
                             DisciplineViewSet,
-                            LessonTypeViewSet)
+                            LessonTypeViewSet,
+                            MyScheduleView)
 from .booking import BookingViewSet, BookingTypeViewSet
 from .building import ClassroomViewSet
 from .schedule_draft import DraftLessonViewSet

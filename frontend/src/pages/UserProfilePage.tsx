@@ -1,6 +1,6 @@
 import { useAuth } from "@/context/AuthContext";
 import { Navigate, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { dbService } from "@/services/crud"; 
 import { privateApi } from "@/services/axios";
 import { useModal } from "@/context/ModalContext"; 
@@ -14,7 +14,6 @@ const UserProfilePage = () => {
     const { openModal, closeModal } = useModal();
     const navigate = useNavigate();
 
-    // 1. ИСПРАВЛЕН ТИП: теперь тут MappedEvent
     const [myLessons, setMyLessons] = useState<MappedEvent[]>([]);
     const [myBookings, setMyBookings] = useState<BookingRequest[]>([]);
     const [isVerifying, setIsVerifying] = useState(false);
@@ -24,27 +23,43 @@ const UserProfilePage = () => {
         if (user) {
             const loadProfileData = async () => {
                 try {
-                    const today = new Date().toISOString().split('T')[0];
-                    const teacherId = (user as any).teacher_id;
+                    // Подготовка дат 
+                    const today = new Date();
+                    //const today = new Date("2026-04-06"); 
+                    //const tomorrow = new Date(today);
+                    const tomorrow = new Date();
+                    tomorrow.setDate(today.getDate() + 1);
 
-                    if (teacherId) {
-                        const lessonsData = await dbService.list("schedule/teacher", {
-                            teacher_id: teacherId,
-                            date_from: today,
-                            date_to: today
-                        });
-                        setMyLessons(lessonsData);
-                    }
+                    const dateFrom = today.toISOString().split('T')[0];
+                    const dateTo = tomorrow.toISOString().split('T')[0];
+
+                    // Бэкенд сам поймет, учитель это или студент
+                    const lessonsData = await dbService.list("schedule/my", {
+                        date_from: dateFrom,
+                        date_to: dateTo
+                    });
+                    setMyLessons(lessonsData);
 
                     const bookingsData = await dbService.list("bookings", { my: 'true' });
                     setMyBookings(bookingsData);
                 } catch (err) {
-                    console.error("Ошибка загрузки профиля:", err);
+                    console.error("Ошибка при загрузке данных профиля:", err);
                 }
             };
             loadProfileData();
         }
     }, [user]);
+
+    // Хелпер для группировки занятий 
+    const lessonsByDay = useMemo(() => {
+        const groups: Record<string, MappedEvent[]> = {};
+        myLessons.forEach(event => {
+            const date = event.start.split('T')[0];
+            if (!groups[date]) groups[date] = [];
+            groups[date].push(event);
+        });
+        return groups;
+    }, [myLessons]);
 
     // Модалка выбора группы
     const openGroupModal = () => {
@@ -58,6 +73,12 @@ const UserProfilePage = () => {
                 }} 
             />
         });
+    };
+
+    const getDayLabel = (dateStr: string) => {
+        const today = new Date().toISOString().split('T')[0];
+        if (dateStr === today) return "Сегодня";
+        return new Date(dateStr).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'short' });
     };
 
     const handleMoodleVerify = async () => {
@@ -162,26 +183,35 @@ const UserProfilePage = () => {
 
                 <div className="content-area flex-grow">
                     <div className="card fade-in">
-                        <h3>Моё ближайшее расписание</h3>
-                        <div className="flex-col mt-2">
-                            {myLessons.length > 0 ? (
-                                myLessons.map((item, idx) => (
-                                    <div key={idx} className="list-item flex-row align-center">
-                                        {/* Достаем время из корня MappedEvent */}
-                                        <div className="text-primary" style={{ fontWeight: 800, width: '120px' }}>
-                                            {new Date(item.start).toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'})}
-                                        </div>
-                                        <div className="flex-grow">
-                                            {/* Достаем данные урока из extendedProps.event */}
-                                            <div style={{ fontWeight: 600 }}>{item.extendedProps.event.discipline}</div>
-                                            <div className="text-muted" style={{ fontSize: '13px' }}>
-                                                Кабинет {item.extendedProps.event.classroom} • {item.extendedProps.event.lesson_type}
+                        <h3>Ближайшие занятия</h3>
+                        <div className="flex-col mt-2 gap-2">
+                            {user.is_internal ? (
+                                Object.keys(lessonsByDay).length > 0 ? (
+                                    Object.entries(lessonsByDay).map(([date, dayLessons]) => (
+                                        <div key={date} className="flex-col">
+                                            <div className="text-muted mb-1" style={{ fontSize: '12px', fontWeight: 700, textTransform: 'uppercase' }}>
+                                                {getDayLabel(date)}
                                             </div>
+                                            {dayLessons.map((item, idx) => (
+                                                <div key={idx} className="list-item flex-row align-center py-1">
+                                                    <div className="text-primary" style={{ fontWeight: 800, width: '90px' }}>
+                                                        {new Date(item.start).toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'})}
+                                                    </div>
+                                                    <div className="flex-grow">
+                                                        <div style={{ fontWeight: 600 }}>{item.extendedProps.event.discipline}</div>
+                                                        <div className="text-muted" style={{ fontSize: '13px' }}>
+                                                            {item.extendedProps.event.classroom} • {item.extendedProps.event.lesson_type}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    </div>
-                                ))
+                                    ))
+                                ) : (
+                                    <p className="empty-text">На ближайшие два дня занятий не найдено</p>
+                                )
                             ) : (
-                                <p className="empty-text">На сегодня занятий нет</p>
+                                <p className="empty-text">Подтвердите аккаунт, чтобы видеть своё расписание</p>
                             )}
                         </div>
                     </div>

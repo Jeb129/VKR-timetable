@@ -5,7 +5,8 @@ from api.views import (TeacherScheduleView,
                        ClassroomScheduleView, 
                        MyTeacherScheduleView, 
                        ScheduleAdjustmentCreateView,
-                       ScheduleAdjustmentViewSet)
+                       ScheduleAdjustmentViewSet,
+                       MyScheduleView)
 
 router = DefaultRouter()
 router.register(r'adjustments', ScheduleAdjustmentViewSet, basename='adjustment')
@@ -16,6 +17,7 @@ urlpatterns =[
     path("teacher/", TeacherScheduleView.as_view(), name="teacher_schedule"),
     path("classroom/",ClassroomScheduleView.as_view(), name="classroom_schedule"),
     path("adjustment/", ScheduleAdjustmentCreateView.as_view(), name="adjustment_create"),
+    path("my/", MyScheduleView.as_view(), name="personal_schedule"),
     path('', include(router.urls)),
 ]
 
