@@ -1,5 +1,6 @@
 // components/schedule_editor/DiffViewer.tsx
-import { type SimpleEntity } from "@/types/schedule";
+
+import type { SimpleEntity } from "@/types/ui";
 
 interface DiffItemProps {
     value: SimpleEntity | SimpleEntity[] | null;

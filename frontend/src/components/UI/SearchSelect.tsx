@@ -1,31 +1,27 @@
 import { useState, useRef } from 'react';
-import type { SelectOption } from "@/types/ui";
+import type { SelectOption, SimpleEntity } from "@/types/ui";
 import "@/styles/SearchSelect.css";
 import { dbService } from '@/services/crud';
 import type { OptionsOrGroups, GroupBase } from 'react-select';
 import AsyncSelect from 'react-select/async';
 
-interface AsyncSearchSelectProps {
+interface SearchSelectProps {
     model: string;
-    // Значение ID (одиночное или массив)
-    value: number | string | (number | string)[] | null;
-    // Начальные данные для отображения label
-    initialOptions?: SelectOption | SelectOption[] | null;
+    // @ts-ignore
     onChange: (value: any) => void;
     placeholder?: string;
     isClearable?: boolean;
     isMulti?: boolean;
 }
 
-const AsyncSearchSelect: React.FC<AsyncSearchSelectProps> = ({
+const SearchSelect: React.FC<SearchSelectProps> = ({
     model,
-    value,
     onChange,
     placeholder,
-    initialOptions,
     isClearable = true,
     isMulti = false
 }) => {
+    // @ts-ignore
     const selectRef = useRef<any>(null);
     const [selectedOption, setSelectedOption] = useState<SelectOption | readonly SelectOption[] | null>(null);
     /**
@@ -37,38 +33,19 @@ const AsyncSearchSelect: React.FC<AsyncSearchSelectProps> = ({
         inputValue: string
     ): Promise<OptionsOrGroups<SelectOption, GroupBase<SelectOption>>> => {
         try {
-            const data = await dbService.list<any>(model, {
+            const data = await dbService.list<SimpleEntity>(model, {
                 search: inputValue,
                 page_size: 20
             });
 
             return data.results.map((item) => ({
                 value: item.id,
-                label: item.name || `ID: ${item.id}`
+                label: item.name ?? `ID: ${item.id}`
             }));
         } catch (e) {
             console.error(`Ошибка справочника ${model}:`, e);
             return [];
         }
-    };
-
-    /**
-     * Приведение текущего value (ID) к объекту SelectOption для отображения
-     */
-    const getSelectedValue = (): SelectOption | SelectOption[] | null => {
-        if (!value || (Array.isArray(value) && value.length === 0)) return null;
-
-        if (isMulti && Array.isArray(value)) {
-            if (Array.isArray(initialOptions)) return initialOptions;
-            return value.map(v => ({ value: v, label: `ID: ${v}` }));
-        }
-
-        if (!Array.isArray(value)) {
-            if (initialOptions && !Array.isArray(initialOptions)) return initialOptions;
-            return { value, label: String(value) };
-        }
-
-        return null;
     };
 
     /**
@@ -93,7 +70,7 @@ const AsyncSearchSelect: React.FC<AsyncSearchSelectProps> = ({
             loadOptions={loadOptions}
             value={selectedOption}
             onChange={handleChange}
-            placeholder={placeholder || (isMulti ? "Выберите несколько..." : "Поиск...")}
+            placeholder={placeholder ?? (isMulti ? "Выберите несколько..." : "Поиск...")}
             isMulti={isMulti}
             isClearable={isClearable}
 
@@ -110,4 +87,4 @@ const AsyncSearchSelect: React.FC<AsyncSearchSelectProps> = ({
     );
 };
 
-export default AsyncSearchSelect;
+export default SearchSelect;

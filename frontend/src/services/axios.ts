@@ -30,16 +30,6 @@ privateApi.interceptors.response.use(
         
         return privateApi(originalRequest);
       } catch (refreshError) {
-        const currentPath = window.location.pathname + window.location.search;
-
-        // Если мы еще не на странице логина, переходим туда
-        if (window.location.pathname !== '/login') {
-          // Кодируем путь, чтобы спецсимволы в URL не сломались
-          const searchParams = new URLSearchParams();
-          searchParams.set("next", currentPath);
-
-          window.location.href = `/login?${searchParams.toString()}`;
-        }
         return Promise.reject(refreshError);
       }
     }

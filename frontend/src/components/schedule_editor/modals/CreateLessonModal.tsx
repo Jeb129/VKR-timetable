@@ -1,5 +1,5 @@
 import { useState} from "react";
-import AsyncSearchSelect from "@/components/UI/SearchSelect";
+import SearchSelect from "@/components/UI/SearchSelect";
 
 interface Props {
     slotId: number;
@@ -36,9 +36,8 @@ const CreateLessonModal = ({ slotId, onConfirm, onCancel }: Props) => {
             {/* ВЫБОР ДИСЦИПЛИНЫ */}
             <div className="flex-col">
                 <label className="filter-label">Дисциплина</label>
-                <AsyncSearchSelect
+                <SearchSelect
                     model="disciplines"
-                    value={formData.discipline}
                     onChange={(val) => setFormData({...formData, discipline: val})}
                     placeholder="Найдите дисциплину..."
                 />
@@ -47,9 +46,8 @@ const CreateLessonModal = ({ slotId, onConfirm, onCancel }: Props) => {
             {/* ВЫБОР ТИПА ЗАНЯТИЯ */}
             <div className="flex-col">
                 <label className="filter-label">Тип занятия</label>
-                <AsyncSearchSelect
+                <SearchSelect
                     model="lesson-types"
-                    value={formData.lesson_type}
                     onChange={(val) => setFormData({...formData, lesson_type: val})}
                     placeholder="Лекция, практика..."
                 />
@@ -58,9 +56,8 @@ const CreateLessonModal = ({ slotId, onConfirm, onCancel }: Props) => {
             {/* ВЫБОР АУДИТОРИИ */}
             <div className="flex-col">
                 <label className="filter-label">Аудитория</label>
-                <AsyncSearchSelect
+                <SearchSelect
                     model="classrooms"
-                    value={formData.classroom}
                     onChange={(val) => setFormData({...formData, classroom: val})}
                     placeholder="Выберите кабинет..."
                 />
@@ -69,10 +66,9 @@ const CreateLessonModal = ({ slotId, onConfirm, onCancel }: Props) => {
             {/* ВЫБОР ПРЕПОДАВАТЕЛЯ */}
             <div className="flex-col">
                 <label className="filter-label">Преподаватели (можно несколько)</label>
-                <AsyncSearchSelect 
+                <SearchSelect 
                     model="teachers"
                     isMulti={true} // ВКЛЮЧАЕМ МУЛЬТИВЫБОР
-                    value={formData.teachers}
                     onChange={(vals) => setFormData({...formData, teachers: vals})}
                     placeholder="Выберите одного или нескольких..."
                 />
@@ -81,10 +77,9 @@ const CreateLessonModal = ({ slotId, onConfirm, onCancel }: Props) => {
             {/* ВЫБОР ГРУППЫ */}
             <div className="flex-col">
                 <label className="filter-label">Учебные группы (можно несколько)</label>
-                <AsyncSearchSelect 
+                <SearchSelect 
                     model="groups"
                     isMulti={true} // ВКЛЮЧАЕМ МУЛЬТИВЫБОР
-                    value={formData.study_groups}
                     onChange={(vals) => setFormData({...formData, study_groups: vals})}
                     placeholder="Выберите одну или несколько..."
                 />

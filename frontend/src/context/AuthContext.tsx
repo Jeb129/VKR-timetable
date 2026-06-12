@@ -1,10 +1,11 @@
-import { createContext, useContext, useEffect, useState,} from "react"
+import { createContext, useContext, useEffect, useState, } from "react"
 import { authService } from "@/services/auth/auth"
 
 import type { ReactNode } from "react"
 import type { LoginRequest, User } from "@/types/user"
 import type { RegisterRequest } from "@/types/user"
 import { dbService } from "@/services/crud"
+import { useNavigate } from "react-router-dom"
 
 // Контекст в котором хранится пользователь если авторизован
 // Используется через хук useAuth (экспорт ниже)
@@ -17,7 +18,7 @@ export interface AuthContextType {
   register: (data: RegisterRequest) => Promise<void>
   logout: () => Promise<void>
   refreshUser: () => Promise<void>
-  updateUser: (data: Record<string,string>) => Promise<void>
+  updateUser: (data: Record<string, string>) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -29,18 +30,18 @@ interface AuthProviderProps {
 const AuthProvider = ({ children }: AuthProviderProps) => {
   const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState<boolean>(true)
+  const navigate = useNavigate();
 
   const isAuthenticated = !!user
 
-  const updateUser = async (data: Record<string,string>) => {
+  const updateUser = async (data: Record<string, string>) => {
     if (!user) return
-    const updated = await dbService.update<User>("user",user.id,data)
+    const updated = await dbService.update<User>("user", user.id, data)
     if (updated) setUser(updated)
   }
 
   const refreshUser = async () => {
     try {
-      setIsLoading(true)
       const u = await authService.getCurrentUser()
       setUser(u)
     } catch {
@@ -51,8 +52,9 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
   }
 
   const login = async (data: LoginRequest) => {
+    setIsLoading(true)
     await authService.login(data)
-    refreshUser()
+    await refreshUser()
   }
 
   const register = async (data: RegisterRequest) => {
@@ -65,6 +67,7 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
       await authService.logout()
     } finally {
       setUser(null)
+      navigate("/login", { replace: true, state: {} });
     }
   }
 

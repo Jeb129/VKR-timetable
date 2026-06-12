@@ -1,15 +1,13 @@
 import { useAuth } from "@/context/AuthContext";
 import { Navigate, useNavigate } from "react-router-dom";
-import { useState, useEffect, useMemo } from "react";
-import { dbService } from "@/services/crud"; 
-import { MyTable } from "@/components/requests/MyTable"; 
+import { useState, useEffect } from "react";
 import { privateApi } from "@/services/axios";
 import { useModal } from "@/context/ModalContext"; 
 import GroupPicker from "@/components/profile/GroupPicker"; 
 import type { MappedEvent } from "@/types/schedule"; 
 import "@/styles/Profile.css";
 import { scheduleViewService } from "@/services/schedule_view";
-import type { User } from "@/types/user";
+import type { RequestInstance } from "@/types/request";
 import { requestService } from "@/services/request";
 
 const UserProfilePage = () => {
@@ -18,7 +16,7 @@ const UserProfilePage = () => {
     const navigate = useNavigate();
 
     const [myLessons, setMyLessons] = useState<MappedEvent[]>([]);
-    const [myRequests, setMyRequests] = useState<any[]>([]); 
+    const [myRequests, setMyRequests] = useState<RequestInstance[]>([]);
     const [isVerifying, setIsVerifying] = useState(false);
     const [verifyError, setVerifyError] = useState<string | null>(null);
 
@@ -128,6 +126,15 @@ const UserProfilePage = () => {
     };
 
     if (!user) return <Navigate to="/login" replace />;
+    // @ts-expect-error
+    const getStatusInfo = (status: number) => {
+        switch (status) {
+            case 0: return { label: "На модерации", color: "var(--p-orange)" };
+            case 1: return { label: "Одобрена", color: "var(--p-green)" };
+            case 2: return { label: "Отклонена", color: "var(--p-red)" };
+            default: return { label: "Черновик", color: "var(--text-muted)" };
+        }
+    };
 
     return (
         <div className="flex-col bg-main min-h-screen"> 
@@ -136,7 +143,7 @@ const UserProfilePage = () => {
                 <div className="flex-row gap-10">
                     <button className="btn nav-btn" onClick={() => navigate("/")}>Главная</button>
                     <button className="btn nav-btn" onClick={() => navigate("/schedule")}>К расписанию</button>
-                    <button className="btn nav-btn btn-red" onClick={logout}>Выйти</button>
+                    <button className="btn nav-btn btn-red" onClick={() => {logout();navigate("/login",{ replace: true })}}>Выйти</button>
                 </div>
             </nav>
 

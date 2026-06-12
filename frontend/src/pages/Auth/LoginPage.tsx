@@ -1,29 +1,33 @@
-import { useState } from "react"
-import { Navigate, useNavigate, useSearchParams } from "react-router-dom"
+import { useEffect, useState } from "react"
+import { useLocation, useNavigate } from "react-router-dom"
 import type { LoginRequest } from "@/types/user"
 import { useAuth } from "@/context/AuthContext"
 import "@/styles/Auth.css";
 
 const LoginPage = () => {
   const { isAuthenticated, isLoading, login } = useAuth()
-  const [searchParams] = useSearchParams(); // Хук для чтения параметров URL
-
-  const redirectPath = searchParams.get("next");
   // Если пользователь уже авторизован - перенаправляем
-
-  if (!isLoading && isAuthenticated) {
-    return <Navigate to={redirectPath || "/profile"} replace />
-  }
 
   const [loginError, setLoginError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
+  const location = useLocation()
 
   const navigate = useNavigate()
   const [form, setForm] = useState<LoginRequest>({
     email: "",
     password: "",
   })
+
+  // Достаем путь из state. Если его там нет (зашли на логин напрямую), ставим /profile
+  // Типизируем для безопасности
+  const redirectedFrom = (location.state)?.from?.pathname
+  const from = redirectedFrom || "/profile"
+  useEffect(() => {
+    if (!isLoading && isAuthenticated) {
+      navigate(from, { replace: true });
+    }
+  }, [isAuthenticated, isLoading, navigate, from]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -37,12 +41,7 @@ const LoginPage = () => {
     try {
       setLoading(true)
       await login(form)
-      if (redirectPath) {
-        localStorage.removeItem("redirectAfterLogin")
-        navigate(redirectPath)
-      } else {
-        navigate("/profile")
-      }
+      navigate(from, { replace: true })
     } catch (err: any) {
       setLoginError(err?.response?.data?.detail ?? "Вход не выполнен")
     } finally {
@@ -70,6 +69,7 @@ const LoginPage = () => {
                 value={form.email}
                 onChange={handleChange}
                 required
+                autoComplete="email" 
               />
             </div>
 
@@ -83,6 +83,7 @@ const LoginPage = () => {
                   value={form.password}
                   onChange={handleChange}
                   required
+                  autoComplete="current-password" 
                 />
                 <div
                   className="primary-btn"
@@ -107,7 +108,7 @@ const LoginPage = () => {
             </button>
           </form>
         </div>
-        { redirectPath ? (<></>) : (
+        { 0 ? (<></>) : (
           <>
           <div className="flex-col fade-in card max-width">
             <div className="justify-center">

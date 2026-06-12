@@ -7,7 +7,6 @@ import SchedulePage from "./pages/Schedule/SchedulePage";
 import ModerationPage from "./pages/Booking/ModerationPage";
 import ScheduleEditorPage from "./pages/Editor/ScheduleEditorPage";
 import ScenarioSelectionPage from "./pages/Editor/ScenarioSelectionPage";
-import TeacherAdjustmentPage from "./pages/TeacherAdjustment/TeacherAdjustmentPage"
 import AcademicLoadImportPage from "./pages/AcademicLoad/AcademicLoadImportPage"
 import HomePage from "./pages/HomePage";
 import StatsPage from "./pages/Statistics/StatsPage"
@@ -33,7 +32,6 @@ const App = () =>
       <Route path="/Moderation" element={<ProtectedRoute><ModerationPage/></ProtectedRoute>}/>
       <Route path="/ScheduleEditor" element={<ProtectedRoute><ScenarioSelectionPage /></ProtectedRoute>} />
       <Route path="/ScheduleEditor/:scenarioId" element={<ProtectedRoute><ScheduleEditorPage/></ProtectedRoute>}/>
-      <Route path="/TeacherAdjustment" element={<ProtectedRoute><TeacherAdjustmentPage/></ProtectedRoute>}/>
       <Route path="/AcademicLoad" element={<ProtectedRoute><AcademicLoadImportPage/></ProtectedRoute>}/>
       <Route path="/Statistics" element={<ProtectedRoute><StatsPage/></ProtectedRoute>} />
       <Route path="/Statistics/:buildingId" element={<ProtectedRoute><BuildingStatsPage /></ProtectedRoute>} />

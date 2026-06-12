@@ -5,7 +5,7 @@ import { dbService } from "@/services/crud";
 import { ChangeLogItem } from "@/components/schedule_editor/ChangeLogItem";
 import LessonErrorItem from "@/components/schedule_editor/LessonError";
 import { DeletedLogItem } from "@/components/schedule_editor/DeletedLogItem";
-import type { Lesson } from "@/types/schedule";
+import type { Lesson, Scenario } from "@/types/schedule";
 import type { LessonError } from "@/types/constraint";
 import "@/styles/Editor.css";
 
@@ -14,7 +14,6 @@ const ScenarioReviewPage = () => {
     const navigate = useNavigate();
     const sId = Number(scenarioId);
 
-    const [loading, setLoading] = useState(true);
     const [isApplying, setIsSyncing] = useState(false);
     
     const [scenarioName, setScenarioName] = useState("");
@@ -22,8 +21,8 @@ const ScenarioReviewPage = () => {
     const [allDeleted, setAllDeleted] = useState<Lesson[]>([]);
     const [globalErrors, setGlobalErrors] = useState<LessonError[]>([]);
 
+
     const loadReviewData = async () => {
-        setLoading(true);
         try {
             // ОДИН ЗАПРОС вместо трех
             const data = await scheduleDraftService.getSummary(sId);
@@ -33,12 +32,12 @@ const ScenarioReviewPage = () => {
             setAllDeleted(data.deleted);
             
             // Инфо о самом сценарии можно подтянуть отдельно или добавить в summary
-            const scenario = await dbService.get("scenarios", sId);
+            const scenario = await dbService.get<Scenario>("scenarios", sId);
             setScenarioName(scenario.name);
         } catch (err) {
             console.error("Ошибка подготовки ревью:", err);
         } finally {
-            setLoading(false);
+
         }
     };
 

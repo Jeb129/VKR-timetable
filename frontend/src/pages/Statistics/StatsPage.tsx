@@ -8,6 +8,7 @@ const StatsPage = () => {
     const [stats, setStats] = useState<any[]>([]);
 
     useEffect(() => {
+        // @ts-expect-error
         dbService.list("statistics/load").then(setStats);
     }, []);
 

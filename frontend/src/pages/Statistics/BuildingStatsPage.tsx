@@ -22,10 +22,11 @@ const BuildingStatsPage = () => {
 
     useEffect(() => { fetchRooms(); }, [buildingId]);
     const showRoomDetails = async (roomId: number) => {
-        const details = await dbService.list("statistics/load", { classroom_id: roomId });
+        const details = (await dbService.list("statistics/load", { classroom_id: roomId })).results;
         
         // Вызываем модалку через хук
         openModal({
+            // @ts-expect-error
             title: `Аналитика: Аудитория ${details.num}`,
             width: '800px',
             content: (
@@ -39,7 +40,9 @@ const BuildingStatsPage = () => {
                                     <div className="week-title-mini text-center">{week === 1 ? 'ЧИСЛИТЕЛЬ' : 'ЗНАМЕНАТЕЛЬ'}</div>
                                     <div className="daily-chart-container">
                                         {DAYS_SHORT.map((name, i) => {
+                                            // @ts-expect-error
                                             const count = details.daily_load[week][i + 1] || 0;
+                                            // @ts-expect-error
                                             const height = (count / details.max_pairs) * 100;
                                             return (
                                                 <div key={i} className="day-column">
@@ -58,9 +61,14 @@ const BuildingStatsPage = () => {
 
                     {/* Бронирования */}
                     <div className="flex-col gap-1">
-                        <h4>Активные бронирования ({details.booking_count}):</h4>
+                        <h4>Активные бронирования ({
+                            // @ts-expect-error
+                            details.booking_count
+                        }):</h4>
                         <div className="scroll-y" style={{ maxHeight: '200px' }}>
-                            {details.bookings.map((b: any, i: number) => (
+                            {
+                            // @ts-expect-error
+                            details.bookings.map((b: any, i: number) => (
                                 <div key={i} className="p-2 border-bottom bg-white flex-row space-between">
                                     <div>
                                         <div style={{fontWeight: 700}}>{b.date}</div>

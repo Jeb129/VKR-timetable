@@ -11,7 +11,7 @@ export const scheduleDraftService = {
             room_id?: number,
             with_errors?: boolean
         }): Promise<{lessons: Lesson[], errors?: LessonError[]}> => {
-
+        console.log(params)
         const query = new URLSearchParams(params as any).toString();
         const res = await privateApi.get(`/api/scenario/${scenarioId}/draft/lessons/?${query}`);
         return res.data;

@@ -6,7 +6,7 @@ import { GridCell } from "@/components/schedule_editor/GridCell";
 import LessonErrorItem from "@/components/schedule_editor/LessonError";
 import CreateLessonModal from "@/components/schedule_editor/modals/CreateLessonModal";
 import EditRoomModal from "@/components/schedule_editor/modals/EditRoomModal";
-import AsyncSearchSelect from "@/components/UI/SearchSelect";
+import SearchSelect from "@/components/UI/SearchSelect";
 import { useModal } from "@/context/ModalContext";
 import { useScheduleEditor } from "@/hooks/useScheduleEditor";
 import { dbService } from "@/services/crud";
@@ -39,14 +39,13 @@ const ScheduleEditorPage = () => {
 
     // Состояние
     const [timeslots, setTimeslots] = useState<Timeslot[]>([]);
-    const [filterType, setFilterType] = useState<"group" | "teacher" | "classroom">("group");
+    const [filterType, setFilterType] = useState<"groups" | "teachers" | "classrooms">("groups");
     const [targetId, setTargetId] = useState<number | null>(null);
     const [currentWeek, setCurrentWeek] = useState<number>(1);
     const [isSidebarOpen, setIsSidebarOpen] = useState(true);
     const [activeTab, setActiveTab] = useState<"errors" | "changes" | "trash">("errors");
     const [deletedLessons, setDeletedLessons] = useState<Lesson[]>([]);
     const [loading, setLoading] = useState(false);
-    const [draggingId, setDraggingId] = useState<string | null>(null);
 
     const switchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -74,7 +73,6 @@ const ScheduleEditorPage = () => {
     };
 
     const onDrop = async (lessonId: string, targetSlot: Timeslot) => {
-        setDraggingId(null);
         const lookupKey = getLookupKey(targetSlot);
         const targetLesson = lessonsLookup[lookupKey];
         
@@ -92,9 +90,9 @@ const ScheduleEditorPage = () => {
         setLoading(true); 
         try {
             const filters: any = { with_errors: true };
-            if (filterType === "group") filters.group_id = targetId;
-            if (filterType === "teacher") filters.teacher_id = targetId;
-            if (filterType === "classroom") filters.classroom_id = targetId;
+            if (filterType === "groups") filters.group_id = targetId;
+            if (filterType === "teachers") filters.teacher_id = targetId;
+            if (filterType === "classrooms") filters.classroom_id = targetId;
 
             const [trashData] = await Promise.all([
                 scheduleDraftService.getTrash(sId),
@@ -209,9 +207,8 @@ const ScheduleEditorPage = () => {
                         </div>
                         <div className="flex-col f-1">
                             <label className="filter-label">Объект редактирования</label>
-                            <AsyncSearchSelect 
+                            <SearchSelect 
                                 model={filterType}
-                                value={targetId}
                                 onChange={(val) => {
                                     setTargetId(val as number);
                                 }}
@@ -260,10 +257,9 @@ const ScheduleEditorPage = () => {
                                                     errors={currentErrors}
                                                     isPending={lesson ? pendingIds.has(lesson.id) : false}
                                                     onDragStart={(e, id) => { 
-                                                        setDraggingId(id); 
                                                         e.dataTransfer.setData("lessonId", id); 
                                                     }}
-                                                    onDragEnd={() => setDraggingId(null)}
+                                                    onDragEnd={() => {}}
                                                     onDrop={onDrop}
                                                     onDelete={() => lesson && handleDelete(lesson)}
                                                     onClick={() => lesson ? handleLessonClick(lesson) : slot && handleAddClick(slot.id)}
@@ -276,7 +272,11 @@ const ScheduleEditorPage = () => {
                         </table>
                     </div>
                 </div>
-
+                <div onClick={() => setIsSidebarOpen(prev => !prev)}>
+                    -
+                    -
+                    -
+                </div>
                 <div className={`error-sidebar ${isSidebarOpen ? '' : 'closed'}`}>
                     <div className="sidebar-tabs flex-row">
                         <button className={`tab-btn f-1 p-1 ${activeTab === 'errors' ? 'active' : ''}`} onClick={() => setActiveTab('errors')}>

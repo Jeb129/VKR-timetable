@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { type MappedEvent } from "@/types/schedule";
 import "@/styles/Schedule.css";
-import AsyncSearchSelect from "@/components/UI/SearchSelect";
+import SearchSelect from "@/components/UI/SearchSelect";
 import { scheduleViewService } from "@/services/schedule_view";
 
 const SchedulePage = () => {
@@ -11,7 +11,6 @@ const SchedulePage = () => {
     // Фильтры
     const [filterType, setFilterType] = useState<"classroom" | "group" | "teacher">("classroom");
     const [targetId, setTargetId] = useState<number | null>(null);
-    const [targetLabel, setTargetLabel] = useState<string>(""); // Для хранения имени выбранного объекта
     
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [events, setEvents] = useState<MappedEvent[]>([]);
@@ -64,7 +63,7 @@ const SchedulePage = () => {
 
     // Группировка событий по датам
     const groupedEvents = useMemo(() => {
-        const groups: { [key: string]: MappedEvent[] } = {};
+        const groups: Record<string, MappedEvent[]> = {};
         events.forEach(event => {
             const dateKey = event.start.split('T')[0];
             if (!groups[dateKey]) groups[dateKey] = [];
@@ -108,7 +107,6 @@ const SchedulePage = () => {
                         onChange={(e) => {
                             setFilterType(e.target.value as any);
                             setTargetId(null);
-                            setTargetLabel("");
                         }}
                     >
                         <option value="classrooms">По аудитории</option>
@@ -119,9 +117,8 @@ const SchedulePage = () => {
 
                 <div className="filter-group f-2">
                     <label className="filter-label">Объект</label>
-                    <AsyncSearchSelect 
+                    <SearchSelect 
                         model={modelMapping[filterType]}
-                        value={targetId}
                         onChange={(val) => {
                             setTargetId(val);
                         }}
