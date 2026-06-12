@@ -2,13 +2,13 @@ import { useAuth } from "@/context/AuthContext";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useState, useEffect, useMemo } from "react";
 import { dbService } from "@/services/crud"; 
+import { MyTable } from "@/components/requests/MyTable"; 
 import { privateApi } from "@/services/axios";
 import { useModal } from "@/context/ModalContext"; 
 import GroupPicker from "@/components/profile/GroupPicker"; 
 import type { MappedEvent } from "@/types/schedule"; 
 import "@/styles/Profile.css";
 import { scheduleViewService } from "@/services/schedule_view";
-import type { RequestInstance } from "@/types/request";
 import type { User } from "@/types/user";
 import { requestService } from "@/services/request";
 
@@ -18,15 +18,21 @@ const UserProfilePage = () => {
     const navigate = useNavigate();
 
     const [myLessons, setMyLessons] = useState<MappedEvent[]>([]);
-    const [myRequests, setMyRequests] = useState<RequestInstance[]>([]);
+    const [myRequests, setMyRequests] = useState<any[]>([]); 
     const [isVerifying, setIsVerifying] = useState(false);
     const [verifyError, setVerifyError] = useState<string | null>(null);
+
+    const [loading, setLoading] = useState(true);
+
 
     useEffect(() => {
         if (user) {
             const loadProfileData = async () => {
+                setLoading(true);
                 try {
+
                     const today = new Date().toISOString().split('T')[0];
+                    //const today = "2026-04-06";
                     const teacherId = user.teacher?.id;
                     const studygroupId = user.study_group?.id;
                     
@@ -48,10 +54,34 @@ const UserProfilePage = () => {
                 } catch (err) {
                     console.error("Ошибка при загрузке данных профиля:", err);
                 }
+                finally {
+                    setLoading(false);
+                }
             };
             loadProfileData();
         }
     }, [user]);
+
+    const getStatusStyle = (statusId: number) => {
+        switch(statusId) {
+            case 1: return { color: 'var(--p-green)', label: 'Одобрена' };
+            case 2: return { color: 'var(--p-red)', label: 'Отклонена' };
+            default: return { color: 'var(--p-orange)', label: 'На модерации' };
+        }
+    };
+
+    const getUserRoles = (user: User) => {
+        const roles = [];
+        if (user.is_staff) roles.push("Администратор");
+        if (user.is_schedule_moderator) roles.push("Модератор расписания");
+        if (user.is_booking_moderator) roles.push("Модератор бронирования");
+        // Если ролей нет, но пользователь внутренний
+        if (roles.length === 0 && user.is_internal) {
+            roles.push("Сотрудник / Студент");
+        }
+        
+        return roles.length > 0 ? roles : ["Внешний пользователь"];
+    };
 
     // Хелпер для группировки занятий 
     const lessonsByDay = useMemo(() => {
@@ -99,15 +129,6 @@ const UserProfilePage = () => {
 
     if (!user) return <Navigate to="/login" replace />;
 
-    const getStatusInfo = (status: number) => {
-        switch (status) {
-            case 0: return { label: "На модерации", color: "var(--p-orange)" };
-            case 1: return { label: "Одобрена", color: "var(--p-green)" };
-            case 2: return { label: "Отклонена", color: "var(--p-red)" };
-            default: return { label: "Черновик", color: "var(--text-muted)" };
-        }
-    };
-
     return (
         <div className="flex-col bg-main min-h-screen"> 
             <nav className="navbar">
@@ -133,11 +154,19 @@ const UserProfilePage = () => {
                         </div>
                         <div className="info-group flex-col mt-2 pt-2">
                             <div className="info-group flex-col">
-                                <label className="filter-label info-label">Роль в системе</label>
-                                <span className="info-value text-primary" style={{ fontWeight: 800 }}>
-                                    {/* ИСПОЛЬЗУЕМ is_internal */}
-                                    {user.is_internal ? "Сотрудник / Студент КГУ" : "Внешний пользователь"}
-                                </span>
+                                <label className="filter-label info-label">Роли в системе</label>
+                                    <div className="flex-row flex-wrap gap-1">
+                                        {getUserRoles(user).map((role, idx) => (
+                                            <span key={idx} className="badge" style={{ 
+                                                backgroundColor: 'var(--p-blue-light)', 
+                                                color: 'var(--p-blue)',
+                                                fontSize: '12px',
+                                                fontWeight: 700
+                                            }}>
+                                                {role}
+                                            </span>
+                                        ))}
+                                    </div>
                             </div>
 
                             {/* БЛОК ПОДТВЕРЖДЕНИЯ MOODLE */}
@@ -153,7 +182,10 @@ const UserProfilePage = () => {
                                                 <small className="text-muted">Группа: </small>
                                                 <strong>{user.study_group.name}</strong>
                                             </div>
-                                        ) : (
+                                        ) : !user.teacher && 
+                                            !user.is_staff && 
+                                            !user.is_schedule_moderator && 
+                                            !user.is_booking_moderator &&(
                                             <button className="btn btn-orange w-100 mt-1" onClick={openGroupModal}>
                                                 Выбрать группу
                                             </button>
@@ -179,7 +211,7 @@ const UserProfilePage = () => {
                         <h3 className="text-orange">Действия</h3>
                         <div className="action-buttons flex-col gap-1">
                             <button className="btn btn-orange" onClick={() => navigate("/TeacherAdjustment")}>Перенести занятие</button>
-                            <button className="btn btn-green" onClick={() => navigate("/booking")}>Забронировать ауд.</button>
+                            <button className="btn btn-green" onClick={() => navigate("/Booking")}>Забронировать ауд.</button>
                         </div>
                     </div>
                 </div>
@@ -221,32 +253,34 @@ const UserProfilePage = () => {
 
                     <div className="card fade-in">
                         <h3>Статус моих заявок</h3>
-                        <div className="flex-col mt-2">
-                            {/* {myBookings.length > 0 ? (
-                                myBookings.map(req => {
-                                    const status = getStatusInfo(req.status);
+                        <div className="flex-col mt-2 gap-2">
+                            {loading ? <p>Загрузка...</p> : myRequests.length > 0 ? (
+                                myRequests.map((req) => {
+                                    const status = getStatusStyle(req.status.id);
                                     return (
-                                        <div key={req.id} className="list-item flex-col">
+                                        <div key={req.id} className="list-item flex-col py-2">
                                             <div className="flex-row space-between align-center">
-                                                <div style={{ fontWeight: 700 }}>Бронь аудитории {req.classroom_num}</div>
-                                                <span className="badge" style={{ color: status.color, border: `1px solid ${status.color}` }}>
-                                                    {status.label}
-                                                </span>
+                                                <div className="flex-col">
+                                                    <span className="font-bold text-primary">#{req.id} — {req.type.name}</span>
+                                                    <span className="text-muted small">{new Date(req.created_at).toLocaleDateString()}</span>
+                                                </div>
+                                                <div className="badge" style={{ border: `1px solid ${status.color}`, color: status.color, backgroundColor: 'transparent' }}>
+                                                    {status.label.toUpperCase()}
+                                                </div>
                                             </div>
-                                            <div className="text-muted mt-1" style={{ fontSize: '13px' }}>
-                                                {new Date(req.date_start).toLocaleString('ru-RU')}
+                                            <div className="mt-1 small">
+                                                <strong>Описание:</strong> {req.description}
                                             </div>
                                             {req.admin_comment && (
-                                                <div className="bg-main mt-1" style={{ borderLeft: `4px solid ${status.color}`, padding: '10px', borderRadius: '8px' }}>
-                                                    <p style={{ fontSize: '13px', margin: 0 }}>{req.admin_comment}</p>
+                                                <div className="mt-1 p-2 bg-main rounded-md" style={{ borderLeft: `4px solid var(--p-red)` }}>
+                                                    <small className="font-bold">Комментарий администрации:</small>
+                                                    <p className="m-0">{req.admin_comment}</p>
                                                 </div>
                                             )}
                                         </div>
                                     );
                                 })
-                            ) : (
-                                <p className="empty-text">История заявок пуста</p>
-                            )} */}
+                            ) : <p className="empty-text">У вас нет активных заявок</p>}
                         </div>
                     </div>
                 </div>

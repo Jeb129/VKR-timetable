@@ -14,6 +14,7 @@ import StatsPage from "./pages/Statistics/StatsPage"
 import BuildingStatsPage from "./pages/Statistics/BuildingStatsPage"
 import ScenarioReviewPage from "./pages/Editor/ScenarioReviewPage"
 import ScheduleGeneratorPage from "./pages/Editor/ScheduleGeneratorPage"
+import BookingCreatePage from "./pages/Booking/BookingCreatePage"
 
 import './App.css'
 import { RequestsPage } from "./pages/RequestsPage"
@@ -28,6 +29,7 @@ const App = () =>
       <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
       <Route path="/request" element={<ProtectedRoute><RequestsPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><UserProfilePage /></ProtectedRoute>} />
+      <Route path="/Booking" element={<ProtectedRoute><BookingCreatePage/></ProtectedRoute>}/>
       <Route path="/Moderation" element={<ProtectedRoute><ModerationPage/></ProtectedRoute>}/>
       <Route path="/ScheduleEditor" element={<ProtectedRoute><ScenarioSelectionPage /></ProtectedRoute>} />
       <Route path="/ScheduleEditor/:scenarioId" element={<ProtectedRoute><ScheduleEditorPage/></ProtectedRoute>}/>
