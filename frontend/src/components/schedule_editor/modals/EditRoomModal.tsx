@@ -1,22 +1,15 @@
 import { useState } from "react";
 import SearchSelect from "@/components/UI/SearchSelect";
-import { type SelectOption } from "@/types/ui";
 import { type Lesson } from "@/types/schedule";
 
 interface Props {
     lesson: Lesson;
-    rooms: any[];
     onConfirm: (roomId: number) => void;
     onCancel: () => void;
 }
 
-const EditRoomModal = ({ lesson, rooms, onConfirm, onCancel }: Props) => {
+const EditRoomModal = ({ lesson, onConfirm, onCancel }: Props) => {
     const [selectedRoom, setSelectedRoom] = useState<string | number>(lesson.classroom);
-
-    const roomOptions: SelectOption[] = rooms.map(r => ({
-        value: r.id,
-        label: r.name || r.num
-    }));
 
     return (
         <div className="flex-col gap-2">
@@ -28,7 +21,7 @@ const EditRoomModal = ({ lesson, rooms, onConfirm, onCancel }: Props) => {
             <div className="flex-col">
                 <label className="filter-label">Выберите новую аудиторию</label>
                 <SearchSelect 
-                    options={roomOptions}
+                    model="classrooms"
                     value={selectedRoom}
                     onChange={setSelectedRoom}
                 />

@@ -1,19 +1,13 @@
-import { useState, useMemo } from "react";
-import SearchSelect from "@/components/UI/SearchSelect";
-import type { SelectOption } from "@/types/ui";
+import { useState} from "react";
+import AsyncSearchSelect from "@/components/UI/SearchSelect";
 
 interface Props {
     slotId: number;
-    teachers: any[];
-    groups: any[];
-    rooms: any[];
-    disciplines: any[]; 
-    lessonTypes: any[]; 
     onConfirm: (data: any) => void;
     onCancel: () => void;
 }
 
-const CreateLessonModal = ({ slotId, teachers, groups, rooms, disciplines, lessonTypes, onConfirm, onCancel }: Props) => {
+const CreateLessonModal = ({ slotId, onConfirm, onCancel }: Props) => {
     const [formData, setFormData] = useState({
         timeslot: slotId,
         discipline: "" as string | number,
@@ -23,14 +17,6 @@ const CreateLessonModal = ({ slotId, teachers, groups, rooms, disciplines, lesso
         study_groups: [] as (string | number)[]
     });
 
-    // Мемоизируем опции для производительности
-    const options = useMemo(() => ({
-        disciplines: disciplines.map(d => ({ value: d.id, label: d.name })),
-        types: lessonTypes.map(t => ({ value: t.id, label: t.name })),
-        rooms: rooms.map(r => ({ value: r.id, label: r.name || r.num })),
-        teachers: teachers.map(t => ({ value: t.id, label: t.name })),
-        groups: groups.map(g => ({ value: g.id, label: g.name }))
-    }), [disciplines, lessonTypes, rooms, teachers, groups]);
 
     const handleConfirm = () => {
         // Простая валидация перед отправкой
@@ -50,8 +36,8 @@ const CreateLessonModal = ({ slotId, teachers, groups, rooms, disciplines, lesso
             {/* ВЫБОР ДИСЦИПЛИНЫ */}
             <div className="flex-col">
                 <label className="filter-label">Дисциплина</label>
-                <SearchSelect 
-                    options={options.disciplines}
+                <AsyncSearchSelect
+                    model="disciplines"
                     value={formData.discipline}
                     onChange={(val) => setFormData({...formData, discipline: val})}
                     placeholder="Найдите дисциплину..."
@@ -61,8 +47,8 @@ const CreateLessonModal = ({ slotId, teachers, groups, rooms, disciplines, lesso
             {/* ВЫБОР ТИПА ЗАНЯТИЯ */}
             <div className="flex-col">
                 <label className="filter-label">Тип занятия</label>
-                <SearchSelect 
-                    options={options.types}
+                <AsyncSearchSelect
+                    model="lesson-types"
                     value={formData.lesson_type}
                     onChange={(val) => setFormData({...formData, lesson_type: val})}
                     placeholder="Лекция, практика..."
@@ -72,8 +58,8 @@ const CreateLessonModal = ({ slotId, teachers, groups, rooms, disciplines, lesso
             {/* ВЫБОР АУДИТОРИИ */}
             <div className="flex-col">
                 <label className="filter-label">Аудитория</label>
-                <SearchSelect 
-                    options={options.rooms}
+                <AsyncSearchSelect
+                    model="classrooms"
                     value={formData.classroom}
                     onChange={(val) => setFormData({...formData, classroom: val})}
                     placeholder="Выберите кабинет..."
@@ -83,9 +69,9 @@ const CreateLessonModal = ({ slotId, teachers, groups, rooms, disciplines, lesso
             {/* ВЫБОР ПРЕПОДАВАТЕЛЯ */}
             <div className="flex-col">
                 <label className="filter-label">Преподаватели (можно несколько)</label>
-                <SearchSelect 
+                <AsyncSearchSelect 
+                    model="teachers"
                     isMulti={true} // ВКЛЮЧАЕМ МУЛЬТИВЫБОР
-                    options={options.teachers}
                     value={formData.teachers}
                     onChange={(vals) => setFormData({...formData, teachers: vals})}
                     placeholder="Выберите одного или нескольких..."
@@ -95,9 +81,9 @@ const CreateLessonModal = ({ slotId, teachers, groups, rooms, disciplines, lesso
             {/* ВЫБОР ГРУППЫ */}
             <div className="flex-col">
                 <label className="filter-label">Учебные группы (можно несколько)</label>
-                <SearchSelect 
+                <AsyncSearchSelect 
+                    model="groups"
                     isMulti={true} // ВКЛЮЧАЕМ МУЛЬТИВЫБОР
-                    options={options.groups}
                     value={formData.study_groups}
                     onChange={(vals) => setFormData({...formData, study_groups: vals})}
                     placeholder="Выберите одну или несколько..."

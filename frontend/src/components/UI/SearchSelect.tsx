@@ -1,56 +1,113 @@
 import { useState, useRef } from 'react';
-import Select from 'react-select';
-import type { SearchSelectProps, SelectOption } from "@/types/ui";
+import type { SelectOption } from "@/types/ui";
 import "@/styles/SearchSelect.css";
+import { dbService } from '@/services/crud';
+import type { OptionsOrGroups, GroupBase } from 'react-select';
+import AsyncSelect from 'react-select/async';
 
-const SearchSelect = ({ options, value, onChange, placeholder,isMulti  }: SearchSelectProps) => {
-    // Реф для управления фокусом самого компонента
+interface AsyncSearchSelectProps {
+    model: string;
+    // Значение ID (одиночное или массив)
+    value: number | string | (number | string)[] | null;
+    // Начальные данные для отображения label
+    initialOptions?: SelectOption | SelectOption[] | null;
+    onChange: (value: any) => void;
+    placeholder?: string;
+    isClearable?: boolean;
+    isMulti?: boolean;
+}
+
+const AsyncSearchSelect: React.FC<AsyncSearchSelectProps> = ({
+    model,
+    value,
+    onChange,
+    placeholder,
+    initialOptions,
+    isClearable = true,
+    isMulti = false
+}) => {
     const selectRef = useRef<any>(null);
-    // Состояние для отслеживания, нажат ли сейчас поиск
-    const [isFocused, setIsFocused] = useState(false);
+    const [selectedOption, setSelectedOption] = useState<SelectOption | readonly SelectOption[] | null>(null);
+    /**
+     * loadOptions ожидает возврата Promise с типом OptionsOrGroups<SelectOption, GroupBase<SelectOption>>
+     */
 
-    // Логика определения выбранных опций для одиночного и множественного режимов
-    const getSelectedOption = () => {
-        if (isMulti) {
-            // Если это массив, фильтруем опции. Если нет (например, пришло ""), возвращаем пустой массив
-            return options.filter(opt => (Array.isArray(value) ? value : []).includes(opt.value));
+
+    const loadOptions = async (
+        inputValue: string
+    ): Promise<OptionsOrGroups<SelectOption, GroupBase<SelectOption>>> => {
+        try {
+            const data = await dbService.list<any>(model, {
+                search: inputValue,
+                page_size: 20
+            });
+
+            return data.results.map((item) => ({
+                value: item.id,
+                label: item.name || `ID: ${item.id}`
+            }));
+        } catch (e) {
+            console.error(`Ошибка справочника ${model}:`, e);
+            return [];
         }
-        return options.find(opt => opt.value === value) || null;
     };
 
-    const handleChange = (newValue: any) => {
+    /**
+     * Приведение текущего value (ID) к объекту SelectOption для отображения
+     */
+    const getSelectedValue = (): SelectOption | SelectOption[] | null => {
+        if (!value || (Array.isArray(value) && value.length === 0)) return null;
+
+        if (isMulti && Array.isArray(value)) {
+            if (Array.isArray(initialOptions)) return initialOptions;
+            return value.map(v => ({ value: v, label: `ID: ${v}` }));
+        }
+
+        if (!Array.isArray(value)) {
+            if (initialOptions && !Array.isArray(initialOptions)) return initialOptions;
+            return { value, label: String(value) };
+        }
+
+        return null;
+    };
+
+    /**
+     * Типизация newValue зависит от того, включен ли isMulti
+     */
+    const handleChange = (newValue: SelectOption | readonly SelectOption[] | null) => {
+        setSelectedOption(newValue)
         if (isMulti) {
-            // 2. БЕЗОПАСНАЯ ПРОВЕРКА: Если newValue это массив — мапим, если null/undefined — отдаем []
-            const selectedValues = Array.isArray(newValue) 
-                ? newValue.map((v: SelectOption) => v.value) 
-                : [];
-            onChange(selectedValues);
+            const options = newValue as SelectOption[];
+            onChange(options ? options.map(opt => opt.value) : []);
         } else {
-            // Одиночный выбор
-            onChange(newValue ? (newValue as SelectOption).value : "");
-            if (selectRef.current) {
-                selectRef.current.blur();
-            }
+            const option = newValue as SelectOption;
+            onChange(option ? option.value : null);
         }
     };
 
     return (
-        <Select
+        <AsyncSelect<SelectOption, boolean, GroupBase<SelectOption>>
             ref={selectRef}
+            cacheOptions
+            defaultOptions
+            loadOptions={loadOptions}
+            value={selectedOption}
+            onChange={handleChange}
+            placeholder={placeholder || (isMulti ? "Выберите несколько..." : "Поиск...")}
+            isMulti={isMulti}
+            isClearable={isClearable}
+
             className="ksu-select-container"
             classNamePrefix="ksu-select"
-            options={options}
-            value={getSelectedOption()}
-            onChange={handleChange}
-            placeholder={placeholder || "Поиск..."}
-            isMulti={isMulti}
-            isSearchable={true}
-            noOptionsMessage={() => "Ничего не найдено"}
-            controlShouldRenderValue={isMulti ? true : !isFocused}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
+
+            // Типизируем inputValue в функции сообщения
+            noOptionsMessage={({ inputValue }: { inputValue: string }) =>
+                !inputValue ? "Начните вводить текст..." : "Ничего не найдено"
+            }
+            loadingMessage={() => "Загрузка..."}
+            closeMenuOnSelect={!isMulti}
         />
     );
 };
 
-export default SearchSelect;
+export default AsyncSearchSelect;

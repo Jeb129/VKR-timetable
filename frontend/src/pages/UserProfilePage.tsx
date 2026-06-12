@@ -6,8 +6,11 @@ import { privateApi } from "@/services/axios";
 import { useModal } from "@/context/ModalContext"; 
 import GroupPicker from "@/components/profile/GroupPicker"; 
 import type { MappedEvent } from "@/types/schedule"; 
-import type { BookingRequest } from "@/types/booking";
 import "@/styles/Profile.css";
+import { scheduleViewService } from "@/services/schedule_view";
+import type { RequestInstance } from "@/types/request";
+import type { User } from "@/types/user";
+import { requestService } from "@/services/request";
 
 const UserProfilePage = () => {
     const { user, logout, refreshUser } = useAuth();
@@ -15,7 +18,7 @@ const UserProfilePage = () => {
     const navigate = useNavigate();
 
     const [myLessons, setMyLessons] = useState<MappedEvent[]>([]);
-    const [myBookings, setMyBookings] = useState<BookingRequest[]>([]);
+    const [myRequests, setMyRequests] = useState<RequestInstance[]>([]);
     const [isVerifying, setIsVerifying] = useState(false);
     const [verifyError, setVerifyError] = useState<string | null>(null);
 
@@ -23,25 +26,25 @@ const UserProfilePage = () => {
         if (user) {
             const loadProfileData = async () => {
                 try {
-                    // Подготовка дат 
-                    const today = new Date();
-                    //const today = new Date("2026-04-06"); 
-                    //const tomorrow = new Date(today);
-                    const tomorrow = new Date();
-                    tomorrow.setDate(today.getDate() + 1);
+                    const today = new Date().toISOString().split('T')[0];
+                    const teacherId = user.teacher?.id;
+                    const studygroupId = user.study_group?.id;
+                    
+                    let tLessons: MappedEvent[] = []
+                    let sgLessons: MappedEvent[] = []
 
-                    const dateFrom = today.toISOString().split('T')[0];
-                    const dateTo = tomorrow.toISOString().split('T')[0];
+                    if (teacherId) {
+                        tLessons = await scheduleViewService.teacher(teacherId,today,today)
+                    }
+                    if (studygroupId) {
+                        sgLessons = await scheduleViewService.group(studygroupId,today,today)
+                    }
+                    setMyLessons([...tLessons,...sgLessons])
 
-                    // Бэкенд сам поймет, учитель это или студент
-                    const lessonsData = await dbService.list("schedule/my", {
-                        date_from: dateFrom,
-                        date_to: dateTo
-                    });
-                    setMyLessons(lessonsData);
-
-                    const bookingsData = await dbService.list("bookings", { my: 'true' });
-                    setMyBookings(bookingsData);
+                    const reqData = (await requestService.getAll({
+                        search: user.email
+                    })).results
+                    setMyRequests(reqData)
                 } catch (err) {
                     console.error("Ошибка при загрузке данных профиля:", err);
                 }
@@ -219,7 +222,7 @@ const UserProfilePage = () => {
                     <div className="card fade-in">
                         <h3>Статус моих заявок</h3>
                         <div className="flex-col mt-2">
-                            {myBookings.length > 0 ? (
+                            {/* {myBookings.length > 0 ? (
                                 myBookings.map(req => {
                                     const status = getStatusInfo(req.status);
                                     return (
@@ -243,7 +246,7 @@ const UserProfilePage = () => {
                                 })
                             ) : (
                                 <p className="empty-text">История заявок пуста</p>
-                            )}
+                            )} */}
                         </div>
                     </div>
                 </div>

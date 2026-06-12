@@ -125,10 +125,10 @@ class ScheduleAdjustmentInline(admin.TabularInline):
 class BaseRequestAdmin(admin.ModelAdmin):
     """Базовый класс для всех типов заявок"""
 
-    list_display = ("id", "display_status", "user", "request_type", "created_at")
-    list_filter = ("status", "request_type", "created_at")
+    list_display = ("id", "display_status", "user", "type", "created_at")
+    list_filter = ("status", "type", "created_at")
     search_fields = ("user__username", "description")
-    readonly_fields = ("created_at",)
+    readonly_fields = ("created_at","type")
     actions = ["approve_requests", "reject_requests"]
 
     @admin.action(description="Одобрить выбранные заявки")
@@ -157,7 +157,7 @@ class BaseRequestAdmin(admin.ModelAdmin):
     def get_readonly_fields(self, request, obj=None):
         # Если объект уже создан, запрещаем менять тип и пользователя
         if obj:
-            return self.readonly_fields + ("request_type", "user")
+            return self.readonly_fields + ("type", "user")
         return self.readonly_fields
 
 
@@ -209,20 +209,20 @@ class ScheduleAdjustmentRequestAdmin(BaseRequestAdmin):
     """
     Специальная админка для заявок типа SCHEDULE_ADJUSTMENT.
     """
-    readonly_fields = ("request_type",)
+    # readonly_fields = ("type",)
     inlines = [ScheduleAdjustmentInline]
 
     def get_queryset(self, request):
         return (
             super()
             .get_queryset(request)
-            .filter(request_type=enums.RequestType.SCHEDULE_ADJUSTMENT)
+            .filter(type=enums.RequestType.SCHEDULE_ADJUSTMENT)
         )
 
     def save_model(self, request, obj, form, change):
         # Принудительно ставим тип при создании через эту панель
         if not obj.pk:
-            obj.request_type = enums.RequestType.SCHEDULE_ADJUSTMENT
+            obj.type = enums.RequestType.SCHEDULE_ADJUSTMENT
         super().save_model(request, obj, form, change)
 
 
@@ -241,7 +241,7 @@ class RequestAdmin(BaseRequestAdmin):
     def change_view(self, request, object_id, form_url="", extra_context=None):
         obj = self.get_object(request, object_id)
         if obj:
-            if obj.request_type == enums.RequestType.SCHEDULE_ADJUSTMENT:
+            if obj.type == enums.RequestType.SCHEDULE_ADJUSTMENT:
                 return redirect(
                     f"admin:api_scheduleadjustmentrequest_change", object_id
                 )

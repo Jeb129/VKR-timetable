@@ -1,199 +1,221 @@
+from django.db import transaction
+from django.db.models import Manager
 from rest_framework import serializers
-from django.utils import timezone
+
 from api.models import (
-    Request,
-    ExcludedTimeslot,
-    ClassroomPreference,
     Booking,
+    ClassroomPreference,
+    ExcludedTimeslot,
+    Request,
     ScheduleAdjustment,
-    Constraint,
-    Lesson,
     enums,
-    BookingType
 )
-from api.services.schedule.mapper import ScheduleMapper
+from config.utils import IdNameField, SimpleRelatedSerializer
+
+# Связанные заявки
 
 
-class ConstraintSerializer(serializers.ModelSerializer):
+class ExcludedTimeslotSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Constraint
-        fields = "__all__"
+        model = ExcludedTimeslot
+        fields = ["teacher", "timeslot"]
 
 
-class RequestBaseSerializer(serializers.ModelSerializer):
-    status_display = serializers.CharField(source="get_status_display", read_only=True)
-    user_full_name = serializers.CharField(source="user.get_full_name", read_only=True)
+class ClassroomPreferenceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ClassroomPreference
+        fields = ["teacher", "discipline", "lesson_type", "classroom"]
+
+
+class BookingSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Booking
+        fields = ["classroom", "booking_type", "date_start", "date_end"]
+
+
+class ScheduleAdjustmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ScheduleAdjustment
+        fields = ["date", "lesson", "timeslot", "classroom"]
+
+
+class ExcludedTimeslotReadSerializer(ExcludedTimeslotSerializer):
+    teacher = SimpleRelatedSerializer(read_only=True)
+    timeslot = serializers.StringRelatedField()
+
+
+class ClassroomPreferenceReadSerializer(ClassroomPreferenceSerializer):
+    teacher = SimpleRelatedSerializer(read_only=True)
+    classroom = SimpleRelatedSerializer(read_only=True)
+    discipline = serializers.StringRelatedField()
+    lesson_type = serializers.StringRelatedField()
+
+
+class BookingReadSerializer(BookingSerializer):
+    classroom = SimpleRelatedSerializer(read_only=True)
+    booking_type = serializers.StringRelatedField()
+
+
+class ScheduleAdjustmentReadSerializer(ScheduleAdjustmentSerializer):
+    lesson = serializers.StringRelatedField()
+    timeslot = serializers.StringRelatedField()
+    classroom = SimpleRelatedSerializer(read_only=True)
+
+
+# Маппер, для удобства
+
+TYPE_SERIALIZER_MAP = {
+    enums.RequestType.EXCLUDED_TIMESLOT: {
+        "model": ExcludedTimeslot,
+        "write": ExcludedTimeslotSerializer,
+        "read": ExcludedTimeslotReadSerializer,
+    },
+    enums.RequestType.CLASSROOM_PREFERENCE: {
+        "model": ClassroomPreference,
+        "write": ClassroomPreferenceSerializer,
+        "read": ClassroomPreferenceReadSerializer,
+    },
+    enums.RequestType.BOOKING: {
+        "model": Booking,
+        "write": BookingSerializer,
+        "read": BookingReadSerializer,
+    },
+    enums.RequestType.SCHEDULE_ADJUSTMENT: {
+        "model": ScheduleAdjustment,
+        "write": ScheduleAdjustmentSerializer,
+        "read": ScheduleAdjustmentReadSerializer,
+    },
+}
+
+# Поле для представления детаей заявки
+
+
+class RequestDetailsField(serializers.Field):
+    def to_representation(self, value):
+        serializer_class = TYPE_SERIALIZER_MAP.get(value.type)["read"]
+        child = value.get_child_obj
+        return serializer_class(child, many=isinstance(child, Manager)).data
+
+    def to_internal_value(self, data):
+        """
+        Валидация входящих данных
+        """
+        request_type = self.parent.initial_data.get("type")
+
+        if request_type is None:
+            raise serializers.ValidationError("Поле 'type' обязательно для заполнения.")
+
+        try:
+            request_type = int(request_type)
+        except (ValueError, TypeError):
+            raise serializers.ValidationError("Некорректный формат 'type'.")
+
+        serializer_class = TYPE_SERIALIZER_MAP.get(request_type)["write"]
+        if not serializer_class:
+            raise serializers.ValidationError(
+                f"Для типа {request_type} валидатор не найден."
+            )
+
+        is_many = request_type == enums.RequestType.SCHEDULE_ADJUSTMENT
+        sub_serializer = serializer_class(data=data, many=is_many, context=self.context)
+
+        if sub_serializer.is_valid():
+            return {"details": sub_serializer.validated_data}
+        else:
+            raise serializers.ValidationError(sub_serializer.errors)
+
+
+class RequestSerializer(serializers.ModelSerializer):
+
+    user = serializers.HiddenField(default=serializers.CurrentUserDefault())
+
+    type = IdNameField(choices=enums.RequestType.choices)
+    status = IdNameField(choices=enums.RequestStatus.choices, read_only=True)
+    can_approve = serializers.SerializerMethodField()
+    can_edit = serializers.SerializerMethodField()
+    can_delete = serializers.SerializerMethodField()
+
+    details = RequestDetailsField(source="*")
 
     class Meta:
         model = Request
         fields = [
             "id",
             "user",
-            "user_full_name",
-            "description",
-            "created_at",
-            "status",
-            "status_display",
-        ]
-
-class BookingTypeSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = BookingType
-        fields = ['id', 'name']
-
-class BookingReadSerializer(serializers.ModelSerializer):
-    # Разворачиваем информацию о пользователе, комнате и типе
-    user_name = serializers.CharField(source='user.username', read_only=True)
-    user_email = serializers.CharField(source='user.email', read_only=True)
-    classroom_name = serializers.CharField(source='classroom.name', read_only=True)
-    booking_type_name = serializers.CharField(source='booking_type.name', read_only=True)
-    status_label = serializers.CharField(source='get_status_display', read_only=True)
-
-    class Meta:
-        model = Booking
-        fields = [
-            'id', 'user_email', 'description', 'created_at', 
-            'admin_comment', 'status', 'status_label',
-            'classroom', 'classroom_name', 
-            'booking_type', 'booking_type_name',
-            'date_start', 'date_end'
-        ]
-
-class BookingCreateUpdateSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Booking
-        # Доступны только поля Booking и описание из Request
-        fields = ['classroom', 'booking_type', 'date_start', 'date_end', 'description']
-
-    def validate(self, data):
-        instance = self.instance
-        start = data.get('date_start', getattr(instance, 'date_start', None))
-        end = data.get('date_end', getattr(instance, 'date_end', None))
-        classroom = data.get('classroom', getattr(instance, 'classroom', None))
-
-        # Если статус меняется на "Отклонено", пропускаем сложные проверки наложений
-        if data.get('status') == 2: 
-            return data
-
-        # Проверка логики времени 
-        if not(start and end):
-            raise serializers.ValidationError("Должны быть указаны начало и конец мероприятия")
-
-        if start >= end:
-            raise serializers.ValidationError("Время начала должно быть меньше времени окончания.")
-        
-        events = ScheduleMapper(
-            start,end,
-            classroom_id=classroom.id
-        ).get_schedule()
-        if len(events) > 0:
-            raise serializers.ValidationError("Аудитория уже занята в это время")
-
-        return data
-
-    
-class BookingActionSerializer(serializers.Serializer):
-    admin_comment = serializers.CharField(required=True, min_length=5)
-
-class BookingSerializer(serializers.ModelSerializer):
-    user_name = serializers.ReadOnlyField(source="user.username")
-    classroom_num = serializers.ReadOnlyField(source="classroom.num")
-    booking_type_name = serializers.ReadOnlyField(source="booking_type.name")
-
-    class Meta:
-        model = Booking
-        fields = [
-            "id",
-            "user",
-            "user_name",
-            "classroom",
-            "classroom_num",
-            "date_start",
-            "booking_type",
-            "booking_type_name",
-            "date_end",
             "description",
             "status",
+            "type",
             "admin_comment",
+            "created_at",
+            "can_approve",
+            "can_edit",
+            "can_delete",
+            "details",
         ]
-        read_only_fields = ["id", "user", "user_name", "classroom_num",""]
+        read_only_fields = ["user", "status", "created_at"]
+
+    def _check_action_permission(self, obj, action_name):
+        view = self.context.get('view')
+        request = self.context.get('request')
+
+        if not view or not request or not request.user:
+            return False
+
+        # 1. Сохраняем текущее действие (обычно это 'list' или 'retrieve')
+        old_action = view.action
+        # 2. Подменяем действие на нужное нам
+        view.action = action_name
+        
+        try:
+            # 3. Запрашиваем у вьюсета список прав именно для этого действия
+            # Это сработает, даже если get_permissions переопределен!
+            permissions = view.get_permissions()
+            
+            # 4. Проверяем каждое разрешение
+            for permission in permissions:
+                if not permission.has_permission(request, view):
+                    return False
+                if not permission.has_object_permission(request, view, obj):
+                    return False
+            return True
+        finally:
+            # 5. Возвращаем действие назад, чтобы не сломать логику вьюсета
+            view.action = old_action
+
+    def get_can_edit(self, obj):
+        # Проверяем по действию 'update'
+        return self._check_action_permission(obj, 'update')
+
+    def get_can_delete(self, obj):
+        # Проверяем по действию 'destroy'
+        return self._check_action_permission(obj, 'destroy')
+
+    def get_can_approve(self, obj):
+        # ВАЖНО: читайте комментарий ниже про логику внутри метода
+        return self._check_action_permission(obj, 'approve')
+
+
+    def to_representation(self, instance):
+        ret = super().to_representation(instance)
+        # Заменяем скрытое поле 'user' (или его отсутствие) на данные из короткого сериализатора
+        ret["user"] = SimpleRelatedSerializer(instance.user).data
+        return ret
 
     def create(self, validated_data):
-        validated_data["user"] = self.context["request"].user
-        return super().create(validated_data)
-    
-    def validate(self, data):
-        instance = self.instance
-        start = data.get('date_start', getattr(instance, 'date_start', None))
-        end = data.get('date_end', getattr(instance, 'date_end', None))
-        classroom = data.get('classroom', getattr(instance, 'classroom', None))
+        details_data = validated_data.pop("details")
+        req_type = validated_data.get("type")
+        user = validated_data.pop("user")
 
-        # Если статус меняется на "Отклонено", пропускаем сложные проверки наложений
-        if data.get('status') == 2: 
-            return data
+        with transaction.atomic():
 
-        # Проверка логики времени 
-        if start and end:
-            if start >= end:
-                raise serializers.ValidationError("Время начала должно быть меньше времени окончания.")
-            
-            # Проверка наложений (только при создании или изменении времени/аудитории)
-            # Чтобы не ругаться на саму себя при обновлении, исключаем текущий ID
-            exclude_id = instance.id if instance else None
-            
-            # 1. Проверка на другие брони
-            if Booking.objects.filter(
-                classroom=classroom,
-                status=1, # VERIFIED
-                date_start__lt=end,
-                date_end__gt=start
-            ).exclude(id=exclude_id).exists():
-                raise serializers.ValidationError("Аудитория уже занята другой бронью.")
-
-            # 2. Проверка на учебные пары
-            day_of_week = start.weekday() + 1
-            week_num = 1 if start.isocalendar()[1] % 2 != 0 else 2
-            
-            if Lesson.objects.filter(
-                classroom=classroom,
-                timeslot__day=day_of_week,
-                timeslot__week_num=week_num,
-                scenario__is_active=True,
-                timeslot__time_start__lt=end.time(),
-                timeslot__time_end__gt=start.time()
-            ).exists():
-                raise serializers.ValidationError("В это время в аудитории занятие по расписанию.")
-
-        return data
-
-
-class ScheduleAdjustmentSerializer(serializers.ModelSerializer):
-    # текстовые поля для удобства админа
-    user = serializers.ReadOnlyField(source="request.user.id")
-    user_name = serializers.ReadOnlyField(source="request.user.username")
-    description = serializers.ReadOnlyField(source="request.description")
-    status = serializers.ReadOnlyField(source="request.status")
-    admin_comment = serializers.ReadOnlyField(source="request.admin_comment")
-    # информация о паре и преподавателе
-    lesson_name = serializers.ReadOnlyField(source="lesson.discipline.name")
-    teacher_name = serializers.ReadOnlyField(source="request.user.teacher.name")
-    # Информация о новом слоте
-    new_time = serializers.ReadOnlyField(source="timeslot.time_start")
-    new_order = serializers.ReadOnlyField(source="timeslot.order_number")
-    # Информация о старом слоте 
-    old_time = serializers.ReadOnlyField(source="lesson.timeslot.time_start")
-    old_day = serializers.ReadOnlyField(source="lesson.timeslot.day")
-    class Meta:
-        model = ScheduleAdjustment
-        fields = [
-            "id", "user", "user_name", "teacher_name", "lesson", "lesson_name",
-            "date", "timeslot", "new_time", "new_order", "old_time", "old_day",
-            "description", "status", "admin_comment"
-        ]
-        read_only_fields = ["id", "user"]
-
-
-class ClassroomPreferenceSerializer(serializers.ModelSerializer):
-    class Meta:
-        model = ClassroomPreference
-        fields = "__all__"
+            if req_type == enums.RequestType.SCHEDULE_ADJUSTMENT:
+                base_request = Request.objects.create(user=user, **validated_data)
+                adjustments = [
+                    ScheduleAdjustment(request=base_request, **item)
+                    for item in details_data
+                ]
+                ScheduleAdjustment.objects.bulk_create(adjustments)
+                return base_request
+            else:
+                model = TYPE_SERIALIZER_MAP.get(req_type)["model"]
+                return model.objects.create(user=user, **validated_data, **details_data)

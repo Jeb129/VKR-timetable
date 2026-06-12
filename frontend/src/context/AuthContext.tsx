@@ -34,7 +34,7 @@ const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const updateUser = async (data: Record<string,string>) => {
     if (!user) return
-    const updated = await dbService.update("user",user.id,data)
+    const updated = await dbService.update<User>("user",user.id,data)
     if (updated) setUser(updated)
   }
 

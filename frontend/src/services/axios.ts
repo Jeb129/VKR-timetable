@@ -1,8 +1,5 @@
 import axios from "axios"
-import type { AxiosError, InternalAxiosRequestConfig } from "axios"
-
-// import { getAccessToken, getRefreshToken, setTokens, clearTokens } from "@/services/auth/tokens"
-// import type { AuthResponse } from "@/types/user"
+import type { AxiosError} from "axios"
 
 const BASE_URL = import.meta.env.VITE_API_URL ?? "http://localhost:8000"
 
@@ -44,7 +41,6 @@ privateApi.interceptors.response.use(
           window.location.href = `/login?${searchParams.toString()}`;
         }
         return Promise.reject(refreshError);
-        // throw refreshError
       }
     }
     return Promise.reject(error);

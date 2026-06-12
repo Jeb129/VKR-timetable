@@ -21,7 +21,7 @@ class ScheduleAdjustmentResource(resources.ModelResource):
 
     class Meta:
         model = ScheduleAdjustment
-        fields = ("id", "date", "discipline", "timeslot", "classroom")
+        fields = ("id", "date","request_user" ,"discipline", "timeslot", "classroom")
 
 
 class LessonResource(resources.ModelResource):

@@ -1,17 +1,28 @@
-from .schedule_view import (GroupScheduleView, 
-                            ClassroomScheduleView, 
-                            TeacherScheduleView, 
-                            TimeslotViewSet, 
-                            ScheduleScenarioViewSet, 
-                            MyTeacherScheduleView, 
-                            ScheduleAdjustmentCreateView,
-                            ScheduleAdjustmentViewSet,
-                            DisciplineViewSet,
-                            LessonTypeViewSet,
-                            MyScheduleView)
-from .booking import BookingViewSet, BookingTypeViewSet
-from .building import ClassroomViewSet
-from .schedule_draft import DraftLessonViewSet
-from .lesson import StudyGroupViewSet, TeacherViewSet
-from .academic_load import ExcelAPIView
+from .database import (
+    AcademicLoadViewSet,
+    BookingTypeViewSet,
+    BuildingTravelTimeViewSet,
+    BuildingViewSet,
+    ClassroomPreferenceViewSet,
+    ClassroomViewSet,
+    ConstraintViewSet,
+    DisciplineViewSet,
+    EquipmentViewSet,
+    InstituteViewSet,
+    LessonTypeViewSet,
+    LessonViewSet,
+    StudyGroupViewSet,
+    StudyProgramViewSet,
+    TeacherViewSet,
+    TimeslotViewSet,
+)
+from .excel import ExcelAPIView
+from .requests import RequestViewSet
+from .schedule import (
+    ClassroomScheduleView,
+    DraftLessonViewSet,
+    GroupScheduleView,
+    ScheduleScenarioViewSet,
+    TeacherScheduleView,
+)
 from .statistics import BuildingLoadView
