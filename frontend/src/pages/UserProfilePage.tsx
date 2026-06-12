@@ -269,7 +269,7 @@ const UserProfilePage = () => {
                                         <div key={req.id} className="list-item flex-col py-2">
                                             <div className="flex-row space-between align-center">
                                                 <div className="flex-col">
-                                                    <span className="font-bold text-primary">#{req.id} — {req.type.name}</span>
+                                                    <span className="font-bold text-primary">{req.type.name}</span>
                                                     <span className="text-muted small">{new Date(req.created_at).toLocaleDateString()}</span>
                                                 </div>
                                                 <div className="badge" style={{ border: `1px solid ${status.color}`, color: status.color, backgroundColor: 'transparent' }}>
