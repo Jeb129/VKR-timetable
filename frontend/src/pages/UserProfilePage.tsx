@@ -1,6 +1,7 @@
 import { useAuth } from "@/context/AuthContext";
+import type { User } from "@/types/user";
 import { Navigate, useNavigate } from "react-router-dom";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { privateApi } from "@/services/axios";
 import { useModal } from "@/context/ModalContext"; 
 import GroupPicker from "@/components/profile/GroupPicker"; 

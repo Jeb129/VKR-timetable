@@ -22,7 +22,7 @@ const ModerationPage = () => {
             // Запрашиваем через универсальный сервис
             const response = await requestService.getAll({ 
                 status: statusFilter,
-                page_size: 100 // Берем сразу побольше для модерации
+                page_size: 100 
             });
             
             // Твой сервис возвращает RequestsPagination, данные лежат в results

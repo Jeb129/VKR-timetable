@@ -5,8 +5,7 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import { requestService } from "@/services/request";
 import { dbService } from "@/services/crud";
-import AsyncSearchSelect from "@/components/UI/SearchSelect";
-import { RequestType } from "@/types/enums";
+import SearchSelect from "@/components/UI/SearchSelect";
 import type { Classroom } from "@/types/classroom";
 import "@/styles/Booking.css";
 
@@ -18,6 +17,7 @@ const BookingCreatePage = () => {
     const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
     const [selectedRoomObj, setSelectedRoomObj] = useState<Classroom | null>(null);
     const [busyEvents, setBusyEvents] = useState<any[]>([]); 
+    
 
     // Поля формы
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -142,10 +142,10 @@ const BookingCreatePage = () => {
                     
                     <div className="flex-col">
                         <label className="filter-label">Аудитория</label>
-                        <AsyncSearchSelect 
-                            model="classrooms" 
-                            value={selectedRoomId} 
-                            onChange={(val) => setSelectedRoomId(Number(val))} 
+                        <SearchSelect 
+                            model="classrooms"
+                            value={selectedRoomId}
+                            onChange={(val) => setSelectedRoomId(val ? Number(val) : null)}
                             placeholder="Поиск аудитории..."
                         />
                     </div>
