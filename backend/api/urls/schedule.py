@@ -1,7 +1,7 @@
 from django.urls import path
 from api.views import (TeacherScheduleView, 
                        GroupScheduleView, 
-                       ClassroomScheduleView)
+                       ClassroomScheduleView, )
 
 urlpatterns =[
     path("group/",GroupScheduleView.as_view(), name="group_schedule"),

@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef , useEffect } from 'react';
 import type { SelectOption, SimpleEntity } from "@/types/ui";
 import "@/styles/SearchSelect.css";
 import { dbService } from '@/services/crud';
@@ -8,6 +8,7 @@ import AsyncSelect from 'react-select/async';
 interface SearchSelectProps {
     model: string;
     // @ts-ignore
+    value?: number | string | null; 
     onChange: (value: any) => void;
     placeholder?: string;
     isClearable?: boolean;
@@ -17,6 +18,7 @@ interface SearchSelectProps {
 const SearchSelect: React.FC<SearchSelectProps> = ({
     model,
     onChange,
+    value,
     placeholder,
     isClearable = true,
     isMulti = false
@@ -28,6 +30,11 @@ const SearchSelect: React.FC<SearchSelectProps> = ({
      * loadOptions ожидает возврата Promise с типом OptionsOrGroups<SelectOption, GroupBase<SelectOption>>
      */
 
+    useEffect(() => {
+        if (!value) {
+            setSelectedOption(null);
+        }
+    }, [value]);
 
     const loadOptions = async (
         inputValue: string

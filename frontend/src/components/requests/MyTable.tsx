@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import type { RequestInstance } from '@/types/request';
 import '@/styles/Requests.css'; // Локальные стили
 import {
@@ -30,19 +30,61 @@ export const MyTable: React.FC<MyTableProps> = ({ data, loading, onActionSuccess
             footer: <button className="btn btn-primary" onClick={closeModal}>Закрыть</button>
         });
     };
-    const handleApprove = async (id: number) => {
-        if (window.confirm("Одобрить эту заявку?")) {
-            await requestService.approve(id);
-            onActionSuccess();
-        }
+    const handleApprove = (id: number) => {
+        openModal({
+            title: "Подтверждение одобрения",
+            content: <p>Вы уверены, что хотите подтвердить данную заявку? Это действие может изменить расписание.</p>,
+            footer: (
+                <div className="flex-row gap-2 w-100">
+                    <button className="btn btn-green f-1" onClick={async () => {
+                        await requestService.approve(id);
+                        onActionSuccess();
+                        closeModal();
+                    }}>Подтвердить</button>
+                    <button className="btn btn-outline f-1" onClick={closeModal}>Отмена</button>
+                </div>
+            )
+        });
     };
 
-    const handleReject = async (id: number) => {
-        const comment = prompt("Укажите причину отказа:");
-        if (comment) {
-            await requestService.reject(id, comment);
-            onActionSuccess();
-        }
+    const handleReject = (id: number) => {
+        // Локальный компонент для управления вводом внутри модалки
+        const RejectForm = () => {
+            const [comment, setComment] = useState("");
+            return (
+                <div className="flex-col gap-2">
+                    <label className="filter-label">Причина отказа (обязательно):</label>
+                    <textarea 
+                        className="input-styled" 
+                        rows={4} 
+                        autoFocus
+                        value={comment}
+                        onChange={e => setComment(e.target.value)}
+                        placeholder="Например: Аудитория занята или не соответствует типу мероприятия"
+                    />
+                    <div className="flex-row gap-2 mt-1">
+                        <button 
+                            className="btn btn-red f-1" 
+                            disabled={!comment.trim()}
+                            onClick={async () => {
+                                await requestService.reject(id, comment);
+                                onActionSuccess();
+                                closeModal();
+                            }}
+                        >
+                            Отклонить заявку
+                        </button>
+                        <button className="btn btn-outline f-1" onClick={closeModal}>Назад</button>
+                    </div>
+                </div>
+            );
+        };
+
+        openModal({
+            title: "Отклонение заявки",
+            width: "500px",
+            content: <RejectForm />
+        });
     };
     const handleEdit = (req: RequestInstance) => {
         openModal({
