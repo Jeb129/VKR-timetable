@@ -1,10 +1,9 @@
-import { Route, Routes, Navigate  } from "react-router-dom"
+import { Route, Routes} from "react-router-dom"
 import LoginPage from "./pages/Auth/LoginPage"
 import ProtectedRoute from "./context/ProtectedRoute"
 import RegisterPage from "./pages/Auth/RegisterPage"
 import UserProfilePage from "./pages/UserProfilePage"
 import SchedulePage from "./pages/Schedule/SchedulePage";
-import BookingPage from "./pages/Booking/BookingPage";
 import ModerationPage from "./pages/Booking/ModerationPage";
 import ScheduleEditorPage from "./pages/Editor/ScheduleEditorPage";
 import ScenarioSelectionPage from "./pages/Editor/ScenarioSelectionPage";
@@ -16,6 +15,7 @@ import BuildingStatsPage from "./pages/Statistics/BuildingStatsPage"
 import ScenarioReviewPage from "./pages/Editor/ScenarioReviewPage"
 
 import './App.css'
+import { RequestsPage } from "./pages/RequestsPage"
 
 // Основной контейнер приложения
 const App = () =>
@@ -25,8 +25,8 @@ const App = () =>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
       <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
+      <Route path="/request" element={<ProtectedRoute><RequestsPage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><UserProfilePage /></ProtectedRoute>} />
-      <Route path="/Booking" element={<ProtectedRoute><BookingPage/></ProtectedRoute>}/>
       <Route path="/Moderation" element={<ProtectedRoute><ModerationPage/></ProtectedRoute>}/>
       <Route path="/ScheduleEditor" element={<ProtectedRoute><ScenarioSelectionPage /></ProtectedRoute>} />
       <Route path="/ScheduleEditor/:scenarioId" element={<ProtectedRoute><ScheduleEditorPage/></ProtectedRoute>}/>
