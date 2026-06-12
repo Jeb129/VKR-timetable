@@ -70,10 +70,10 @@ jobs:
             echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USERNAME }}" --password-stdin
             
             # Тянем новые образы
-            docker compose pull
+            docker-compose pull
             
             # Перезапускаем
-            docker compose up -d
+            docker-compose up -d
             
             # Очистка старых образов
             docker image prune -f
