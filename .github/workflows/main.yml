@@ -30,7 +30,7 @@ jobs:
           cache-from: type=gha # Использовать кэш GitHub Actions
           cache-to: type=gha,mode=max
           build-args: |
-            VITE_API_URL=https://diploma2026.uvelirsoft.ru/api
+            VITE_API_URL=https://diploma2026.uvelirsoft.ru
 
       # Сборка Бэкенда с кэшированием
       - name: Сборка и отправка бэкенда
