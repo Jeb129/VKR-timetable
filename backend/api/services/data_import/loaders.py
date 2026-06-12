@@ -182,7 +182,7 @@ class AcademicLoadReader:
                     else:
                         self.groups_exists_counter += 1
                     
-                    key = set(filter.values())
+                    key = tuple(set(filter.values()))
                     self.sub_groups[key] = filter
 
                 elif mode == "group":
