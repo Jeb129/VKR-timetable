@@ -46,7 +46,6 @@ const ScheduleEditorPage = () => {
     const [activeTab, setActiveTab] = useState<"errors" | "changes" | "trash">("errors");
     const [deletedLessons, setDeletedLessons] = useState<Lesson[]>([]);
     const [loading, setLoading] = useState(false);
-    const [draggingId, setDraggingId] = useState<string | null>(null);
 
     const switchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -74,7 +73,6 @@ const ScheduleEditorPage = () => {
     };
 
     const onDrop = async (lessonId: string, targetSlot: Timeslot) => {
-        setDraggingId(null);
         const lookupKey = getLookupKey(targetSlot);
         const targetLesson = lessonsLookup[lookupKey];
         
@@ -211,7 +209,6 @@ const ScheduleEditorPage = () => {
                             <label className="filter-label">Объект редактирования</label>
                             <SearchSelect 
                                 model={filterType}
-                                value={targetId}
                                 onChange={(val) => {
                                     setTargetId(val as number);
                                 }}
@@ -260,10 +257,9 @@ const ScheduleEditorPage = () => {
                                                     errors={currentErrors}
                                                     isPending={lesson ? pendingIds.has(lesson.id) : false}
                                                     onDragStart={(e, id) => { 
-                                                        setDraggingId(id); 
                                                         e.dataTransfer.setData("lessonId", id); 
                                                     }}
-                                                    onDragEnd={() => setDraggingId(null)}
+                                                    onDragEnd={() => {}}
                                                     onDrop={onDrop}
                                                     onDelete={() => lesson && handleDelete(lesson)}
                                                     onClick={() => lesson ? handleLessonClick(lesson) : slot && handleAddClick(slot.id)}
@@ -276,7 +272,11 @@ const ScheduleEditorPage = () => {
                         </table>
                     </div>
                 </div>
-
+                <div onClick={() => setIsSidebarOpen(prev => !prev)}>
+                    -
+                    -
+                    -
+                </div>
                 <div className={`error-sidebar ${isSidebarOpen ? '' : 'closed'}`}>
                     <div className="sidebar-tabs flex-row">
                         <button className={`tab-btn f-1 p-1 ${activeTab === 'errors' ? 'active' : ''}`} onClick={() => setActiveTab('errors')}>

@@ -2,7 +2,7 @@ import React, { useState } from "react";
 
 interface CollapsibleListProps<T> {
   items: T[];
-  renderItem: (item: any, index: number) => React.ReactNode;
+  renderItem: (item: T, index: number) => React.ReactNode;
   collapsedCount?: number;
   containerClassName?: string;
   toggleButtonClassName?: string;

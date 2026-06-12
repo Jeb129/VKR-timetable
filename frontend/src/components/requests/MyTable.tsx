@@ -134,8 +134,8 @@ export const MyTable: React.FC<MyTableProps> = ({ data, loading, onActionSuccess
                                     <div className="flex-row justify-end gap-1">
                                         {req.can_approve && (
                                             <>
-                                                <button onClick={() => handleApprove(req.id)} className="btn btn-green p-1">Одобрить</button>
-                                                <button onClick={() => handleReject(req.id)} className="btn btn-red p-1">Отказ</button>
+                                                <button onClick={() => void handleApprove(req.id)} className="btn btn-green p-1">Одобрить</button>
+                                                <button onClick={() => void handleReject(req.id)} className="btn btn-red p-1">Отказ</button>
                                             </>
                                         )}
                                         {req.can_edit && (

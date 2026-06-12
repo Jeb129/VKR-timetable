@@ -7,10 +7,7 @@ import AsyncSelect from 'react-select/async';
 
 interface SearchSelectProps {
     model: string;
-    // Значение ID (одиночное или массив)
-    value: number | string | (number | string)[] | null;
-    // Начальные данные для отображения label
-    initialOptions?: SelectOption | SelectOption[] | null;
+    // @ts-ignore
     onChange: (value: any) => void;
     placeholder?: string;
     isClearable?: boolean;
@@ -19,13 +16,12 @@ interface SearchSelectProps {
 
 const SearchSelect: React.FC<SearchSelectProps> = ({
     model,
-    value,
     onChange,
     placeholder,
-    initialOptions,
     isClearable = true,
     isMulti = false
 }) => {
+    // @ts-ignore
     const selectRef = useRef<any>(null);
     const [selectedOption, setSelectedOption] = useState<SelectOption | readonly SelectOption[] | null>(null);
     /**

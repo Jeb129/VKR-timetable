@@ -11,7 +11,6 @@ const SchedulePage = () => {
     // Фильтры
     const [filterType, setFilterType] = useState<"classroom" | "group" | "teacher">("classroom");
     const [targetId, setTargetId] = useState<number | null>(null);
-    const [targetLabel, setTargetLabel] = useState<string>(""); // Для хранения имени выбранного объекта
     
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
     const [events, setEvents] = useState<MappedEvent[]>([]);
@@ -108,7 +107,6 @@ const SchedulePage = () => {
                         onChange={(e) => {
                             setFilterType(e.target.value as any);
                             setTargetId(null);
-                            setTargetLabel("");
                         }}
                     >
                         <option value="classrooms">По аудитории</option>
@@ -121,7 +119,6 @@ const SchedulePage = () => {
                     <label className="filter-label">Объект</label>
                     <SearchSelect 
                         model={modelMapping[filterType]}
-                        value={targetId}
                         onChange={(val) => {
                             setTargetId(val);
                         }}

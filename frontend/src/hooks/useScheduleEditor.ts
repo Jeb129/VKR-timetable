@@ -163,7 +163,7 @@ export const useScheduleEditor = (scenarioId: number) => {
     const checkAll = async () => {
         setIsChecking(true);
         try {
-            const errors = await scheduleDraftService.checkScenario(scenarioId);
+            const errors = (await scheduleDraftService.getSummary(scenarioId)).errors;
             setLessonErrors(errors.filter(e => e.errors && e.errors.length > 0));
         } finally {
             setIsChecking(false);

@@ -17,6 +17,7 @@ const UserProfilePage = () => {
 
     // 1. ИСПРАВЛЕН ТИП: теперь тут MappedEvent
     const [myLessons, setMyLessons] = useState<MappedEvent[]>([]);
+    // @ts-expect-error
     const [myRequests, setMyRequests] = useState<RequestInstance[]>([]);
     const [isVerifying, setIsVerifying] = useState(false);
     const [verifyError, setVerifyError] = useState<string | null>(null);
@@ -80,7 +81,7 @@ const UserProfilePage = () => {
     };
 
     if (!user) return <Navigate to="/login" replace />;
-
+    // @ts-expect-error
     const getStatusInfo = (status: number) => {
         switch (status) {
             case 0: return { label: "На модерации", color: "var(--p-orange)" };

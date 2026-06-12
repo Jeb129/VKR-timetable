@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react"
-import { Navigate, useLocation, useNavigate } from "react-router-dom"
+import { useLocation, useNavigate } from "react-router-dom"
 import type { LoginRequest } from "@/types/user"
 import { useAuth } from "@/context/AuthContext"
 import "@/styles/Auth.css";

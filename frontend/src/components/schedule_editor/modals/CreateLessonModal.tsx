@@ -38,7 +38,6 @@ const CreateLessonModal = ({ slotId, onConfirm, onCancel }: Props) => {
                 <label className="filter-label">Дисциплина</label>
                 <SearchSelect
                     model="disciplines"
-                    value={formData.discipline}
                     onChange={(val) => setFormData({...formData, discipline: val})}
                     placeholder="Найдите дисциплину..."
                 />
@@ -49,7 +48,6 @@ const CreateLessonModal = ({ slotId, onConfirm, onCancel }: Props) => {
                 <label className="filter-label">Тип занятия</label>
                 <SearchSelect
                     model="lesson-types"
-                    value={formData.lesson_type}
                     onChange={(val) => setFormData({...formData, lesson_type: val})}
                     placeholder="Лекция, практика..."
                 />
@@ -60,7 +58,6 @@ const CreateLessonModal = ({ slotId, onConfirm, onCancel }: Props) => {
                 <label className="filter-label">Аудитория</label>
                 <SearchSelect
                     model="classrooms"
-                    value={formData.classroom}
                     onChange={(val) => setFormData({...formData, classroom: val})}
                     placeholder="Выберите кабинет..."
                 />
@@ -72,7 +69,6 @@ const CreateLessonModal = ({ slotId, onConfirm, onCancel }: Props) => {
                 <SearchSelect 
                     model="teachers"
                     isMulti={true} // ВКЛЮЧАЕМ МУЛЬТИВЫБОР
-                    value={formData.teachers}
                     onChange={(vals) => setFormData({...formData, teachers: vals})}
                     placeholder="Выберите одного или нескольких..."
                 />
@@ -84,7 +80,6 @@ const CreateLessonModal = ({ slotId, onConfirm, onCancel }: Props) => {
                 <SearchSelect 
                     model="groups"
                     isMulti={true} // ВКЛЮЧАЕМ МУЛЬТИВЫБОР
-                    value={formData.study_groups}
                     onChange={(vals) => setFormData({...formData, study_groups: vals})}
                     placeholder="Выберите одну или несколько..."
                 />

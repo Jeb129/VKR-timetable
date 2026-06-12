@@ -1,5 +1,4 @@
 import { MyTable } from '@/components/requests/MyTable';
-import { useModal } from '@/context/ModalContext';
 import { requestService } from '@/services/request';
 import { RequestStatus } from '@/types/enums';
 import type { RequestInstance } from '@/types/request';
