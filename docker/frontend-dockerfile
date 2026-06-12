@@ -9,4 +9,4 @@ RUN npm audit fix
 COPY frontend/ ./
 RUN npm run build
 
-command: sh -c "rm -rf /output/* && cp -rp /app/dist/. /output/"
+CMD ["sh", "-c", "rm -rf /output/* && cp -rp /app/dist/. /output/"]
