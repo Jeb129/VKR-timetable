@@ -24,22 +24,22 @@ jobs:
 
       - name: Настройка Docker Buildx
         uses: docker/setup-buildx-action@v2
-
-      - name: Сборка бэкенда
-        uses: docker/build-push-action@v4
-        with:
-          context: ./docker 
-          file: ./backend-dockerFile 
-          push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/vkr-backend:latest
-      
+        
       - name: Сборка фронтенда
         uses: docker/build-push-action@v4
         with:
           context: ./docker 
           file: ./frontend-dockerFile 
           push: true
-          tags: ${{ secrets.DOCKER_USERNAME }}/vkr-frontend:latest 
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/vkr-frontend:latest 
+          
+      - name: Сборка бэкенда
+        uses: docker/build-push-action@v4
+        with:
+          context: ./docker 
+          file: ./backend-dockerFile 
+          push: true
+          tags: ${{ secrets.DOCKER_HUB_USERNAME }}/vkr-backend:latest
 
   # 2. Обновление на сервере
   deploy:
