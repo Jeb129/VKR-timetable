@@ -19,6 +19,12 @@ export default defineConfig([
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+      parserOptions: {
+        // Указывает на ваш основной файл настроек TS
+        project: ['./tsconfig.json', './tsconfig.app.json'],
+        // Помогает ESLint найти tsconfig относительно корня проекта
+        tsconfigRootDir: import.meta.dirname,
+      },
     },
   },
 ])
