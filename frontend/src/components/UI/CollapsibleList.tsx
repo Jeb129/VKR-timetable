@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 
-interface CollapsibleListProps {
-  items: any[];
+interface CollapsibleListProps<T> {
+  items: T[];
   renderItem: (item: any, index: number) => React.ReactNode;
   collapsedCount?: number;
   containerClassName?: string;
@@ -9,14 +9,14 @@ interface CollapsibleListProps {
   vertical?: boolean
 }
 
-export const CollapsibleList = ({
+export const CollapsibleList = <T,>({
   items,
   renderItem,
   collapsedCount = 2,
   containerClassName = "",
   toggleButtonClassName = "",
   vertical = true
-}: CollapsibleListProps) => {
+}: CollapsibleListProps<T>) => {
   const [expanded, setExpanded] = useState(false);
 
   const displayedItems = expanded ? items : items.slice(0, collapsedCount);
