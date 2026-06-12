@@ -109,22 +109,24 @@ const SchedulePage = () => {
                             setTargetId(null);
                         }}
                     >
-                        <option value="classrooms">По аудитории</option>
-                        <option value="study_groups">По группе</option>
-                        <option value="teachers">По преподавателю</option>
+                        <option value="classroom">По аудитории</option>
+                        <option value="group">По группе</option>
+                        <option value="teacher">По преподавателю</option>
                     </select>
                 </div>
 
                 <div className="filter-group f-2">
                     <label className="filter-label">Объект</label>
                     <SearchSelect 
+                        key={filterType}
                         model={modelMapping[filterType]}
                         onChange={(val) => {
                             setTargetId(val);
                         }}
                         placeholder={`Выберите ${
                             filterType === 'classroom' ? 'аудиторию' : 
-                            filterType === 'group' ? 'группу' : 'преподавателя'
+                            filterType === 'group' ? 'группу' : 
+                            filterType === 'teacher' ? 'преподавателя':'тип'
                         }...`}
                     />
                 </div>

@@ -94,7 +94,6 @@ class LinkGroupView(APIView):
         if not user.internal_user:
             return Response({"error": "Сначала подтвердите аккаунт через Moodle"}, status=403)
 
-        from api.models.education_subjects import StudyGroup
         group = get_object_or_404(StudyGroup, id=group_id)
         
         user.study_group = group
