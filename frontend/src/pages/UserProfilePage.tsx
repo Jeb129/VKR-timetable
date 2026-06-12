@@ -6,6 +6,7 @@ import { privateApi } from "@/services/axios";
 import type { Lesson } from "@/types/schedule"; 
 import type { BookingRequest } from "@/types/booking";
 import "@/styles/Profile.css";
+import { scheduleViewService } from "@/services/schedule_view";
 
 const UserProfilePage = () => {
     const { user, logout, refreshUser  } = useAuth();
@@ -17,32 +18,31 @@ const UserProfilePage = () => {
     const [verifyError, setVerifyError] = useState<string | null>(null);
 
     useEffect(() => {
-        if (user) {
-            const loadProfileData = async () => {
-                try {
-                    const today = new Date().toISOString().split('T')[0];
+        // if (user) {
+        //     const loadProfileData = async () => {
+        //         try {
+        //             const today = new Date().toISOString().split('T')[0];
 
-                    const lessonsParams = {
-                        teacher_id: user.id, 
-                        date_from: today,
-                        date_to: today
-                    };
+        //             const lessonsParams = {
+        //                 teacher_id: user.id, 
+        //                 date_from: today,
+        //                 date_to: today
+        //             };
 
-                    const lessonsData = await dbService.list("schedule/teacher", lessonsParams);
-                    setMyLessons(lessonsData);
+        //             const lessonsData = await scheduleViewService.teacher(user.)
+        //             setMyLessons(lessonsData);
 
-                    // ЗАГРУЗКА БРОНИ 
-                    const bookingsData = await dbService.list("bookings", { my: 'true' });
-                    setMyBookings(bookingsData);
+        //             // ЗАГРУЗКА БРОНИ 
+        //             const bookingsData = await dbService.list("bookings", { my: 'true' });
+        //             setMyBookings(bookingsData);
 
-                } catch (err) {
-                    console.error("Ошибка при загрузке данных профиля:", err);
-                } finally {
-                    // setLoading(false);
-                }
-            };
-            loadProfileData();
-        }
+        //         } catch (err) {
+        //             console.error("Ошибка при загрузке данных профиля:", err);
+        //         } finally {
+        //         }
+        //     };
+        //     loadProfileData();
+        // }
     }, [user]);
 
     const handleMoodleVerify = async () => {
@@ -149,7 +149,7 @@ const UserProfilePage = () => {
                     <div className="card fade-in">
                         <h3>Моё ближайшее расписание</h3>
                         <div className="flex-col mt-2">
-                            {myLessons.length > 0 ? (
+                            {/* {myLessons.length > 0 ? (
                                 myLessons.map(lesson => (
                                     <div key={lesson.id} className="list-item flex-row align-center">
                                         <div className="text-primary" style={{ fontWeight: 800, width: '120px' }}>
@@ -165,7 +165,7 @@ const UserProfilePage = () => {
                                 ))
                             ) : (
                                 <p className="empty-text">У вас пока нет назначенных занятий</p>
-                            )}
+                            )} */}
                         </div>
                     </div>
 
@@ -173,7 +173,7 @@ const UserProfilePage = () => {
                     <div className="card fade-in">
                         <h3>Статус моих заявок</h3>
                         <div className="flex-col mt-2">
-                            {myBookings.length > 0 ? (
+                            {/* {myBookings.length > 0 ? (
                                 myBookings.map(req => {
                                     const status = getStatusInfo(req.status);
                                     return (
@@ -191,8 +191,6 @@ const UserProfilePage = () => {
                                             <div className="text-muted mt-1" style={{ fontSize: '13px' }}>
                                                 {new Date(req.date_start).toLocaleString('ru-RU', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' })}
                                             </div>
-                                            
-                                            {/* Комментарий админа */}
                                             {req.admin_comment && (
                                                 <div className="bg-main mt-1" style={{ borderLeft: `4px solid ${status.color}`, padding: '10px', borderRadius: '8px' }}>
                                                     <small><strong>Комментарий модератора:</strong></small>
@@ -204,7 +202,7 @@ const UserProfilePage = () => {
                                 })
                             ) : (
                                 <p className="empty-text">История заявок пуста</p>
-                            )}
+                            )} */}
                         </div>
                     </div>
                 </div>
