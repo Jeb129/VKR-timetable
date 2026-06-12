@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { type MappedEvent } from "@/types/schedule";
 import "@/styles/Schedule.css";
-import AsyncSearchSelect from "@/components/UI/SearchSelect";
+import SearchSelect from "@/components/UI/SearchSelect";
 import { scheduleViewService } from "@/services/schedule_view";
 
 const SchedulePage = () => {
@@ -64,7 +64,7 @@ const SchedulePage = () => {
 
     // Группировка событий по датам
     const groupedEvents = useMemo(() => {
-        const groups: { [key: string]: MappedEvent[] } = {};
+        const groups: Record<string, MappedEvent[]> = {};
         events.forEach(event => {
             const dateKey = event.start.split('T')[0];
             if (!groups[dateKey]) groups[dateKey] = [];
@@ -119,7 +119,7 @@ const SchedulePage = () => {
 
                 <div className="filter-group f-2">
                     <label className="filter-label">Объект</label>
-                    <AsyncSearchSelect 
+                    <SearchSelect 
                         model={modelMapping[filterType]}
                         value={targetId}
                         onChange={(val) => {
