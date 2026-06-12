@@ -1,3 +1,5 @@
+import type { SimpleEntity } from "./ui";
+
 export interface MappedEvent {
     start: string;  // ISO дата-время
     end: string;    // ISO дата-время
@@ -71,11 +73,6 @@ export interface Scenario {
     is_active: boolean;
     created_at: string;
     semester?: number;
-}
-
-export interface SimpleEntity {
-    id: number;
-    name: string;
 }
 
 export interface DraftChange {
