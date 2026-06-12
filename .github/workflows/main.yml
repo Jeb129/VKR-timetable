@@ -24,7 +24,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: . # Контекст - корень репозитория
-          file: ./docker/frontend-dockerFile # Путь к файлу
+          file: ./docker/frontend-dockerfile # Путь к файлу
           push: true
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/vkr-frontend:latest
           cache-from: type=gha # Использовать кэш GitHub Actions
@@ -35,7 +35,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./docker/backend-dockerFile
+          file: ./docker/backend-dockerfile
           push: true
           tags: ${{ secrets.DOCKER_HUB_USERNAME }}/vkr-backend:latest
           cache-from: type=gha
