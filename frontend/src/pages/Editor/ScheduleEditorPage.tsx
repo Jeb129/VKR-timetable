@@ -208,11 +208,17 @@ const ScheduleEditorPage = () => {
                         <div className="flex-col f-1">
                             <label className="filter-label">Объект редактирования</label>
                             <SearchSelect 
+                                key={filterType}
                                 model={filterType}
+                                value={targetId}
                                 onChange={(val) => {
                                     setTargetId(val as number);
                                 }}
-                                placeholder={`Поиск ${filterType}...`}
+                                placeholder={`Выберите ${
+                                    filterType === 'classrooms' ? 'аудиторию' : 
+                                    filterType === 'groups' ? 'группу' : 
+                                    filterType === 'teachers' ? 'преподавателя':'тип'
+                                }...`}
                             />
                         </div>
                     </div>

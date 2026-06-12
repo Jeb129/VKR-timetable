@@ -9,7 +9,7 @@ import type { MappedEvent } from "@/types/schedule";
 import "@/styles/Profile.css";
 import { scheduleViewService } from "@/services/schedule_view";
 import type { RequestInstance } from "@/types/request";
-import { requestService } from "@/services/request";
+import { requestService,isBookingRequest, isClassroomPreferenceRequest } from "@/services/request";
 
 const UserProfilePage = () => {
     const { user, logout, refreshUser } = useAuth();
@@ -269,7 +269,10 @@ const UserProfilePage = () => {
                                         <div key={req.id} className="list-item flex-col py-2">
                                             <div className="flex-row space-between align-center">
                                                 <div className="flex-col">
-                                                    <span className="font-bold text-primary">{req.type.name}</span>
+                                                    <span className="font-bold text-primary">{req.type.name} 
+                                                        {isBookingRequest(req) && ` — ${req.details.classroom.name}`}
+                                                        {isClassroomPreferenceRequest(req) && ` — ${req.details.classroom.name}`}
+                                                    </span>
                                                     <span className="text-muted small">{new Date(req.created_at).toLocaleDateString()}</span>
                                                 </div>
                                                 <div className="badge" style={{ border: `1px solid ${status.color}`, color: status.color, backgroundColor: 'transparent' }}>
