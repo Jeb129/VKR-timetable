@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from api.models import Request, enums
 from api.pagination import StandartPagination
 from api.permissions import CanCreateRequestType, IsModeratorOrOwner, IsRequestModerator
-from api.services.serializers import RequestSerializer
+from api.serializers import RequestSerializer
 from api.services.schedule.mapper import ScheduleMapper
 
 class RequestViewSet(viewsets.ModelViewSet):

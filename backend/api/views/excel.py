@@ -10,7 +10,7 @@ import json
 
 from io import BytesIO
 
-from api.services.serializers import ExcelUploadSerializer, ValidationMeassageSerializer
+from api.serializers import ExcelUploadSerializer, ValidationMeassageSerializer
 from api.services.data_import.excel import import_excel
 from api.services.data_import.loaders import AcademicLoadReader, export_loading
 from authentification.permissions import IsScheduleModerator
