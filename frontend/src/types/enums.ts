@@ -13,3 +13,17 @@ export const DAYS = [
     { id: 6, name: "Суббота", short_name: "Сб" },
     { id: 7, name: "Воскресенье", short_name: "Вс" },
 ] as const;
+
+export enum RequestStatus {
+  PENDING = 0,
+  VERIFIED = 1,
+  REJECTED = 2,
+  CANCELD = 3,
+}
+
+export enum RequestType {
+  EXCLUDED_TIMESLOT = 0,
+  CLASSROOM_PREFERENCE = 1,
+  SCHEDULE_ADJUSTMENT = 2,
+  BOOKING = 3,
+}
