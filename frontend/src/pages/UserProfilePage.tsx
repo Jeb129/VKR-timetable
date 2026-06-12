@@ -30,8 +30,8 @@ const UserProfilePage = () => {
                 setLoading(true);
                 try {
 
-                    const today = new Date().toISOString().split('T')[0];
-                    //const today = "2026-04-06";
+                    //const today = new Date().toISOString().split('T')[0];
+                    const today = "2026-04-06";
                     const teacherId = user.teacher?.id;
                     const studygroupId = user.study_group?.id;
                     
