@@ -49,7 +49,7 @@ services:
       # PHP настройки
       PHP_MEMORY_LIMIT: 512M
     depends_on:
-      postgres:
+      moodle_db:
         condition: service_healthy
     volumes:
       - ./moodle_data:/bitnami/moodle
