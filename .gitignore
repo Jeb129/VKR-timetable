@@ -92,3 +92,9 @@ redis/.env
 # ----------------------------
 *.tmp
 data_files/
+
+
+moodle_data/
+moodledata/
+pg_data/
+

@@ -12,6 +12,8 @@ services:
     ports:
       - "5432:5432"
     env_file: .env
+    networks:
+      - vkr-shared
 
   redis:
     image: redis:7-alpine
@@ -45,6 +47,8 @@ services:
              python manage.py makemigrations authentification &&
              python manage.py migrate &&
              gunicorn --bind 0.0.0.0:8000 config.wsgi:application"
+    networks:
+      - vkr-shared
   frontend:
     image: jeb129/vkr-frontend:latest
     container_name: vkr-frontend
@@ -52,3 +56,8 @@ services:
     volumes:
       - ../frontend:/output
     command: sh -c "cp -rp /app/dist/. /output/"
+
+networks:
+  vkr-shared:
+    external: true
+    name: vkr-network

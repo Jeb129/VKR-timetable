@@ -6,9 +6,10 @@ from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 
 
+from api.models import Teacher
 from authentification.permissions import IsEmailVerified
 from authentification.serializers import CustomUserSerializer
-from authentification.services.moodle import find_teacher_profile, moodle_get_profiles, moodle_get_user
+from authentification.services.moodle import find_student_profile, find_teacher_profile, moodle_get_profiles, moodle_get_user
 
 #  Логика верификации
 class MoodleVerifyView(APIView):
@@ -22,7 +23,6 @@ class MoodleVerifyView(APIView):
         try:
             # Находим Moodle ID по Email
             m_user = moodle_get_user(user)
-
             if not m_user:
                 return Response(
                     {"error":"Пользователь с таким Email не найден в Moodle"},
@@ -30,14 +30,18 @@ class MoodleVerifyView(APIView):
                 )
             
             m_id,m_fullname = m_user
-
-            profiles = moodle_get_profiles(m_id)
-
-            is_teacher = find_teacher_profile(profiles) is not None
-
             user.internal_user = True
             user.moodle_id = m_id
-            msg = "Ваш профиль найден в системе Moodle"
+
+            profiles = moodle_get_profiles(m_id)
+            if not profiles:
+                return Response(
+                    {"message": "Ваш профиль найден в системе Moodle, но вы не зачислены ни на один курс.\nНевозможно определить вашу роль", "is_teacher": False},
+                    status=status.HTTP_200_OK
+                )
+
+            is_teacher = find_teacher_profile(profiles) is not None
+            msg = "Ваш ппрофиль найден в системе Moodle"
 
             if is_teacher:
                 # Ищем преподавателя по ФИО в нашей базе
@@ -47,8 +51,6 @@ class MoodleVerifyView(APIView):
                     msg = f"Вы подтверждены как преподаватель: {m_fullname}"
                 else:
                     msg = f"В Moodle вы учитель, но в базе расписания ФИО {m_fullname} не найдено."
-
-            user.save()
             return Response(
                 {"message": msg, "is_teacher": is_teacher},
                 status=status.HTTP_200_OK
@@ -59,6 +61,9 @@ class MoodleVerifyView(APIView):
                 {"error": f"Ошибка взаимодействии с Moodle: {str(e)}"}, 
                 status=status.HTTP_502_BAD_GATEWAY
             )
+        
+        finally:
+            user.save()
 
 class CurrentUserView(RetrieveAPIView):
     permission_classes= [IsAuthenticated]
