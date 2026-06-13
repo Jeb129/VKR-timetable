@@ -6,7 +6,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.views import APIView
 
 
-from api.models import Teacher
+from api.models import Teacher,StudyGroup
 from authentification.permissions import IsEmailVerified
 from authentification.serializers import CustomUserSerializer
 from authentification.services.moodle import find_student_profile, find_teacher_profile, moodle_get_profiles, moodle_get_user
