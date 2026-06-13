@@ -5,6 +5,10 @@ moodle_url = settings.MOODLE_URL
 token = settings.MOODLE_TOKEN
 teacher_role_shortnames = ['editingteacher', 'teacher', 'coursecreator']
 
+ROLES = {
+
+}
+
 # Для работы блока нужно создать токен с достуом к следующим методам:
 # - core_user_get_users
 # - core_enrol_get_users_courses
@@ -61,3 +65,10 @@ def find_teacher_profile(profiles):
         for role in profile.get('roles', []):
             if role.get('shortname') in teacher_role_shortnames:
                 return profile
+
+def find_student_profile(profiles):
+    """Поиск профиля с правами преподавателя для"""
+    for profile in profiles:
+        for role in profile.get('roles', []):
+            if role.get('shortname') == "student":
+                return profile      
