@@ -34,6 +34,14 @@ class AcademicLoadSerializer(serializers.ModelSerializer):
         fields = "__all__"
         read_only_fields = ["id"]
 
+class PlannedLessonSerializer(serializers.ModelSerializer):
+    discipline = serializers.ReadOnlyField(source="discipline.name")
+    lesson_type = serializers.ReadOnlyField(source="lesson_type.short_name")
+
+    class Meta:
+        model = AcademicLoad
+        fields = "__all__"
+        read_only_fields = ["id"]
 
 class TeacherSerializer(serializers.ModelSerializer):
     class Meta:

@@ -26,3 +26,4 @@ from .schedule import (
     TeacherScheduleView,
 )
 from .statistics import BuildingLoadView
+from .plannedlessons import PlannedLessonViewSet
