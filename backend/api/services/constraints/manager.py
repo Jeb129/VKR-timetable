@@ -2,9 +2,9 @@ import logging
 from typing import Any, Dict, List
 
 from api.models import Lesson
-from api.services.constraints.meta import ConstraintError
 
-from api.services.constraints import *
+from api.services.constraints import methods
+from api.services.constraints.meta import BaseConstraint, ConstraintError, registry
 
 from api.models import Constraint
 from api.services.schedule.context import ScheduleContext
