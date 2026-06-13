@@ -1,37 +1,62 @@
 services:
-  mariadb:
-    image: bitnami/mariadb:latest
-    volumes:
-      - 'mariadb_data:/bitnami/mariadb'
+  moodle_db:
+    image: postgres:14-alpine  # Понижаем версию для совместимости
+    container_name: moodle_db
     environment:
-      - MARIADB_USER=bn_moodle
-      - MARIADB_DATABASE=bitnami_moodle
-      - ALLOW_EMPTY_PASSWORD=yes
+      POSTGRES_DB: moodle
+      POSTGRES_USER: moodleuser
+      POSTGRES_PASSWORD: moodlepassword
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+      PGPORT: 5433
+    volumes:
+      - ./pg_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5433"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moodleuser -d moodle"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
 
   moodle:
-    image: bitnami/moodle:latest
+    image: bitnamilegacy/moodle:latest
+    container_name: moodle
     ports:
-      - '8080:8080'
-      - '8443:8443'
-    volumes:
-      - 'moodle_data:/bitnami/moodle'
-      - 'moodledata_data:/bitnami/moodledata'
+      - "8081:8080"
+      - "8443:8443"
+    entrypoint: /bin/bash -c "mkdir -p /bitnami/apache/conf && /opt/bitnami/scripts/moodle/entrypoint.sh /opt/bitnami/scripts/moodle/run.sh"
     environment:
-      - MOODLE_DATABASE_HOST=mariadb
-      - MOODLE_DATABASE_PORT_NUMBER=3306
-      - MOODLE_DATABASE_USER=bn_moodle
-      - MOODLE_DATABASE_NAME=bitnami_moodle
-      - ALLOW_EMPTY_PASSWORD=yes
-      - MOODLE_USERNAME=admin
-      - MOODLE_PASSWORD=admin
-      - MOODLE_EMAIL=admin@mail.com
+      # Настройки базы данных
+      MOODLE_DATABASE_TYPE: pgsql
+      MOODLE_DATABASE_HOST: moodle_db
+      MOODLE_DATABASE_PORT_NUMBER: 5433
+      MOODLE_DATABASE_NAME: moodle
+      MOODLE_DATABASE_USER: moodleuser
+      MOODLE_DATABASE_PASSWORD: moodlepassword
+      
+      # Настройки администратора
+      MOODLE_USERNAME: admin
+      MOODLE_PASSWORD: a1d2m3i4n5!
+      MOODLE_EMAIL: admin@mail.ru
+      
+      # Дополнительные переменные для legacy образа
+      MOODLE_SKIP_BOOTSTRAP: "no"
+      MOODLE_SKIP_INSTALL: "no"
+      APACHE_HTTP_PORT_NUMBER: 8080
+      APACHE_HTTPS_PORT_NUMBER: 8443
+      
+      # PHP настройки
+      PHP_MEMORY_LIMIT: 512M
     depends_on:
-      - mariadb
-
-volumes:
-  mariadb_data:
-    driver: local
-  moodle_data:
-    driver: local
-  moodledata_data:
-    driver: local
+      postgres:
+        condition: service_healthy
+    volumes:
+      - ./moodle_data:/bitnami/moodle
+      - ./moodledata:/bitnami/moodledata
+    restart: unless-stopped
+    
+networks:
+  default:
+    external:
+      name: vkr

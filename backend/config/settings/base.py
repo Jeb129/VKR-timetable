@@ -17,6 +17,8 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+DEBUG = os.getenv("DEBUG",False)
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
 DATA_FILES_DIR = Path(os.getenv("DATA_FILES_DIR",BASE_DIR/"data_files")).resolve()
@@ -147,14 +149,25 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = "static/"
-STATIC_ROOT = BASE_DIR / "static"
+STATIC_URL = os.getenv("STATIC_URL","static/")
+STATIC_ROOT = Path(os.getenv("STATIC_ROOT", BASE_DIR / "static")).resolve()
+
+MEDIA_URL = os.getenv("MEDIA_URL","media/")
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", BASE_DIR / "media")).resolve()
 
 REST_FRAMEWORK = {
-    "DEFAULT_AUTHENTICATION_CLASSES": (
+    "DEFAULT_AUTHENTICATION_CLASSES": [
         "authentification.services.user.CustomJWTAuthentication", 
-    )
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
 }
+if DEBUG:
+    REST_FRAMEWORK['DEFAULT_RENDERER_CLASSES'].append(
+        'rest_framework.renderers.BrowsableAPIRenderer'
+    )
+
 AUTH_USER_MODEL = "authentification.CustomUser"
 
 SIMPLE_JWT = {
@@ -196,13 +209,13 @@ DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL')
 
 ADMIN_REORDER = (
     # 0. Управление системой
-    {
-        'app': 'api', 
-        'label': 'Управление системой', 
-        'models': (
-            'api.SystemTask',
-        )
-    },
+    # {
+    #     'app': 'api', 
+    #     'label': 'Управление системой', 
+    #     'models': (
+    #         'api.SystemTask',
+    #     )
+    # },
     # 1. Инфраструктура
     {
         'app': 'api', 
@@ -269,7 +282,7 @@ ADMIN_REORDER = (
         'label': 'Пользователи', 
         'models': (
             'authentification.CustomUser',
-            'auth.Group', # Можно добавить стандартные группы сюда же
+            'auth.Group',
         )
     },
 )
