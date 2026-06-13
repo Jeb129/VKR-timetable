@@ -17,7 +17,8 @@ services:
       timeout: 5s
       retries: 5
     restart: unless-stopped
-
+    networks:
+      - vkr-shared
   moodle:
     image: bitnamilegacy/moodle:latest
     container_name: moodle
@@ -54,3 +55,9 @@ services:
       - ./moodle_data:/bitnami/moodle
       - ./moodledata:/bitnami/moodledata
     restart: unless-stopped
+    networks:
+      - vkr-shared
+networks:
+  vkr-shared:
+    external: true
+    name: vkr-network
