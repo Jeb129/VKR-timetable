@@ -152,6 +152,9 @@ USE_TZ = True
 STATIC_URL = os.getenv("STATIC_URL","static/")
 STATIC_ROOT = Path(os.getenv("STATIC_ROOT", BASE_DIR / "static")).resolve()
 
+MEDIA_URL = os.getenv("MEDIA_URL","media/")
+MEDIA_ROOT = Path(os.getenv("MEDIA_ROOT", BASE_DIR / "media")).resolve()
+
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": [
         "authentification.services.user.CustomJWTAuthentication", 
