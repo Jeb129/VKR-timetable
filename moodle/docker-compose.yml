@@ -7,11 +7,10 @@ services:
       POSTGRES_USER: moodleuser
       POSTGRES_PASSWORD: moodlepassword
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
-      PGPORT: 5433
     volumes:
       - ./pg_data:/var/lib/postgresql/data
     ports:
-      - "5433:5433"
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U moodleuser -d moodle"]
       interval: 10s
@@ -30,7 +29,7 @@ services:
       # Настройки базы данных
       MOODLE_DATABASE_TYPE: pgsql
       MOODLE_DATABASE_HOST: moodle_db
-      MOODLE_DATABASE_PORT_NUMBER: 5433
+      MOODLE_DATABASE_PORT_NUMBER: 5432
       MOODLE_DATABASE_NAME: moodle
       MOODLE_DATABASE_USER: moodleuser
       MOODLE_DATABASE_PASSWORD: moodlepassword
@@ -55,8 +54,3 @@ services:
       - ./moodle_data:/bitnami/moodle
       - ./moodledata:/bitnami/moodledata
     restart: unless-stopped
-    
-networks:
-  default:
-    external: true
-    name: vkr
