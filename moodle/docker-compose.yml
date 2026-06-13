@@ -58,5 +58,5 @@ services:
     
 networks:
   default:
-    external:
-      name: vkr
+    external: true
+    name: vkr
