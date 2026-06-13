@@ -1,5 +1,5 @@
 services:
-  postgres:
+  moodle_db:
     image: postgres:14-alpine  # Понижаем версию для совместимости
     container_name: moodle_db
     environment:
@@ -7,10 +7,11 @@ services:
       POSTGRES_USER: moodleuser
       POSTGRES_PASSWORD: moodlepassword
       POSTGRES_INITDB_ARGS: "--encoding=UTF8 --lc-collate=C --lc-ctype=C"
+      PGPORT: 5433
     volumes:
       - ./pg_data:/var/lib/postgresql/data
     ports:
-      - "5433:5432"
+      - "5433:5433"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U moodleuser -d moodle"]
       interval: 10s
@@ -22,20 +23,21 @@ services:
     image: bitnamilegacy/moodle:latest
     container_name: moodle
     ports:
-      - "8080:8080"
+      - "8081:8080"
       - "8443:8443"
+    entrypoint: /bin/bash -c "mkdir -p /bitnami/apache/conf && /opt/bitnami/scripts/moodle/entrypoint.sh /opt/bitnami/scripts/moodle/run.sh"
     environment:
       # Настройки базы данных
       MOODLE_DATABASE_TYPE: pgsql
-      MOODLE_DATABASE_HOST: postgres
-      MOODLE_DATABASE_PORT_NUMBER: 5432
+      MOODLE_DATABASE_HOST: moodle_db
+      MOODLE_DATABASE_PORT_NUMBER: 5433
       MOODLE_DATABASE_NAME: moodle
       MOODLE_DATABASE_USER: moodleuser
       MOODLE_DATABASE_PASSWORD: moodlepassword
       
       # Настройки администратора
       MOODLE_USERNAME: admin
-      MOODLE_PASSWORD: admin
+      MOODLE_PASSWORD: a1d2m3i4n5!
       MOODLE_EMAIL: admin@mail.ru
       
       # Дополнительные переменные для legacy образа
@@ -53,3 +55,8 @@ services:
       - ./moodle_data:/bitnami/moodle
       - ./moodledata:/bitnami/moodledata
     restart: unless-stopped
+    
+networks:
+  default:
+    external:
+      name: vkr

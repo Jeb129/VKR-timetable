@@ -1,5 +1,5 @@
 services:
-  postgres:
+  backend_db:
     image: postgres:17-alpine
     container_name: vkr-postgres
     restart: always
@@ -52,4 +52,8 @@ services:
     volumes:
       - ../frontend:/output
     command: sh -c "cp -rp /app/dist/. /output/"
-   
+
+networks:
+  default:
+    external:
+      name: vkr 
