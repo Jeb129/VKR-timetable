@@ -27,3 +27,4 @@ from .schedule import (
 )
 from .statistics import BuildingLoadView
 from .plannedlessons import PlannedLessonViewSet
+from .generation import GenerationViewSet

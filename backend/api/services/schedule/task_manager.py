@@ -1,10 +1,9 @@
 import logging
 from datetime import datetime
-from typing import Dict, Optional, List
+from typing import Dict
 from django.core.cache import cache
 from celery.result import AsyncResult
 
-from api.models import ScheduleScenario, Constraint, enums
 from api.tasks import run_generation_task
 from celery.signals import task_postrun
 from config.settings.celery import app as celery_app
