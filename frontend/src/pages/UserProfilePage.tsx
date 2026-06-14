@@ -250,7 +250,11 @@ const UserProfilePage = () => {
                     <div className="card slide-up" style={{ borderColor: 'var(--p-orange)' }}>
                         <h3 className="text-orange">Действия</h3>
                         <div className="action-buttons flex-col gap-1">
-                            <button className="btn btn-orange" onClick={() => navigate("/TeacherAdjustment")}>Перенести занятие</button>
+                            {(user.teacher || user.is_staff || user.is_schedule_moderator) && (
+                                <button className="btn btn-orange" onClick={() => navigate("/TeacherAdjustment")}>
+                                    Перенести занятие
+                                </button>
+                            )}
                             <button className="btn btn-green" onClick={() => navigate("/Booking")}>Забронировать ауд.</button>
                         </div>
                     </div>
