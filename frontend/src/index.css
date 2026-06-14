@@ -69,3 +69,5 @@ html, body {
 /* Скрытие прокрутки где нужно */
 .no-scroll { overflow: hidden; }
 .scroll-y { overflow-y: auto; }
+
+.w-100 {width: 100% !important;}
