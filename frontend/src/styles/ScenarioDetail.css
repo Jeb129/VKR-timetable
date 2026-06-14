@@ -38,3 +38,48 @@
     height: 100%;
     transition: width 0.5s ease;
 }
+
+.border-dashed {
+    border: 1px dashed var(--border-color);
+}
+
+.border-blue {
+    border: 1px solid rgba(44, 58, 179, 0.2);
+}
+
+.sticky-top {
+    position: sticky;
+    top: 20px;
+}
+
+/* Spinner для загрузки */
+.spinner {
+    width: 30px;
+    height: 30px;
+    border: 4px solid var(--p-blue-light);
+    border-top: 4px solid var(--p-blue);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Расстояние в сетке инфо */
+.request-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-top: 1rem;
+}
+
+/* Стилизация скроллбара для ограничений */
+.scroll-y::-webkit-scrollbar {
+    width: 6px;
+}
+.scroll-y::-webkit-scrollbar-thumb {
+    background-color: var(--border-color);
+    border-radius: 10px;
+}

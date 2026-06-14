@@ -1,16 +1,17 @@
 /* src/styles/ScenarioSelection.css */
 .scenario-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
-  gap: 1.5rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
+    gap: 1.5rem;
+    width: 100%;
 }
 
 .scenario-card {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  min-height: 200px;
-  transition: var(--transition);
+    min-height: 220px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    transition: var(--transition);
 }
 
 .scenario-card:hover {
@@ -19,7 +20,12 @@
 }
 
 .card-actions {
-  display: flex;
-  gap: 0.5rem;
-  margin-top: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.profile-wrapper {
+    width: 100%;
+    box-sizing: border-box;
 }
