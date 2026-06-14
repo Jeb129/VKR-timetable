@@ -23,22 +23,26 @@ import ScenarioPage from "./pages/Schedule/ScenarioPage"
 const App = () =>
   <>
     <Routes>
-      <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
-      <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
-      <Route path="/request" element={<ProtectedRoute><RequestsPage /></ProtectedRoute>} />
+
+      <Route path="/" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><UserProfilePage /></ProtectedRoute>} />
+      <Route path="/schedule" element={<ProtectedRoute><SchedulePage /></ProtectedRoute>} />
       <Route path="/Booking" element={<ProtectedRoute><BookingCreatePage/></ProtectedRoute>}/>
-      <Route path="/Moderation" element={<ProtectedRoute><ModerationPage/></ProtectedRoute>}/>
-      <Route path="/scenarios" element={<ProtectedRoute><ScenarioSelectionPage /></ProtectedRoute>} />
-      <Route path="/scenarios/:scenarioId/edit" element={<ProtectedRoute><ScheduleEditorPage/></ProtectedRoute>}/>
-      <Route path="/scenarios/:id" element={<ProtectedRoute><ScenarioPage/></ProtectedRoute>}/>
-      <Route path="/AcademicLoad" element={<ProtectedRoute><AcademicLoadImportPage/></ProtectedRoute>}/>
-      <Route path="/Statistics" element={<ProtectedRoute><StatsPage/></ProtectedRoute>} />
-      <Route path="/Statistics/:buildingId" element={<ProtectedRoute><BuildingStatsPage /></ProtectedRoute>} />
-      <Route path="/ScheduleEditor/:scenarioId/review" element={<ProtectedRoute><ScenarioReviewPage /></ProtectedRoute>} />
-      <Route path="/ScheduleEditor/:scenarioId/generate" element={<ProtectedRoute><ScheduleGeneratorPage /></ProtectedRoute>} />
+
+      <Route path="/Statistics/:buildingId" element={<ProtectedRoute anyModerator={true}><BuildingStatsPage /></ProtectedRoute>} /> 
+      <Route path="/Statistics" element={<ProtectedRoute anyModerator={true}><StatsPage/></ProtectedRoute>} />
+      <Route path="/request" element={<ProtectedRoute anyModerator={true}><RequestsPage /></ProtectedRoute>} />
+           
+      <Route path="/Moderation" element={<ProtectedRoute bookingModOnly={true}><ModerationPage/></ProtectedRoute>}/>
+      
+      <Route path="/AcademicLoad" element={<ProtectedRoute scheduleModOnly={true}><AcademicLoadImportPage/></ProtectedRoute>}/>
+      <Route path="/scenarios" element={<ProtectedRoute scheduleModOnly={true}><ScenarioSelectionPage /></ProtectedRoute>} />
+      <Route path="/scenarios/:scenarioId/edit" element={<ProtectedRoute scheduleModOnly={true}><ScheduleEditorPage/></ProtectedRoute>}/>
+      <Route path="/scenarios/:id" element={<ProtectedRoute scheduleModOnly={true}><ScenarioPage/></ProtectedRoute>}/>
+      <Route path="/ScheduleEditor/:scenarioId/review" element={<ProtectedRoute scheduleModOnly={true}><ScenarioReviewPage /></ProtectedRoute>} />
+      <Route path="/ScheduleEditor/:scenarioId/generate" element={<ProtectedRoute scheduleModOnly={true}><ScheduleGeneratorPage /></ProtectedRoute>} />
     </Routes>
   </>
 export default App
