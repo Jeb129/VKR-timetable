@@ -75,6 +75,6 @@ class GenerationViewSet(viewsets.ViewSet):
         # Дополнительно подтянем текущий статус сценария из БД
         scenario = self.get_scenario(scenario_id)
         if scenario:
-            info["scenario_status"] = scenario.status
+            info["scenario_status"] = scenario.generation_status
 
         return Response(info)

@@ -15,7 +15,7 @@ class ConstraintManager:
     Менеджер для методов проверки ограничений. 
     Подгружает информацию об ограничениях из БД и сопостовляет с методами
     """
-    def __init__(self, constraints):
+    def __init__(self, constraints=None):
         self.constraints: List[Constraint] = constraints or list(Constraint.objects.filter(is_active = True))
         self.methods: Dict[str, callable] = {}
         self.instances: Dict[str, BaseConstraint] = {}
