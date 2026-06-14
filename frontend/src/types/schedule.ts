@@ -7,7 +7,7 @@ export interface MappedEvent {
     type: string;   // "0", "2", "3"
     extendedProps: {
         event: {
-             id: number;
+            id: number;
             discipline: string;     // Название дисциплины (строка)
             lesson_type: string;    // Тип занятия (строка)
             lesson_name?: string;    // Название дисциплины для Adjustment
@@ -112,16 +112,6 @@ export interface Scenario {
     created_at: string;
 }
 
-export interface PlannedCheckResult {
-    is_ok: boolean;
-    missing_hours: number;
-    details: {
-        discipline: string;
-        group: string;
-        remaining: number;
-    }[];
-}
-
 export type CeleryState = 
     | 'PENDING'   // Задача ожидает в очереди
     | 'STARTED'   // Задача взята воркером в работу
@@ -152,33 +142,4 @@ export interface GenerationStatusResponse {
     // Опционально: можно добавить поля для прогресса, если добавишь их в metadata на бэке
     progress?: number; 
     current_penalty?: number;
-}
-
-/**
- * Структура записи нагрузки, которая не была распределена.
- * Основана на полях модели AcademicLoad.
- */
-export interface UncoveredLoadData {
-    id: number;
-    discipline_name: string;      // Обычно в сериализаторах передают названия для фронтенда
-    lesson_type_name: string;
-    teacher_name: string;
-    study_group_name: string;
-    whole_hours: number;
-    whole_weeks: number;
-    // Можно добавить id сущностей, если нужно делать ссылки
-    discipline?: number;
-    teacher?: number;
-    study_group?: number;
-}
-
-/**
- * Ответ от эндпоинта /plannedlessons/check/
- */
-export interface PlannedCheckResult {
-    status: 'ok' | 'warning';
-    message: string;
-    
-    // Данные присутствуют только если статус 'warning'
-    uncovered_data?: UncoveredLoadData[];
 }
