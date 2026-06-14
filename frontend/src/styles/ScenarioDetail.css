@@ -107,3 +107,19 @@
 .text-green { color: var(--p-green); }
 .text-red { color: var(--p-red); }
 .text-orange { color: var(--p-orange); }
+
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--p-blue); 
+}
+
+.pointer {
+    cursor: pointer;
+    user-select: none;
+}
+
+.font-bold {
+    font-weight: 700;
+}
