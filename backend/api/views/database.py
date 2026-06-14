@@ -45,6 +45,11 @@ class DisciplineViewSet(BaseReadOnlyViewSet):
     serializer_class = DisciplineSerializer
     search_fields = ['name']
 
+class SemesterViewSet(BaseReadOnlyViewSet):
+    queryset = Semester.objects.all()
+    serializer_class = SemesterSerializer
+    search_fields = ['name']
+
 class LessonTypeViewSet(BaseReadOnlyViewSet):
     queryset = LessonType.objects.all()
     serializer_class = LessonTypeSerializer

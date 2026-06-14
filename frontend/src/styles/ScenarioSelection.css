@@ -1,24 +1,25 @@
+/* src/styles/ScenarioSelection.css */
 .scenario-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(380px, 1fr));
-    gap: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
 }
 
 .scenario-card {
-    transition: var(--transition);
-    display: flex;
-    flex-direction: column;
-    min-height: 180px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 200px;
+  transition: var(--transition);
 }
 
-/* Отступ для кнопки создания от заголовка */
-.create-btn-margin {
-    margin-left: 3rem;
+.scenario-card:hover {
+  border-color: var(--p-orange);
+  transform: translateY(-4px);
 }
 
-/* Стили для кнопок управления внутри карточки */
 .card-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 1.5rem;
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1.5rem;
 }

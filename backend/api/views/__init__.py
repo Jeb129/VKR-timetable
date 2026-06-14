@@ -15,6 +15,7 @@ from .database import (
     StudyProgramViewSet,
     TeacherViewSet,
     TimeslotViewSet,
+    SemesterViewSet
 )
 from .excel import ExcelAPIView
 from .requests import RequestViewSet

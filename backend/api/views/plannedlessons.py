@@ -49,7 +49,7 @@ class PlannedLessonViewSet(viewsets.ModelViewSet):
         # Ищем нагрузку, у которой нет связанных PlannedLesson в этом семестре
         uncovered_load = AcademicLoad.objects.filter(
             semester_id=semester_id,
-            planned_lessons__isnull=True
+            plannedlesson__isnull=True
         ).distinct()
 
         if not uncovered_load.exists():

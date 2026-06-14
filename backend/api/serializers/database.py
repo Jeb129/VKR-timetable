@@ -78,6 +78,11 @@ class ScheduleScenarioSerializer(serializers.ModelSerializer):
         model = ScheduleScenario
         fields = "__all__"
 
+class SemesterSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Semester
+        fields = "__all__"
+
 
 class BuildingSerializer(serializers.ModelSerializer):
     class Meta:
