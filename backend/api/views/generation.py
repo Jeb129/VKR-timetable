@@ -45,6 +45,7 @@ class GenerationViewSet(viewsets.ViewSet):
             return Response(
                 {
                     "status": enums.GenerationStatus.IN_PROGRESS,
+                    "task_id": task_id,
                     "message": "Процесс генерации запущен успешно",
                 },
                 status=status.HTTP_202_ACCEPTED,

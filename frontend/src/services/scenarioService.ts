@@ -1,5 +1,6 @@
+import type { PlannedCheckResult, PlannedGenerateResult } from "@/types/plannedlessons";
 import { privateApi } from "./axios";
-import type { GenerationStatusResponse, PlannedCheckResult, Scenario } from "@/types/schedule";
+import type { GenerationStatusResponse, Scenario } from "@/types/schedule";
 
 export const scenarioService = {
     // Запуск генерации
@@ -39,8 +40,9 @@ export const semesterService = {
     },
 
     // Синхронизация нагрузки (generate)
-    syncPlanned: async (id: number): Promise<void> => {
+    syncPlanned: async (id: number,force: boolean = false): Promise<PlannedGenerateResult> => {
         // УДАЛЯЕТ СУЩЕСТВУЮЩИЕ ПЛАНОВЫЕ ЗАНЯТИЯ!!!!!!
-        await privateApi.post(`/api/semesters/${id}/plannedlessons/generate/`);
+        const response = await privateApi.post(`/api/semesters/${id}/plannedlessons/generate/${force ? "?force=true" : ""}`);
+        return response.data
     },
 }
