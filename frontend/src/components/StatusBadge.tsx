@@ -1,17 +1,25 @@
 import { GenerationStatus } from "@/types/schedule";
 
 // Вспомогательный мини-компонент для бейджа
-const StatusBadge: React.FC<{ status?: GenerationStatus | null }> = ({ status }) => {
+const StatusBadge: React.FC<{ status?: {id:GenerationStatus; name: string} | null}> = ({ status }) => {
+    // const config = {
+    //     [GenerationStatus.SUCCESS]: { label: 'Готово', class: 'btn-green' },
+    //     [GenerationStatus.IN_PROGRESS]: { label: 'В процессе', class: 'btn-primary' },
+    //     [GenerationStatus.ERROR]: { label: 'Ошибка', class: 'btn-red' },
+    //     [GenerationStatus.INFEASIBLE]: { label: 'Нерешаемо', class: 'btn-orange' },
+    //     [GenerationStatus.IN_QUERRY]: { label: 'Нерешаемо', class: 'btn-orange' },
+    // };
     const config = {
-        [GenerationStatus.SUCCESS]: { label: 'Готово', class: 'btn-green' },
-        [GenerationStatus.IN_PROGRESS]: { label: 'В процессе', class: 'btn-primary' },
-        [GenerationStatus.ERROR]: { label: 'Ошибка', class: 'btn-red' },
-        [GenerationStatus.INFEASIBLE]: { label: 'Нерешаемо', class: 'btn-orange' },
+        [GenerationStatus.SUCCESS]: { class: 'btn-green' },
+        [GenerationStatus.IN_PROGRESS]: { class: 'btn-primary' },
+        [GenerationStatus.ERROR]: { class: 'btn-red' },
+        [GenerationStatus.INFEASIBLE]: {class: 'btn-orange' },
+        [GenerationStatus.IN_QUERRY]: { class: 'btn-orange' },
     };
 
     if (status === null || status === undefined) return <span className="badge btn-outline">Новый</span>;
-    const s = config[status];
-    return <span className={`badge ${s.class}`}>{s.label}</span>;
+    const s = config[status.id];
+    return <span className={`badge ${s.class}`}>{status.name}</span>;
 }
 
 export default StatusBadge

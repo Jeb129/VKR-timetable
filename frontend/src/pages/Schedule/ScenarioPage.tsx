@@ -12,6 +12,7 @@ import { semesterService, scenarioService } from '@/services/scenarioService';
 import { useModal } from '@/context/ModalContext'; // Импортируем модалки
 import ConstraintItem from '@/components/ConstraintItem';
 import "@/styles/ScenarioDetail.css";
+import StatusBadge from '@/components/StatusBadge';
 
 const ScenarioPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -40,7 +41,7 @@ const ScenarioPage: React.FC = () => {
             const check = await semesterService.checkPlanned(sData.semester);
             setCheckResult(check);
 
-            if (sData.generation_status === GenerationStatus.IN_PROGRESS) {
+            if (sData.generation_status?.id === GenerationStatus.IN_PROGRESS) {
                 setPolling(true);
             }
         } catch (e) {
@@ -342,16 +343,4 @@ const ScenarioPage: React.FC = () => {
     );
 };
 
-// Вспомогательный компонент статуса
-const StatusBadge: React.FC<{ status?: GenerationStatus | null }> = ({ status }) => {
-    const map = {
-        [GenerationStatus.SUCCESS]: { label: 'Готово', cls: 'btn-green' },
-        [GenerationStatus.IN_PROGRESS]: { label: 'Расчет', cls: 'btn-primary' },
-        [GenerationStatus.ERROR]: { label: 'Ошибка', cls: 'btn-red' },
-        [GenerationStatus.INFEASIBLE]: { label: 'Нерешаемо', cls: 'btn-orange' },
-    };
-    const item = (status !== undefined && status !== null) ? map[status] : { label: 'Новый', cls: 'btn-outline' };
-    return <span className={`badge ${item?.cls || 'btn-outline'}`}>{item?.label || '---'}</span>;
-};
-
-export default ScenarioPage;
+export default ScenarioPage
