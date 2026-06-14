@@ -13,7 +13,7 @@ const BookingCreatePage = () => {
     const navigate = useNavigate();
 
     // Справочники
-    const [bookingTypes, setBookingTypes] = useState<any[]>([]);
+    const [, setBookingTypes] = useState<any[]>([]);
     const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
     const [selectedRoomObj, setSelectedRoomObj] = useState<Classroom | null>(null);
     const [busyEvents, setBusyEvents] = useState<any[]>([]); 
@@ -168,10 +168,13 @@ const BookingCreatePage = () => {
 
                     <div className="flex-col">
                         <label className="filter-label">Вид мероприятия</label>
-                        <select className="styled-select" value={selectedTypeId} onChange={e => setSelectedTypeId(e.target.value)}>
-                            <option value="">Выберите тип...</option>
-                            {bookingTypes.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
-                        </select>
+                        <SearchSelect 
+                            model="booking-types" 
+                            value={selectedTypeId}
+                            onChange={setSelectedTypeId}
+                            placeholder="Выберите тип..."
+                            pageSize={50} 
+                        />
                     </div>
 
                     <div className="flex-col">

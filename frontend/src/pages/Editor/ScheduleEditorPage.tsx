@@ -103,6 +103,7 @@ const ScheduleEditorPage = () => {
             setLoading(false);
         }
     }, [sId, targetId, filterType, loadLessons]);
+
     const handleRestore = async (lessonId: string) => {
         await revertLesson(lessonId);
         loadDraft();
@@ -164,6 +165,24 @@ const ScheduleEditorPage = () => {
         });
     };
 
+    const handleCommit = async () => {
+        try {
+            await scheduleDraftService.commitDraft(sId);
+            await loadDraft();
+            openModal({
+                title: "Успех",
+                content: <p>Расписание успешно опубликовано в базу данных.</p>,
+                footer: <button className="btn btn-primary w-100" onClick={closeModal}>Ок</button>
+            });
+        } catch (err) {
+            openModal({
+                title: "Ошибка",
+                content: <p>Не удалось опубликовать изменения.</p>,
+                footer: <button className="btn btn-red w-100" onClick={closeModal}>Закрыть</button>
+            });
+        }
+    };
+
     // Расчеты сетки
     const orderNumbers = useMemo(() => 
         Array.from(new Set(timeslots.map(t => t.order_number))).sort((a,b) => a-b)
@@ -186,8 +205,10 @@ const ScheduleEditorPage = () => {
                         <button className={`btn ${currentWeek === 1 ? 'btn-primary' : 'btn-outline'}`} onClick={() => setCurrentWeek(1)}>Числитель</button>
                         <button className={`btn ${currentWeek === 2 ? 'btn-primary' : 'btn-outline'}`} onClick={() => setCurrentWeek(2)}>Знаменатель</button>
                     </div>
-                    <button className="btn btn-green" onClick={() => navigate(`/ScheduleEditor/${sId}/review`)}>Опубликовать</button>
-                    <button className="btn nav-btn" onClick={() => navigate("/ScheduleEditor")}>К версиям</button>
+                    <button className="btn btn-green" onClick={handleCommit} disabled={draftChanges.length === 0 && deletedLessons.length === 0}>
+                        Сохранить
+                    </button>
+                    <button className="btn nav-btn" onClick={() => navigate("/scenarios")}>К версиям</button>
                 </div>
             </nav>
 

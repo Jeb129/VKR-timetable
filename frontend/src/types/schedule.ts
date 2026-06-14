@@ -7,7 +7,7 @@ export interface MappedEvent {
     type: string;   // "0", "2", "3"
     extendedProps: {
         event: {
-             id: number;
+            id: number;
             discipline: string;     // Название дисциплины (строка)
             lesson_type: string;    // Тип занятия (строка)
             lesson_name?: string;    // Название дисциплины для Adjustment
@@ -58,23 +58,6 @@ export interface ScheduleEvent {
     editable?: boolean; 
     backgroundColor?: string;
 }
-
-export interface ScheduleScenario {
-    id: number;
-    name: string;
-    is_active: boolean;
-    created_at: string;
-    semester?: number;
-}
-
-export interface Scenario {
-    id: number;
-    name: string;
-    is_active: boolean;
-    created_at: string;
-    semester?: number;
-}
-
 export interface DraftChange {
     field: string;
     was: SimpleEntity | SimpleEntity[] | null;
@@ -98,4 +81,65 @@ export interface Lesson {
 
     whole_weeks: number;
     draft_info: {is_new: boolean; changes: DraftChange[]} | null
+}
+
+export enum GenerationStatus {
+    SUCCESS = 0,
+    IN_PROGRESS = 1,
+    ERROR = 2,
+    INFEASIBLE = 3
+}
+
+export interface Constraint {
+    id: number;
+    name: string; // Имя метода в коде
+    description: string;
+    weight: number;
+    is_active: boolean;
+    is_hard: boolean;
+    manual_only: boolean;
+    generation_only: boolean;
+}
+
+export interface Scenario {
+    id: number;
+    name: string;
+    semester: number; // ID семестра
+    semester_name?: string; // Если бэк присылает через SerializerMethodField
+    is_active: boolean;
+    generation_status: GenerationStatus | null;
+    total_penalty: number;
+    created_at: string;
+}
+
+export type CeleryState = 
+    | 'PENDING'   // Задача ожидает в очереди
+    | 'STARTED'   // Задача взята воркером в работу
+    | 'SUCCESS'   // Задача успешно завершена
+    | 'FAILURE'   // Произошла критическая ошибка
+    | 'REVOKED'   // Задача была отменена пользователем
+    | 'RETRY';    // Повторная попытка
+
+export interface GenerationStatusResponse {
+    // Общее состояние для фронтенда
+    // Если метаданных в кеше нет, бэк пришлет только { "state": "IDLE" }
+    state: 'IDLE' | string; 
+
+    // Данные из GenerationTaskManager (доступны, если state != 'IDLE')
+    scenario_id?: number;
+    semester_id?: number;
+    user_id?: number;
+    task_id?: string;
+    start_time?: string; // ISO DateTime string
+    stop_signal?: boolean; // Была ли нажата кнопка "Остановить"
+
+    // Статус задачи из Celery (AsyncResult.state)
+    celery_state?: CeleryState;
+
+    // Статус сценария напрямую из БД (добавляется в ViewSet)
+    scenario_status?: GenerationStatus; 
+
+    // Опционально: можно добавить поля для прогресса, если добавишь их в metadata на бэке
+    progress?: number; 
+    current_penalty?: number;
 }

@@ -2,10 +2,9 @@ import logging
 from typing import Any, Dict, List
 
 from api.models import Lesson
-from api.services.constraints.meta import ConstraintError
 
-import api.services.constraints.methods
-from api.services.constraints.meta import registry, BaseConstraint
+from api.services.constraints import methods
+from api.services.constraints.meta import BaseConstraint, ConstraintError, registry
 
 from api.models import Constraint
 from api.services.schedule.context import ScheduleContext
@@ -16,8 +15,8 @@ class ConstraintManager:
     Менеджер для методов проверки ограничений. 
     Подгружает информацию об ограничениях из БД и сопостовляет с методами
     """
-    def __init__(self):
-        self.constraints: Dict[str,Constraint] = {}
+    def __init__(self, constraints=None):
+        self.constraints: List[Constraint] = constraints or list(Constraint.objects.filter(is_active = True))
         self.methods: Dict[str, callable] = {}
         self.instances: Dict[str, BaseConstraint] = {}
         self._load_constraints()
@@ -26,7 +25,7 @@ class ConstraintManager:
         """Загружает ограничения и сопоставляет с реализованными функциями."""
         logger.info("Проверка реализации ограничений")
 
-        for config in Constraint.objects.filter(is_active = True):
+        for config in self.constraints:
             # Ищем класс реализации в реестре по техническому имени
             constraint_class = registry.get(config.name)
             
@@ -100,28 +99,6 @@ class ConstraintManager:
             selected.append(instance)
 
         return selected
-        # for cname, constraint in self.constraints.items():
-        #     func = self.methods[cname]
-
-        #     # 1) Фильтр по имени
-        #     if name is not None and cname != name:
-        #         continue
-
-        #     # 2) Фильтр по уровню
-        #     if level == 1 and constraint.is_hard:      # soft-only
-        #         continue
-        #     if level == 2 and not constraint.is_hard:  # hard-only
-        #         continue
-
-        #     # 3) Фильтр по manual_only
-        #     if generation_only and constraint.manual_only:
-        #         continue
-        #     if manual_only and constraint.generation_only:
-        #         continue
-
-        #     selected[cname] = func
-
-        # return selected
 
     def check(
         self,*,lesson: Lesson, context:ScheduleContext,

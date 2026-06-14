@@ -286,3 +286,12 @@ ADMIN_REORDER = (
         )
     },
 )
+
+CELERY_BROKER_URL = f"redis://:{REDIS["PASSWORD"]}@{REDIS["HOST"]}:{REDIS["PORT"]}/0"
+CELERY_RESULT_BACKEND = f"redis://:{REDIS["PASSWORD"]}@{REDIS["HOST"]}:{REDIS["PORT"]}/0"
+
+# Другие важные настройки
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = 'UTC' # или ваш часовой пояс

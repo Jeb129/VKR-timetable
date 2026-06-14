@@ -81,6 +81,7 @@ class AcademicLoad(models.Model):
     whole_hours = models.PositiveIntegerField(verbose_name="всего часов")
     whole_weeks = models.PositiveIntegerField(verbose_name="всего недель")
 
+
     @property
     def semester_order(self):
         sem_order = 1 if self.semester.date_start.month < 7 else 0
@@ -119,7 +120,7 @@ class AcademicLoad(models.Model):
         ]
 
     def __str__(self):
-        return f"{self.study_group} - {self.lesson_type} {self.discipline}"
+        return f"{self.teacher}, {self.study_group} - {self.lesson_type} {self.discipline}"
 
 
 class PlannedLesson(models.Model):
@@ -139,7 +140,7 @@ class PlannedLesson(models.Model):
     teachers = models.ManyToManyField(Teacher, verbose_name="преподаватели")
 
     # источник данных
-    academic_loads = models.ManyToManyField(AcademicLoad, verbose_name="источник")
+    academic_loads = models.ManyToManyField(AcademicLoad,related_name="plannedlessons", verbose_name="источник")
 
     # рассчитанное количество занятий в 2 недели
     lessons_in_cycle = models.PositiveIntegerField(

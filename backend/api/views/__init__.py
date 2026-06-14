@@ -15,6 +15,7 @@ from .database import (
     StudyProgramViewSet,
     TeacherViewSet,
     TimeslotViewSet,
+    SemesterViewSet
 )
 from .excel import ExcelAPIView
 from .requests import RequestViewSet
@@ -26,3 +27,5 @@ from .schedule import (
     TeacherScheduleView,
 )
 from .statistics import BuildingLoadView
+from .plannedlessons import PlannedLessonViewSet
+from .generation import GenerationViewSet

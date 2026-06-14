@@ -3,6 +3,7 @@ from datetime import datetime, time
 from typing import List
 
 from django.utils import timezone
+from django.db import transaction
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import ListAPIView
@@ -11,6 +12,7 @@ from rest_framework.response import Response
 from rest_framework.views import Response
 
 from api.models import (Lesson, ScheduleScenario)
+from api.pagination import StandartPagination
 from api.serializers import (LessonReadSerializer,
                              MappedEventSerializer)
 from api.serializers.database import ScheduleScenarioSerializer
@@ -208,6 +210,7 @@ class DraftLessonViewSet(viewsets.ViewSet):
 class ScheduleScenarioViewSet(viewsets.ModelViewSet):
     queryset = ScheduleScenario.objects.all().order_by("-created_at")
     serializer_class = ScheduleScenarioSerializer
+    pagination_class = StandartPagination
     permission_classes = [AllowAny]
 
     @action(detail=True, methods=['post'])
@@ -251,6 +254,38 @@ class ScheduleScenarioViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Ошибка при копировании сценария: {str(e)}")
             return Response({"error": "Не удалось скопировать сценарий"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    @action(detail=True, methods=['post'])
+    def activate(self, request, pk=None):
+        force = request.query_params.get("force")
+
+        current = self.get_object()
+        activated = ScheduleScenario.objects.filter(
+            semester = current.semester,
+            is_active=True).exclude(id=current.id).first()
+        
+        with transaction.atomic():
+            if activated is not None:
+                if force:
+                    activated.is_active = False
+                    activated.save()
+                else:
+                    return Response({
+                        "message": f"Cуществует активный вариант расписания для этого семестра: {activated}"
+                    }, status = status.HTTP_403_FORBIDDEN)
+            current.is_active = True
+            current.save()
+
+        serializer = self.get_serializer(current)
+        return Response(serializer.data,status=status.HTTP_200_OK)
+        
+            
+        
+
+
+    @action(detail=True, methods=['post'])
+    def deactivate(self, request, pk=None):
+        pass
   
 
 class ScheduleView(ListAPIView):

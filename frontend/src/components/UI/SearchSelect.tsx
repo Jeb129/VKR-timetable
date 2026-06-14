@@ -13,6 +13,7 @@ interface SearchSelectProps {
     placeholder?: string;
     isClearable?: boolean;
     isMulti?: boolean;
+    pageSize?: number;
 }
 
 const SearchSelect: React.FC<SearchSelectProps> = ({
@@ -21,7 +22,8 @@ const SearchSelect: React.FC<SearchSelectProps> = ({
     value,
     placeholder,
     isClearable = true,
-    isMulti = false
+    isMulti = false,
+    pageSize = 20 
 }) => {
     // @ts-ignore
     const selectRef = useRef<any>(null);
@@ -42,7 +44,7 @@ const SearchSelect: React.FC<SearchSelectProps> = ({
         try {
             const data = await dbService.list<SimpleEntity>(model, {
                 search: inputValue,
-                page_size: 20
+                page_size: pageSize
             });
 
             return data.results.map((item) => ({

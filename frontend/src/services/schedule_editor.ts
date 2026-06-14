@@ -13,52 +13,52 @@ export const scheduleDraftService = {
         }): Promise<{lessons: Lesson[], errors?: LessonError[]}> => {
         console.log(params)
         const query = new URLSearchParams(params as any).toString();
-        const res = await privateApi.get(`/api/scenario/${scenarioId}/draft/lessons/?${query}`);
+        const res = await privateApi.get(`/api/scenarios/${scenarioId}/draft/lessons/?${query}`);
         return res.data;
     },
 
     // Универсальное обновление (перенос или смена аудитории)
     updateLesson: async (scenarioId: number, lessonId: string, diff: Record<string, any>): Promise<LessonError[]> => {
-        const res = await privateApi.patch(`/api/scenario/${scenarioId}/draft/lessons/${lessonId}/`, diff);
+        const res = await privateApi.patch(`/api/scenarios/${scenarioId}/draft/lessons/${lessonId}/`, diff);
         return res.data || [];
     },
 
     bulkUpdateLessons: async (scenario_id: number, updates: {id: string, [key: string]: any}[]): Promise<LessonError[]> => {
-        return (await privateApi.patch(`/api/scenario/${scenario_id}/draft/lessons/bulk-patch/`, updates)).data;
+        return (await privateApi.patch(`/api/scenarios/${scenario_id}/draft/lessons/bulk-patch/`, updates)).data;
     },
 
     // Создание нового урока в черновике
     createLesson: async (scenarioId: number, data: Partial<Lesson>): Promise<LessonError> => {
-        const res = await privateApi.post(`/api/scenario/${scenarioId}/draft/lessons/`, data);
+        const res = await privateApi.post(`/api/scenarios/${scenarioId}/draft/lessons/`, data);
         return res.data; // Предполагаем, что бэк вернет созданный объект и ошибки
     },
 
     // Удаление (пометка на удаление)
     deleteLesson: async (scenarioId: number, lessonId: string): Promise<void> => {
-        await privateApi.delete(`/api/scenario/${scenarioId}/draft/lessons/${lessonId}/`);
+        await privateApi.delete(`/api/scenarios/${scenarioId}/draft/lessons/${lessonId}/`);
     },
 
     // Сохранение всех изменений в БД
     commitDraft: async (scenarioId: number, lessonId?: string): Promise<LessonError[]> => {
-        const res = await privateApi.post(`/api/scenario/${scenarioId}/draft/lessons/${lessonId ? lessonId + "/" : ""}apply/`);
+        const res = await privateApi.post(`/api/scenarios/${scenarioId}/draft/lessons/${lessonId ? lessonId + "/" : ""}apply/`);
         return res.data || [];
     },
 
     //получение корзины с парами 
     getTrash: async (scenarioId: number): Promise<Lesson[]> => {
-        const res = await privateApi.get(`/api/scenario/${scenarioId}/draft/lessons/trash/`);
+        const res = await privateApi.get(`/api/scenarios/${scenarioId}/draft/lessons/trash/`);
         return res.data;
     },
 
     clearDraft: async (scenarioId: number, lessonId?: string): Promise<Lesson | null> => {
-        const res = await privateApi.delete(`/api/scenario/${scenarioId}/draft/lessons/${lessonId ? lessonId + "/" : ""}clear/`)
+        const res = await privateApi.delete(`/api/scenarios/${scenarioId}/draft/lessons/${lessonId ? lessonId + "/" : ""}clear/`)
         console.log(res.data)
         return res.data
     },
 
     //Получить только измененные занятия (добавим флаг only_changes)
     getAllDraftLessons: async (scenarioId: number): Promise<{lessons: Lesson[]}> => {
-        const res = await privateApi.get(`/api/scenario/${scenarioId}/draft/lessons/`);
+        const res = await privateApi.get(`/api/scenarios/${scenarioId}/draft/lessons/`);
         return res.data;
     },
     //глобальная проверка всего сценария на конфликты 
@@ -67,29 +67,29 @@ export const scheduleDraftService = {
         deleted: Lesson[], 
         errors: LessonError[] 
     }> => {
-        const res = await privateApi.get(`/api/scenario/${scenarioId}/draft/lessons/summary/`);
+        const res = await privateApi.get(`/api/scenarios/${scenarioId}/draft/lessons/summary/`);
         return res.data;
     },
     // Опубликовать всё (Насрать из редиса в БД)
     applyAll: async (scenarioId: number): Promise<void> => {
-        await privateApi.post(`/api/scenario/${scenarioId}/draft/lessons/apply/`);
+        await privateApi.post(`/api/scenarios/${scenarioId}/draft/lessons/apply/`);
     },
     // Сбросить всё
     clearAllDrafts: async (scenarioId: number): Promise<void> => {
-        await privateApi.delete(`/api/scenario/${scenarioId}/draft/lessons/clear/`);
+        await privateApi.delete(`/api/scenarios/${scenarioId}/draft/lessons/clear/`);
     },
 
     // этот метод отправит запрос на бэкенд для старта генерации
     startGeneration: async (scenarioId: number, maxTimeSeconds: number) => {
         // Шлем лимит времени в секундах
-        return await privateApi.post(`/api/scenario/${scenarioId}/generate/`, { 
+        return await privateApi.post(`/api/scenarios/${scenarioId}/generate/`, { 
             max_time: maxTimeSeconds 
         });
     },
 
     getStatus: async (scenarioId: number) => {
         // Получаем текущее состояние сценария (прогресс, статус)
-        const res = await privateApi.get(`/api/scenario/${scenarioId}/generation-status/`);
+        const res = await privateApi.get(`/api/scenarios/${scenarioId}/generation-status/`);
         return res.data; 
     }
 };

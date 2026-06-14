@@ -1,28 +1,22 @@
+import type { PlannedCheckResult, PlannedGenerateResult } from "@/types/plannedlessons";
 import { privateApi } from "./axios";
-import type { Scenario } from "@/types/schedule";
+import type { GenerationStatusResponse, Scenario } from "@/types/schedule";
 
 export const scenarioService = {
-    // Получить список всех сценариев
-    getAll: async (): Promise<Scenario[]> => {
-        const response = await privateApi.get("/api/scenarios/");
-        return response.data;
+    // Запуск генерации
+    startGeneration: async (id: number, config: any): Promise<void> => {
+        await privateApi.post(`/api/scenarios/${id}/generation/start/`, config);
     },
 
-    // Создать новый сценарий
-    create: async (name: string): Promise<Scenario> => {
-        const response = await privateApi.post("/api/scenarios/", { name });
-        return response.data;
+    // Остановка
+    stopGeneration: async (id: number): Promise<void> => {
+        await privateApi.post(`/api/scenarios/${id}/generation/stop/`);
     },
 
-    // Обновить (например, переименовать или сделать активным)
-    update: async (id: number, data: Partial<Scenario>): Promise<Scenario> => {
-        const response = await privateApi.patch(`/api/scenarios/${id}/`, data);
+    // Поллинг статуса
+    getGenStatus: async (id: number): Promise<GenerationStatusResponse> => {
+        const response = await privateApi.get(`/api/scenarios/${id}/generation/status/`);
         return response.data;
-    },
-
-    // Удалить сценарий
-    remove: async (id: number): Promise<void> => {
-        await privateApi.delete(`/api/scenarios/${id}/`);
     },
 
     // Копирование (клонирование) сценария
@@ -32,8 +26,23 @@ export const scenarioService = {
     },
 
     // Специальный метод для активации одной версии (сброс остальных сделает бэк)
-    setActive: async (id: number): Promise<Scenario> => {
-        const response = await privateApi.patch(`/api/scenarios/${id}/`, { is_active: true });
+    setActive: async (id: number,force: boolean = false): Promise<Scenario> => {
+        const response = await privateApi.post(`/api/scenarios/${id}/activate`);
         return response.data;
     }
 };
+
+export const semesterService = {
+    // Проверка готовности нагрузки
+    checkPlanned: async (id: number): Promise<PlannedCheckResult> => {
+        const response = await privateApi.get(`/api/semesters/${id}/plannedlessons/check/`);
+        return response.data;
+    },
+
+    // Синхронизация нагрузки (generate)
+    syncPlanned: async (id: number,force: boolean = false): Promise<PlannedGenerateResult> => {
+        // УДАЛЯЕТ СУЩЕСТВУЮЩИЕ ПЛАНОВЫЕ ЗАНЯТИЯ!!!!!!
+        const response = await privateApi.post(`/api/semesters/${id}/plannedlessons/generate/${force ? "?force=true" : ""}`);
+        return response.data
+    },
+}
