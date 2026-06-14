@@ -11,6 +11,7 @@ from rest_framework.response import Response
 from rest_framework.views import Response
 
 from api.models import (Lesson, ScheduleScenario)
+from api.pagination import StandartPagination
 from api.serializers import (LessonReadSerializer,
                              MappedEventSerializer)
 from api.serializers.database import ScheduleScenarioSerializer
@@ -208,6 +209,7 @@ class DraftLessonViewSet(viewsets.ViewSet):
 class ScheduleScenarioViewSet(viewsets.ModelViewSet):
     queryset = ScheduleScenario.objects.all().order_by("-created_at")
     serializer_class = ScheduleScenarioSerializer
+    pagination_class = StandartPagination
     permission_classes = [AllowAny]
 
     @action(detail=True, methods=['post'])
@@ -251,6 +253,14 @@ class ScheduleScenarioViewSet(viewsets.ModelViewSet):
         except Exception as e:
             logger.error(f"Ошибка при копировании сценария: {str(e)}")
             return Response({"error": "Не удалось скопировать сценарий"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+    @action(detail=True, methods=['post'])
+    def activate(self, request, pk=None):
+        pass
+
+    @action(detail=True, methods=['post'])
+    def deactivate(self, request, pk=None):
+        pass
   
 
 class ScheduleView(ListAPIView):

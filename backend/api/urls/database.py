@@ -19,17 +19,19 @@ from api.views import (
     StudyProgramViewSet,
     TeacherViewSet,
     TimeslotViewSet,
+    SemesterViewSet,
 )
 
 router = DefaultRouter()
-router.register(r'classrooms', ClassroomViewSet, basename='classroom')
-router.register(r'timeslots', TimeslotViewSet, basename='timeslot')
-router.register(r'scenarios', ScheduleScenarioViewSet, basename='scenario')
-router.register(r'groups', StudyGroupViewSet, basename='group')
-router.register(r'teachers', TeacherViewSet, basename='teacher')
-router.register(r'requests', RequestViewSet, basename='request')
-router.register(r'disciplines', DisciplineViewSet, basename='discipline')
-router.register(r'lesson-types', LessonTypeViewSet, basename='lesson-type')
+router.register(r'classrooms', ClassroomViewSet, basename='classrooms')
+router.register(r'timeslots', TimeslotViewSet, basename='timeslots')
+router.register(r'scenarios', ScheduleScenarioViewSet, basename='scenarios')
+router.register(r'groups', StudyGroupViewSet, basename='groups')
+router.register(r'semesters', SemesterViewSet, basename='semesters')
+router.register(r'teachers', TeacherViewSet, basename='teachers')
+router.register(r'requests', RequestViewSet, basename='requests')
+router.register(r'disciplines', DisciplineViewSet, basename='disciplines')
+router.register(r'lesson-types', LessonTypeViewSet, basename='lesson-types')
 router.register(r'institutes', InstituteViewSet)
 router.register(r'programs', StudyProgramViewSet)
 router.register(r'academic-loads', AcademicLoadViewSet)

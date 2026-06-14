@@ -1,0 +1,40 @@
+/* src/styles/ScenarioDetail.css */
+
+.log-container {
+    background: #1e1e1e;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    height: 200px;
+    overflow-y: auto;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.constraint-row {
+    border-bottom: 1px solid var(--p-beige-border);
+    padding: 0.75rem 0;
+}
+
+.constraint-row:last-child {
+    border-bottom: none;
+}
+
+.progress-bar-container {
+    background: var(--border-color);
+    height: 12px;
+    border-radius: 6px;
+    overflow: hidden;
+}
+
+.progress-bar-fill {
+    background: var(--p-blue);
+    height: 100%;
+    transition: width 0.5s ease;
+}

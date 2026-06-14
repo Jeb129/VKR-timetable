@@ -2,11 +2,14 @@ FROM node:20-alpine AS builder
 
 WORKDIR /app
 
+ARG VITE_API_URL
+ENV VITE_API_URL=$VITE_API_URL
+
 COPY frontend/package*.json ./
 RUN npm install
-RUN npm audit fix
+RUN npm audit fix --force
 
 COPY frontend/ ./
 RUN npm run build
 
-command: sh -c "rm -rf /output/* && cp -rp /app/dist/. /output/"
+CMD ["sh", "-c", "rm -rf /output/* && cp -rp /app/dist/. /output/"]

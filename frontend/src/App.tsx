@@ -17,6 +17,7 @@ import BookingCreatePage from "./pages/Booking/BookingCreatePage"
 
 import './App.css'
 import { RequestsPage } from "./pages/RequestsPage"
+import ScenarioPage from "./pages/Schedule/ScenarioPage"
 
 // Основной контейнер приложения
 const App = () =>
@@ -30,8 +31,9 @@ const App = () =>
       <Route path="/profile" element={<ProtectedRoute><UserProfilePage /></ProtectedRoute>} />
       <Route path="/Booking" element={<ProtectedRoute><BookingCreatePage/></ProtectedRoute>}/>
       <Route path="/Moderation" element={<ProtectedRoute><ModerationPage/></ProtectedRoute>}/>
-      <Route path="/ScheduleEditor" element={<ProtectedRoute><ScenarioSelectionPage /></ProtectedRoute>} />
-      <Route path="/ScheduleEditor/:scenarioId" element={<ProtectedRoute><ScheduleEditorPage/></ProtectedRoute>}/>
+      <Route path="/scenarios" element={<ProtectedRoute><ScenarioSelectionPage /></ProtectedRoute>} />
+      <Route path="/scenarios/:scenarioId/edit" element={<ProtectedRoute><ScheduleEditorPage/></ProtectedRoute>}/>
+      <Route path="/scenarios/:id" element={<ProtectedRoute><ScenarioPage/></ProtectedRoute>}/>
       <Route path="/AcademicLoad" element={<ProtectedRoute><AcademicLoadImportPage/></ProtectedRoute>}/>
       <Route path="/Statistics" element={<ProtectedRoute><StatsPage/></ProtectedRoute>} />
       <Route path="/Statistics/:buildingId" element={<ProtectedRoute><BuildingStatsPage /></ProtectedRoute>} />

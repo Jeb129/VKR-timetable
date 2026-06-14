@@ -24,7 +24,7 @@ const HomePage = () => {
         {
             title: "Редактор расписания",
             desc: "Управление версиями (черновиками) и основными сетками расписания.",
-            path: "/ScheduleEditor",
+            path: "/scenarios",
             color: "var(--p-blue)",
             show: true
         },

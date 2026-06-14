@@ -9,7 +9,7 @@ class GenerationStatus(models.IntegerChoices):
     SUCESS = 0, _("Готово")
     IN_PROGRESS = 1, _("В процессе")
     ERROR = 2, _("Ошибка")
-    IDLE = 3, _("Ожидание")
+    INFEASIBLE = 3, _("Нерешаемый")
 
 
 class WeekCycle(models.IntegerChoices):

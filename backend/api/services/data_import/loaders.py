@@ -1,7 +1,6 @@
 import logging
 
 from django.db import transaction
-from django.db.models import Q
 
 from api.models import *
 from api.services.data_import.excel import export_excel
@@ -113,8 +112,8 @@ class AcademicLoadReader:
                 # Программа
                 if sp_code not in self.programs:
                     sp_obj, created = StudyProgram.objects.get_or_create(
-                        code=sp_code, institute=inst_obj, 
-                        defaults={"name": sp_name, "short_name": sp_short}
+                        code=sp_code,
+                        defaults={"institute":inst_obj,"name": sp_name, "short_name": sp_short}
                     )
                     self.programs[sp_code] = sp_obj
                     if created:
@@ -182,7 +181,7 @@ class AcademicLoadReader:
                     else:
                         self.groups_exists_counter += 1
                     
-                    key = set(filter.values())
+                    key = tuple(set(filter.values()))
                     self.sub_groups[key] = filter
 
                 elif mode == "group":
