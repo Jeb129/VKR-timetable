@@ -13,7 +13,7 @@ const BookingCreatePage = () => {
     const navigate = useNavigate();
 
     // Справочники
-    const [bookingTypes, setBookingTypes] = useState<any[]>([]);
+    const [, setBookingTypes] = useState<any[]>([]);
     const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
     const [selectedRoomObj, setSelectedRoomObj] = useState<Classroom | null>(null);
     const [busyEvents, setBusyEvents] = useState<any[]>([]); 

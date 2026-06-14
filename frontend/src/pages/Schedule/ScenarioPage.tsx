@@ -24,7 +24,7 @@ const ScenarioPage: React.FC = () => {
     const [checkResult, setCheckResult] = useState<PlannedCheckResult | null>(null);
     const [genStatus, setGenStatus] = useState<GenerationStatusResponse | null>(null);
     const [polling, setPolling] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const [_error, setError] = useState<string | null>(null);
 
     const [showUncoveredDetails, setShowUncoveredDetails] = useState(false);
 

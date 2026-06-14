@@ -83,23 +83,47 @@ const BuildingStatsPage = () => {
                                 </span>
                             </h4>
                             <div className="scroll-y" style={{ maxHeight: '250px', border: '1px solid var(--border-color)', borderRadius: '12px' }}>
-                                {details.bookings && details.bookings.length > 0 ? (
-                                    details.bookings.map((b: any, i: number) => (
-                                        <div key={i} className="p-2 border-bottom bg-white flex-row space-between align-center">
-                                            <div className="flex-col">
-                                                <div style={{fontWeight: 700, color: 'var(--p-blue)'}}>{b.date}</div>
-                                                <div style={{fontSize: '12px', color: 'var(--text-muted)'}}>{b.reason}</div>
-                                            </div>
-                                            <div className="text-right">
-                                                <div style={{fontWeight: 800, background: 'var(--p-blue-light)', padding: '4px 8px', borderRadius: '8px'}}>
-                                                    {b.time}
+                                {details.bookings.length > 0 ? (
+                                    details.bookings.map((b: any, i: number) => {
+                                        // Определяем стиль в зависимости от статуса
+                                        const statusData = b.status === 1 
+                                            ? { label: "Одобрено", color: "var(--p-green)" } 
+                                            : b.status === 2 
+                                            ? { label: "Отказ", color: "var(--p-red)" } 
+                                            : { label: "Модерация", color: "var(--p-orange)" };
+
+                                        return (
+                                            <div key={i} className="p-2 border-bottom bg-white flex-row space-between align-center">
+                                                <div className="flex-col">
+                                                    <div className="flex-row align-center gap-1">
+                                                        <div style={{
+                                                            width: '8px', 
+                                                            height: '8px', 
+                                                            borderRadius: '50%', 
+                                                            backgroundColor: statusData.color 
+                                                        }}></div>
+                                                        <span style={{fontWeight: 700, color: 'var(--p-blue)'}}>{b.date}</span>
+                                                        <small className="text-muted">({statusData.label})</small>
+                                                    </div>
+                                                    <div style={{fontSize: '12px', color: 'var(--text-muted)'}}>{b.reason}</div>
+                                                </div>
+                                                <div className="text-right">
+                                                    <div style={{
+                                                        fontWeight: 800, 
+                                                        background: 'var(--p-blue-light)', 
+                                                        padding: '4px 8px', 
+                                                        borderRadius: '8px',
+                                                        fontSize: '13px'
+                                                    }}>
+                                                        {b.time}
+                                                    </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))
+                                        );
+                                    })
                                 ) : (
                                     <div className="text-center p-4 text-muted italic">
-                                        Активных бронирований не найдено
+                                        Заявок на бронирование не найдено
                                     </div>
                                 )}
                             </div>
