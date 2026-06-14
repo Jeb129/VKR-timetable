@@ -157,6 +157,7 @@ class AcademicLoadAdmin(ImportExportModelAdmin):
     ]
 
     list_editable = ("whole_hours",)
+    actions = ["fast_delete_selected"]
 
     @admin.action(description="Быстрое удаление")
     def fast_delete_selected(self, request, queryset):
