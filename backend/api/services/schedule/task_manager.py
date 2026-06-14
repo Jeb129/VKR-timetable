@@ -31,11 +31,25 @@ class GenerationTaskManager:
     @classmethod
     def start_task(cls, scenario_id, semester_id, user_id, constraints_data, solver_params):
         meta_key = cls._get_meta_key(scenario_id)
+        metadata = cache.get(meta_key)
 
-        if cache.get(meta_key):
-            raise ValueError("Задача для этого сценария уже запущена.")
+        # ПРОВЕРКА НА ЗОМБИ-ЗАДАЧУ
+        if metadata:
+            task_id = metadata.get("task_id")
+            res = AsyncResult(task_id)
+            
+            # Если задача в Celery уже закончена (SUCCESS, FAILURE, REVOKED)
+            # или ее статус неизвестен, значит запись в Redis — мусор
+            if res.state in ['SUCCESS', 'FAILURE', 'REVOKED'] or res.state is None:
+                logger.warning(f"Обнаружена зомби-задача {task_id} для сценария {scenario_id}. Очистка...")
+                cls.finalize_task(scenario_id)
+            else:
+                raise ValueError("Генерация для этого сценария уже выполняется.")
 
         # Атомарная проверка лимита
+        if cache.get(cls.COUNTER_KEY) is None:
+            cache.set(cls.COUNTER_KEY, 0, timeout=None)
+
         current_count = cache.get(cls.COUNTER_KEY, 0)
         if current_count >= cls.MAX_PARALLEL_TASKS:
             raise RuntimeError("Сервер перегружен. Подождите завершения других задач.")
@@ -107,9 +121,12 @@ class GenerationTaskManager:
             cache.delete(meta_key)
             
             # Уменьшаем счетчик активных задач
-            current = cache.get(cls.COUNTER_KEY, 0)
-            if current > 0:
+            current = cache.get(cls.COUNTER_KEY)
+            if current is not None and current > 0:
                 cache.decr(cls.COUNTER_KEY)
+            elif current is not None and current <= 0:
+                # На всякий случай не уходим в минус
+                cache.set(cls.COUNTER_KEY, 0, timeout=None)
             
             logger.info(f"Ресурсы для сценария {scenario_id} освобождены.")
 

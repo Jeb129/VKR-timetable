@@ -13,7 +13,7 @@ def run_generation_task(scenario_id: int, constraints_data: list, solver_params:
     try:
         # 1. Статус "В процессе"
         ScheduleScenario.objects.filter(id=scenario_id).update(
-            status=enums.GenerationStatus.IN_PROGRESS
+            generation_status=enums.GenerationStatus.IN_PROGRESS
         )
 
         # 2. Подготовка ограничений
@@ -34,16 +34,16 @@ def run_generation_task(scenario_id: int, constraints_data: list, solver_params:
         if success:
             generator.commit()
             ScheduleScenario.objects.filter(id=scenario_id).update(
-                status=enums.GenerationStatus.SUCESS
+                generation_status=enums.GenerationStatus.SUCESS
             )
         else:
             ScheduleScenario.objects.filter(id=scenario_id).update(
-                status=enums.GenerationStatus.INFEASIBLE
+                generation_status=enums.GenerationStatus.INFEASIBLE
             )
 
     except Exception as exc:
         logger.error(f"Ошибка генерации {scenario_id}: {exc}", exc_info=True)
         ScheduleScenario.objects.filter(id=scenario_id).update(
-            status=enums.GenerationStatus.ERROR
+            generation_status=enums.GenerationStatus.ERROR
         )
         raise exc # Пробрасываем для Celery
