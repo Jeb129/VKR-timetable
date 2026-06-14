@@ -174,19 +174,36 @@ export const MyTable: React.FC<MyTableProps> = ({ data, loading, onActionSuccess
 
                                 <td>
                                     <div className="flex-row justify-end gap-1">
-                                        {req.can_approve && (
+                                        {req.status.id === RequestStatus.PENDING && (
                                             <>
-                                                <button onClick={() => void handleApprove(req.id)} className="btn btn-green p-1">Одобрить</button>
-                                                <button onClick={() => void handleReject(req.id)} className="btn btn-red p-1">Отказ</button>
+                                                {req.can_approve && (
+                                                    <button 
+                                                        onClick={() => handleApprove(req.id)} 
+                                                        className="btn btn-green p-1"
+                                                    >
+                                                        Одобрить
+                                                    </button>
+                                                )}
+                                                {req.can_approve && (
+                                                    <button 
+                                                        onClick={() => handleReject(req.id)} 
+                                                        className="btn btn-red p-1"
+                                                    >
+                                                        Отказ
+                                                    </button>
+                                                )}
+                                                {req.can_edit && (
+                                                    <button
+                                                        className="btn btn-outline p-1"
+                                                        onClick={() => handleEdit(req)}
+                                                    >
+                                                        Правка
+                                                    </button>
+                                                )}
                                             </>
-                                        )}
-                                        {req.can_edit && (
-                                            <button
-                                                className="btn btn-outline p-1"
-                                                onClick={() => handleEdit(req)}
-                                            >
-                                                Правка
-                                            </button>
+                                        )}                                        
+                                        {req.status.id !== RequestStatus.PENDING && (
+                                            <span className="text-muted small italic">Обработано</span>
                                         )}
                                     </div>
                                 </td>
