@@ -10,6 +10,7 @@ class GenerationStatus(models.IntegerChoices):
     IN_PROGRESS = 1, _("В процессе")
     ERROR = 2, _("Ошибка")
     INFEASIBLE = 3, _("Нерешаемый")
+    IN_QUERRY = 4, _("В очереди")
 
 
 class WeekCycle(models.IntegerChoices):

@@ -162,8 +162,6 @@ class RoomHasEnoughSeats(BaseConstraint):
                 idx for idx, r in context.idx_to_room.items() 
                 if r.capacity >= capacity_needed or r.is_virtual
             ]
-            if not valid_indices:
-                print("нет аудиторий для занятия\n",model_to_dict(lesson),)
             # Domain Reduction через разрешенные значения
             model.add_allowed_assignments([l_var.room_var], [[i] for i in valid_indices])
 

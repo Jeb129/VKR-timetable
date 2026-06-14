@@ -176,7 +176,6 @@ class DraftLessonViewSet(viewsets.ViewSet):
     @action(detail=True, methods=["delete"])
     def clear(self,request,scenario_id,pk=None):
         lesson = ScheduleManager(scenario_id,request.user).clear_lessons(pk)
-        print(pk, LessonReadSerializer(lesson).data)
         return Response(LessonReadSerializer(lesson).data,status=status.HTTP_200_OK)
     
     @action(detail=False, methods=["get"], url_path="summary")

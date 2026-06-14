@@ -2,13 +2,6 @@ import { GenerationStatus } from "@/types/schedule";
 
 // Вспомогательный мини-компонент для бейджа
 const StatusBadge: React.FC<{ status?: {id:GenerationStatus; name: string} | null}> = ({ status }) => {
-    // const config = {
-    //     [GenerationStatus.SUCCESS]: { label: 'Готово', class: 'btn-green' },
-    //     [GenerationStatus.IN_PROGRESS]: { label: 'В процессе', class: 'btn-primary' },
-    //     [GenerationStatus.ERROR]: { label: 'Ошибка', class: 'btn-red' },
-    //     [GenerationStatus.INFEASIBLE]: { label: 'Нерешаемо', class: 'btn-orange' },
-    //     [GenerationStatus.IN_QUERRY]: { label: 'Нерешаемо', class: 'btn-orange' },
-    // };
     const config = {
         [GenerationStatus.SUCCESS]: { class: 'btn-green' },
         [GenerationStatus.IN_PROGRESS]: { class: 'btn-primary' },

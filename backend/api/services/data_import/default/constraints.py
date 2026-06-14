@@ -122,7 +122,6 @@ def init_travel_times():
             created_count += 2
         else:
             missing = sn1 if not b1 else sn2
-            print(f"Пропущено: корпус {missing} не найден в БД")
 
     return f"Заполнено {created_count} записей времени переходов."
 
