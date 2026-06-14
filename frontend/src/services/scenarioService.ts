@@ -26,7 +26,7 @@ export const scenarioService = {
     },
 
     // Специальный метод для активации одной версии (сброс остальных сделает бэк)
-    setActive: async (id: number): Promise<Scenario> => {
+    setActive: async (id: number,force: boolean = false): Promise<Scenario> => {
         const response = await privateApi.post(`/api/scenarios/${id}/activate`);
         return response.data;
     }

@@ -96,18 +96,81 @@ const ScenarioPage: React.FC = () => {
     };
 
     const handleSync = () => {
+        const SyncConfirmContent = ({ onUpdate }: { onUpdate: (v: boolean) => void }) => {
+            const [f, setF] = useState(false);
+            return (
+                <div className="flex-col gap-2">
+                    <p>Это действие удалит текущие плановые занятия семестра и создаст их заново. Продолжить?</p>
+                    <label className="flex-row align-center gap-1 pointer">
+                        <input 
+                            type="checkbox" 
+                            checked={f} 
+                            onChange={(e) => {
+                                const isChecked = e.target.checked;
+                                setF(isChecked);
+                                // 2. Здесь теперь вызывается именно onUpdate
+                                onUpdate(isChecked); 
+                            }} 
+                        />
+                        <span className="font-bold text-red">Принудительно (игнорировать блокировки)</span>
+                    </label>
+                </div>
+            );
+        };
+
+        let forceValue = false;
+
         openModal({
-            title: "Подтверждение синхронизации",
-            content: <p>Это действие удалит текущие плановые занятия семестра и создаст их заново на основе учебного плана. Продолжить?</p>,
+            title: "Синхронизация нагрузки",
+            content: <SyncConfirmContent onUpdate={(v) => forceValue = v} />,
             footer: (
                 <div className="flex-row gap-2 w-100">
                     <button className="btn btn-red f-1" onClick={async () => {
                         if (scenario) {
-                            await semesterService.syncPlanned(scenario.semester);
+                            await semesterService.syncPlanned(scenario.semester, forceValue);
                             closeModal();
                             fetchData();
                         }
-                    }}>Да, синхронизировать</button>
+                    }}>Выполнить</button>
+                    <button className="btn btn-outline f-1" onClick={closeModal}>Отмена</button>
+                </div>
+            )
+        });
+    };
+
+    const handleActivate = () => {
+        const ActivateConfirmContent = ({ onUpdate }: { onUpdate: (v: boolean) => void }) => {
+            const [f, setF] = useState(false);
+            return (
+                <div className="flex-col gap-2">
+                    <p>Сделать этот сценарий основным для всего семестра?</p>
+                    <label className="flex-row align-center gap-1 pointer">
+                        <input 
+                            type="checkbox" 
+                            checked={f} 
+                            onChange={(e) => {
+                                setF(e.target.checked);
+                                onUpdate(e.target.checked);
+                            }} 
+                        />
+                        <span className="font-bold text-orange">Принудительно переназначить</span>
+                    </label>
+                </div>
+            );
+        };
+
+        let forceValue = false;
+
+        openModal({
+            title: "Активация сценария",
+            content: <ActivateConfirmContent onUpdate={(v) => forceValue = v} />,
+            footer: (
+                <div className="flex-row gap-2 w-100">
+                    <button className="btn btn-green f-1" onClick={async () => {
+                        await scenarioService.setActive(scenarioId, forceValue);
+                        closeModal();
+                        fetchData();
+                    }}>Активировать</button>
                     <button className="btn btn-outline f-1" onClick={closeModal}>Отмена</button>
                 </div>
             )
@@ -155,7 +218,7 @@ const ScenarioPage: React.FC = () => {
                         <button className="btn btn-primary" onClick={() => navigate(`/scenarios/${scenarioId}/edit`)}>
                             Редактор сетки
                         </button>
-                        <button className="btn btn-orange" onClick={() => scenarioService.setActive(scenarioId)}>
+                        <button className="btn btn-orange" onClick={handleActivate}>
                             Сделать основным
                         </button>
                     </div>
