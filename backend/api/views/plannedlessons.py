@@ -76,7 +76,7 @@ class PlannedLessonViewSet(viewsets.ModelViewSet):
                 "message":"Не найдены записи учебной нагрузки для семестра"
             }, status = status.HTTP_404_NOT_FOUND)
 
-        uncovered_qs = loads.filter(plannedlessons__isnull=False)
+        uncovered_qs = loads.filter(plannedlessons__isnull=True)
         uncovered_count = uncovered_qs.count()
         if uncovered_count == 0:
             return Response({
