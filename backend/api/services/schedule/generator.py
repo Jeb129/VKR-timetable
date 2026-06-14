@@ -1,3 +1,4 @@
+from collections import defaultdict
 import logging
 from types import SimpleNamespace
 from typing import List
@@ -9,6 +10,7 @@ from api.models import *
 
 from api.services.schedule.context import ScheduleContext
 from api.services.constraints import ConstraintManager
+from config.utils import get_cached_M2M
 
 logger = logging.getLogger("generator")
 
@@ -92,6 +94,18 @@ class ORToolsTimetableGenerator:
         
         if status in (cp_model.OPTIMAL, cp_model.FEASIBLE):
             self._update_objects_from_solution()
+
+            teacher_slots = defaultdict(list)
+            for l in self.context.lessons:
+                for t in get_cached_M2M(l, "teachers"):
+                    key = (t.id, l.timeslot.id)
+                    if key in teacher_slots:
+                        # Если мы здесь — значит OR-Tools почему-то проигнорировал это
+                        prev_l = teacher_slots[key]
+                        logger.critical(f"КРИТИЧЕСКАЯ ОШИБКА: Учитель {t} в слоте {l.timeslot} "
+                                        f"назначен на занятия {l.id} и {prev_l.id} одновременно!")
+                    teacher_slots[key] = l
+
             return True
         return False
 
