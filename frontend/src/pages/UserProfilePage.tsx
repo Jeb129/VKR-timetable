@@ -23,6 +23,10 @@ const UserProfilePage = () => {
 
     const [loading, setLoading] = useState(true);
 
+    const [hiddenRequestIds, setHiddenRequestIds] = useState<number[]>(() => {
+        const saved = localStorage.getItem("hidden_requests");
+        return saved ? JSON.parse(saved) : [];
+    });
 
     useEffect(() => {
         if (user) {
@@ -136,6 +140,34 @@ const UserProfilePage = () => {
             default: return { label: "Черновик", color: "var(--text-muted)" };
         }
     };
+
+    // Функция для скрытия заявки
+    const handleHideRequest = (id: number) => {
+        const newHidden = [...hiddenRequestIds, id];
+        setHiddenRequestIds(newHidden);
+        localStorage.setItem("hidden_requests", JSON.stringify(newHidden));
+    };
+
+    // --- ЛОГИКА ФИЛЬТРАЦИИ ЗАЯВОК ---
+    const filteredRequests = useMemo(() => {
+        const now = new Date();
+        const THREE_DAYS_MS = 3 * 24 * 60 * 60 * 1000;
+
+        return myRequests.filter(req => {
+            // 1. Убираем те, что пользователь скрыл вручную
+            if (hiddenRequestIds.includes(req.id)) return false;
+
+            // 2. Если заявка "На модерации" (id: 0) — всегда показываем
+            if (req.status.id === 0) return true;
+
+            // 3. Если Одобрена или Отклонена — проверяем срок (3 дня)
+            // Примечание: используем created_at, пока нет updated_at
+            const changeDate = new Date(req.created_at); 
+            const diff = now.getTime() - changeDate.getTime();
+
+            return diff < THREE_DAYS_MS;
+        });
+    }, [myRequests, hiddenRequestIds]);
 
     return (
         <div className="flex-col bg-main min-h-screen"> 
@@ -262,26 +294,58 @@ const UserProfilePage = () => {
                     <div className="card fade-in">
                         <h3>Статус моих заявок</h3>
                         <div className="flex-col mt-2 gap-2">
-                            {loading ? <p>Загрузка...</p> : myRequests.length > 0 ? (
-                                myRequests.map((req) => {
+                            {loading ? (
+                                <p>Загрузка...</p>
+                            ) : filteredRequests.length > 0 ? (
+                                filteredRequests.map((req) => {
                                     const status = getStatusStyle(req.status.id);
                                     return (
                                         <div key={req.id} className="list-item flex-col py-2">
-                                            <div className="flex-row space-between align-center">
-                                                <div className="flex-col">
-                                                    <span className="font-bold text-primary">{req.type.name} 
+                                            <div className="flex-row space-between align-start">
+                                                {/* ЛЕВАЯ ЧАСТЬ: Информация */}
+                                                <div className="flex-col f-1">
+                                                    <span className="font-bold text-primary">
+                                                        {req.type.name} 
                                                         {isBookingRequest(req) && ` — ${req.details.classroom.name}`}
                                                         {isClassroomPreferenceRequest(req) && ` — ${req.details.classroom.name}`}
                                                     </span>
-                                                    <span className="text-muted small">{new Date(req.created_at).toLocaleDateString()}</span>
+                                                    <span className="text-muted small">
+                                                        Создано: {new Date(req.created_at).toLocaleDateString()}
+                                                    </span>
                                                 </div>
-                                                <div className="badge" style={{ border: `1px solid ${status.color}`, color: status.color, backgroundColor: 'transparent' }}>
-                                                    {status.label.toUpperCase()}
+
+                                                {/* ПРАВАЯ ЧАСТЬ: Статус и кнопка Скрыть */}
+                                                <div className="flex-row align-center gap-2">
+                                                    <div className="badge" style={{ 
+                                                        border: `1px solid ${status.color}`, 
+                                                        color: status.color, 
+                                                        backgroundColor: 'transparent',
+                                                        whiteSpace: 'nowrap'
+                                                    }}>
+                                                        {status.label.toUpperCase()}
+                                                    </div>
+                                                    
+                                                    {/* Кнопка Скрыть: теперь она в потоке, не нависает */}
+                                                    <button 
+                                                        className="btn btn-outline" 
+                                                        style={{ 
+                                                            padding: '4px 10px', 
+                                                            fontSize: '11px',
+                                                            height: 'fit-content',
+                                                            borderColor: 'var(--border-color)',
+                                                            color: 'var(--text-muted)'
+                                                        }}
+                                                        onClick={() => handleHideRequest(req.id)}
+                                                    >
+                                                        Скрыть
+                                                    </button>
                                                 </div>
                                             </div>
+                                            
                                             <div className="mt-1 small">
                                                 <strong>Описание:</strong> {req.description}
                                             </div>
+
                                             {req.admin_comment && (
                                                 <div className="mt-1 p-2 bg-main rounded-md" style={{ borderLeft: `4px solid var(--p-red)` }}>
                                                     <small className="font-bold">Комментарий администрации:</small>
@@ -291,7 +355,9 @@ const UserProfilePage = () => {
                                         </div>
                                     );
                                 })
-                            ) : <p className="empty-text">У вас нет активных заявок</p>}
+                            ) : (
+                                <p className="empty-text">У вас нет актуальных заявок</p>
+                            )}
                         </div>
                     </div>
                 </div>
