@@ -1,10 +1,11 @@
-from numpy import delete
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 
+from django.db.models import Value, F, CharField
+from django.db.models.functions import Concat
 from api.models import Semester, PlannedLesson, AcademicLoad
-from api.serializers import PlannedLessonSerializer, AcademicLoadSerializer
+from api.serializers import PlannedLessonSerializer
 from api.services.schedule.planner import generate_planned_lessons_bulk
 from authentification.permissions import IsScheduleModerator
 from config.utils import SimpleRelatedSerializer
@@ -67,27 +68,36 @@ class PlannedLessonViewSet(viewsets.ModelViewSet):
 
         # Ищем нагрузку, у которой нет связанных PlannedLesson в этом семестре
         loads = AcademicLoad.objects.filter(
-            semester_id=semester_id
+            semester_id=semester_id,
         )
         if not loads.exists():
             return Response({
                 "status": "warning",
                 "message":"Не найдены записи учебной нагрузки для семестра"
             }, status = status.HTTP_404_NOT_FOUND)
-        
-        uncovered_load = loads.filter(
-            plannedlessons__isnull=True
-        ).distinct()
-        if not uncovered_load.exists():
+
+        uncovered_qs = loads.filter(plannedlessons__isnull=False)
+        uncovered_count = uncovered_qs.count()
+        if uncovered_count == 0:
             return Response({
                 "status": "ok",
                 "message": "Вся учебная нагрузка распределена"
             }, status=status.HTTP_200_OK)
+        
+        uncovered_load = uncovered_qs.annotate(
+            name=Concat(
+                F("teacher__name"), Value(", "),
+                F("study_group__name"), Value(" - "),
+                F('lesson_type__short_name'), Value(" "), F('discipline__name'),
+                output_field=CharField()
+            )
+        ).select_related(
+            "discipline", "lesson_type", "study_group","teacher"
+        ).values('id', 'name')
 
         # Если есть пропуски, возвращаем их список
-        serializer = SimpleRelatedSerializer(uncovered_load, many=True)
         return Response({
             "status": "warning",
-            "message": f"Найдено {uncovered_load.count()} нераспределенных записей учебной нагрузки",
-            "uncovered_data": serializer.data
+            "message": f"Найдено {uncovered_count} нераспределенных записей учебной нагрузки",
+            "uncovered_data": list(uncovered_load)
         }, status=status.HTTP_200_OK)
