@@ -139,12 +139,13 @@ class LessonTypeAdmin(admin.ModelAdmin):
 class AcademicLoadAdmin(ImportExportModelAdmin):
     resource_class = AcademicLoadResource
     list_display = (
+        "semester",
         "study_group",
         "discipline",
         "lesson_type",
         "teacher",
         "whole_hours",
-        "semester",
+        "whole_weeks",
     )
     list_filter = ("semester", "lesson_type", "study_group__admission_year")
     search_fields = ("study_group__name", "teacher__name", "discipline__name")
@@ -156,7 +157,7 @@ class AcademicLoadAdmin(ImportExportModelAdmin):
         "semester",
     ]
 
-    list_editable = ("whole_hours",)
+    list_editable = ("whole_hours","whole_weeks")
     actions = ["fast_delete_selected"]
 
     @admin.action(description="Быстрое удаление")

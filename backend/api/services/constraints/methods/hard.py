@@ -106,34 +106,46 @@ class GroupNoOverlap(BaseConstraint):
 @constraint("room_no_overlap")
 class RoomNoOverlap(BaseConstraint):
     def _build_hard(self, model, lesson_vars, context):
-        # Базовый индекс для уникальных ид. Должен быть больше чем любая комбинция
-        # Должен быть больше чем Количество всех слотов * количество всех комнат. Взято с запасом для КГУ
-        _base_idx = 2_000_000 
         num_slots = len(context.idx_to_slot)
-        all_presence_vars = []
-
-        # Индексы комнат, которые НЕЛЬЗЯ делить
-        phys_room_indices = [
-            idx for idx, r in context.idx_to_room.items() 
-            if not r.is_virtual and not r.allow_parallel
+        num_rooms = len(context.idx_to_room)
+        
+        # Константа для смещения (чтобы виртуальные занятия не пересекались с реальными)
+        # 300 комнат * 84 слота = 25 200. Сделаем запас.
+        virtual_offset = (num_rooms * num_slots) + 1000
+        
+        # Подготовка карты физических комнат для add_element
+        # 1 - обычная комната (нужен контроль), 0 - виртуальная/параллельная
+        phys_map = [
+            1 if (not r.is_virtual and not r.allow_parallel) else 0 
+            for r in context.idx_to_room.values()
         ]
 
-        for l_id, l_var in lesson_vars.items():
-            cell_idx = model.new_int_var(0, _base_idx, f'cell_{l_id}')
+        presence_indices = []
+
+        for l_id, v in lesson_vars.items():
+            # 1. Определяем, является ли выбранная комната "физической"
+            # Это стоит 1 BoolVar и 1 add_element на занятие
             is_phys = model.new_bool_var(f'is_phys_{l_id}')
-            
-            # Если комната входит в список физических -> is_phys = 1
-            model.add_allowed_assignments([l_var.room_var], [[i] for i in phys_room_indices]).only_enforce_if(is_phys)
-            model.add_forbidden_assignments([l_var.room_var], [[i] for i in phys_room_indices]).only_enforce_if(is_phys.Not())
+            model.add_element(v.room_var, phys_map, is_phys)
 
-            # Пересечение только для физических комнат
-            model.add(cell_idx == l_var.room_var * num_slots + l_var.slot_var).only_enforce_if(is_phys)
-            # Для виртуальных — даем уникальный ID, чтобы add_all_different их пропустил
-            model.add(cell_idx == _base_idx - abs(l_id)).only_enforce_if(is_phys.Not())
-            
-            all_presence_vars.append(cell_idx)
+            # 2. Вычисляем глобальный индекс ячейки (адрес)
+            # Если физическая: addr = room_idx * num_slots + slot_idx
+            # Если виртуальная: addr = virtual_offset + unique_id
+            addr = model.new_int_var(0, virtual_offset + abs(l_id), f'addr_{l_id}')
 
-        model.add_all_different(all_presence_vars)
+            # Условие для физической комнаты
+            model.add(addr == v.room_var * num_slots + v.slot_var).only_enforce_if(is_phys)
+            
+            # Условие для виртуальной комнаты (используем ID занятия как уникальный ключ)
+            # l_id у нас отрицательный (-1, -2...), поэтому берем abs()
+            model.add(addr == virtual_offset + abs(l_id)).only_enforce_if(is_phys.Not())
+            
+            presence_indices.append(addr)
+
+        # 3. Одно ограничение AllDifferent на все занятия
+        # Оно гарантирует, что ни у каких двух занятий в "физическом" режиме не совпадет адрес
+        model.add_all_different(presence_indices)
+        
     # def _build_hard(self, model, lesson_vars, context):
     #     num_slots = len(context.idx_to_slot)
     #     all_presence_vars = []
@@ -186,7 +198,7 @@ class RoomNoOverlap(BaseConstraint):
     
 
 
-# @constraint("room_has_enough_seats")
+@constraint("room_has_enough_seats")
 class RoomHasEnoughSeats(BaseConstraint):
     def _build_hard(self, model, lesson_vars, context):
         for l_id, l_var in lesson_vars.items():
