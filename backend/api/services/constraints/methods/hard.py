@@ -9,11 +9,28 @@ from django.forms.models import model_to_dict
 @constraint("teacher_no_overlap")
 class TeacherNoOverlap(BaseConstraint):
     def _build_hard(self, model, lesson_vars, context):
-        for t_id, l_ids in context.teacher_to_l_ids.items():
-            if len(l_ids) > 1:
-                # Берем переменные слотов только для существующих в модели занятий
-                slots = [lesson_vars[l_id].slot_var for l_id in l_ids if l_id in lesson_vars]
-                model.add_all_different(slots)
+        for entity_id, l_ids in context.teacher_to_l_ids.items(): # или group_to_l_ids
+            if len(l_ids) < 2: continue
+            
+            intervals = []
+            for l_id in l_ids:
+                if l_id not in lesson_vars: continue
+                
+                v = lesson_vars[l_id]
+                # Создаем интервал: начало=слот, длительность=1, конец=слот+1
+                # Это ОДНА переменная вместо сотен попарных проверок
+                suffix = f"t{entity_id}_l{l_id}"
+                start = v.slot_var
+                size = 1
+                end = model.new_int_var(0, len(context.idx_to_slot), f"end_{suffix}")
+                model.add(end == start + size)
+                
+                interval = model.new_interval_var(start, size, end, f"iv_{suffix}")
+                intervals.append(interval)
+            
+            if intervals:
+                # Магическая функция, которая работает в C++ и не ест память Python
+                model.add_no_overlap(intervals)
 
     def check(self, lesson, context):
         ts_id = lesson.timeslot.id
@@ -40,10 +57,28 @@ class TeacherNoOverlap(BaseConstraint):
 @constraint("group_no_overlap")
 class GroupNoOverlap(BaseConstraint):
     def _build_hard(self, model, lesson_vars, context):
-        for g_id, l_ids in context.group_to_l_ids.items():
-            if len(l_ids) > 1:
-                slots = [lesson_vars[l_id].slot_var for l_id in l_ids if l_id in lesson_vars]
-                model.add_all_different(slots)
+        for entity_id, l_ids in context.group_to_l_ids.items(): # или group_to_l_ids
+            if len(l_ids) < 2: continue
+            
+            intervals = []
+            for l_id in l_ids:
+                if l_id not in lesson_vars: continue
+                
+                v = lesson_vars[l_id]
+                # Создаем интервал: начало=слот, длительность=1, конец=слот+1
+                # Это ОДНА переменная вместо сотен попарных проверок
+                suffix = f"g{entity_id}_l{l_id}"
+                start = v.slot_var
+                size = 1
+                end = model.new_int_var(0, len(context.idx_to_slot), f"end_{suffix}")
+                model.add(end == start + size)
+                
+                interval = model.new_interval_var(start, size, end, f"iv_{suffix}")
+                intervals.append(interval)
+            
+            if intervals:
+                # Магическая функция, которая работает в C++ и не ест память Python
+                model.add_no_overlap(intervals)
                 
     def check(self,lesson,context):
         ts_id = lesson.timeslot.id
@@ -181,7 +216,7 @@ class RoomHasEnoughSeats(BaseConstraint):
             )
         return None
     
-@constraint("building_travel_impossible")
+# @constraint("building_travel_impossible")
 class BuildingTravelImpossible(BaseConstraint):
     def _build_hard(self, model, lesson_vars, context):
         num_bldgs = len(context.building_to_idx)
