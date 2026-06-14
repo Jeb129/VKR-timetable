@@ -9,6 +9,8 @@ services:
       POSTGRES_DB: ${POSTGRES_DB}
     volumes:
       - ../backend/pg_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5432:5432"
     env_file: .env
     networks:
       - vkr-shared
