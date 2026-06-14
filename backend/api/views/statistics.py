@@ -3,6 +3,7 @@ from rest_framework.response import Response
 from api.models import Building, Classroom, Lesson, Timeslot, Booking
 from django.shortcuts import get_object_or_404
 from datetime import datetime
+from django.utils import timezone
 
 class BuildingLoadView(APIView):
     def get(self, request):
@@ -21,26 +22,31 @@ class BuildingLoadView(APIView):
             lessons = Lesson.objects.filter(classroom=room, scenario__is_active=True).select_related('timeslot')
             for l in lessons:
                 daily_stats[l.timeslot.week_num][l.timeslot.day] += 1
-
-            active_bookings = Booking.objects.filter(classroom=room, status=1, date_start__gte=datetime.now())
             
+            all_requests = Booking.objects.filter(
+                classroom=room
+            ).exclude(status=3).order_by('-date_start')
             return Response({
                 "num": room.num,
                 "daily_load": daily_stats,
                 "max_pairs": 7,
-                "booking_count": active_bookings.count(), # Добавили счетчик
+                "booking_count":  all_requests.count(), # Добавили счетчик
                 "bookings": [{
                     "date": b.date_start.strftime("%d.%m"),
                     "time": f"{b.date_start.strftime('%H:%M')} - {b.date_end.strftime('%H:%M')}",
                     "reason": b.description,
-                } for b in active_bookings]
+                    "status": b.status, 
+                    "user": b.user.username,
+                } for b in all_requests]
             })
 
         # РЕЖИМ 1: Список аудиторий корпуса
         if building_id:
             building = get_object_or_404(Building, id=building_id)
+            classrooms = building.classrooms.all().order_by('num')
+
             classroom_stats = []
-            for room in building.classrooms.all():
+            for room in classrooms:
                 actual_lessons = Lesson.objects.filter(classroom=room, scenario__is_active=True).count()
                 actual_hours = actual_lessons * 1.5
                 load_percent = round((actual_hours / max_hours_cycle) * 100, 1)
