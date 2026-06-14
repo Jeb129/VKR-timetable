@@ -3,6 +3,7 @@ from datetime import datetime, time
 from typing import List
 
 from django.utils import timezone
+from django.db import transaction
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.generics import ListAPIView
@@ -256,7 +257,31 @@ class ScheduleScenarioViewSet(viewsets.ModelViewSet):
         
     @action(detail=True, methods=['post'])
     def activate(self, request, pk=None):
-        pass
+        force = request.query_params.get("force")
+
+        current = self.get_object()
+        activated = ScheduleScenario.objects.filter(
+            semester = current.semester,
+            is_active=True).exclude(id=current.id).first()
+        
+        with transaction.atomic():
+            if activated is not None:
+                if force:
+                    activated.is_active = False
+                    activated.save()
+                else:
+                    return Response({
+                        "message": f"Cуществует активный вариант расписания для этого семестра: {activated}"
+                    }, status = status.HTTP_403_FORBIDDEN)
+            current.is_active = True
+            current.save()
+
+        serializer = self.get_serializer(current)
+        return Response(serializer.data,status=status.HTTP_200_OK)
+        
+            
+        
+
 
     @action(detail=True, methods=['post'])
     def deactivate(self, request, pk=None):
