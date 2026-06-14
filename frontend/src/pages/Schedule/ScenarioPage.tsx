@@ -5,9 +5,9 @@ import {
     type Scenario, 
     type Constraint, 
     type GenerationStatusResponse, 
-    type PlannedCheckResult, 
     GenerationStatus 
 } from '@/types/schedule';
+import { type PlannedCheckResult } from '@/types/plannedlessons';
 import { semesterService, scenarioService } from '@/services/scenarioService';
 import { useModal } from '@/context/ModalContext'; // Импортируем модалки
 import ConstraintItem from '@/components/ConstraintItem';
@@ -25,6 +25,8 @@ const ScenarioPage: React.FC = () => {
     const [genStatus, setGenStatus] = useState<GenerationStatusResponse | null>(null);
     const [polling, setPolling] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const [showUncoveredDetails, setShowUncoveredDetails] = useState(false);
 
     // 1. Загрузка данных
     const fetchData = useCallback(async () => {
@@ -140,18 +142,18 @@ const ScenarioPage: React.FC = () => {
             </nav>
 
             <div className="profile-wrapper flex-col gap-3 w-100">
-                {/* Header Card */}
                 <div className="card flex-row space-between align-center slide-up w-100">
                     <div className="flex-col gap-1">
                         <h2 className="text-primary">{scenario?.name || "Загрузка..."}</h2>
                         <div className="flex-row gap-2 align-center">
                             <span className="badge btn-outline">ID: {scenarioId}</span>
                             <StatusBadge status={scenario?.generation_status} />
+                            {scenario?.semester_name && <span className="text-muted">| {scenario.semester_name}</span>}
                         </div>
                     </div>
                     <div className="flex-row gap-2">
                         <button className="btn btn-primary" onClick={() => navigate(`/scenarios/${scenarioId}/edit`)}>
-                            Ручное редактирование сетки
+                            Редактор сетки
                         </button>
                         <button className="btn btn-orange" onClick={() => scenarioService.setActive(scenarioId)}>
                             Сделать основным
@@ -159,61 +161,113 @@ const ScenarioPage: React.FC = () => {
                     </div>
                 </div>
 
-                {error && <div className="error">{error}</div>}
-
                 <div className="flex-row gap-3 align-start">
                     <div className="flex-col f-2 gap-3">
-                        {/* Нагрузка */}
+                        
                         <div className="card flex-col gap-2">
                             <div className="flex-row space-between align-center">
-                                <h3>Подготовка нагрузки</h3>
+                                <h3>Подготовка нагрузки (Academic Load)</h3>
                                 {checkResult?.status === 'ok' ? 
-                                    <span className="text-green font-bold">Готово</span> : 
-                                    <span className="text-orange font-bold">Внимание</span>
+                                    <span className="badge btn-green">Покрыта полностью</span> : 
+                                    <span className="badge btn-red">Есть пробелы</span>
                                 }
                             </div>
-                            <div className="p-2 bg-main radius-md border-dashed">
-                                {checkResult?.status === 'ok' ? 
-                                    "Вся нагрузка семестра успешно распределена." : 
-                                    `Не распределено: ${checkResult?.uncovered_data?.length || 0} записей.`
-                                }
+                            
+                            <div className="p-3 bg-main radius-md border-dashed">
+                                {checkResult?.status === 'ok' ? (
+                                    <p className="text-green text-center font-bold"> Все часы учебного плана распределены по занятиям.</p>
+                                ) : (
+                                    <div className="flex-col gap-2">
+                                        <div className="flex-row space-between align-center">
+                                            <p className="text-red m-0">
+                                                Не распределено: <strong>{checkResult?.uncovered_data?.length || 0}</strong> позиций нагрузки.
+                                            </p>
+                                            <button 
+                                                className="btn btn-outline" 
+                                                style={{padding: '4px 12px', fontSize: '12px'}}
+                                                onClick={() => setShowUncoveredDetails(!showUncoveredDetails)}
+                                            >
+                                                {showUncoveredDetails ? "Скрыть список" : "Показать список"}
+                                            </button>
+                                        </div>
+
+                                        {showUncoveredDetails && (
+                                            <div className="mt-2 scroll-y" style={{maxHeight: '250px'}}>
+                                                <table className="mini-table w-100">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Дисциплина</th>
+                                                            <th>Группа</th>
+                                                            <th className="text-center">Остаток</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {checkResult?.uncovered_data?.map((item: any, idx: number) => (
+                                                            <tr key={idx}>
+                                                                <td>{item.discipline_name}</td>
+                                                                <td>{item.group_name}</td>
+                                                                <td className="text-center text-red font-bold">{item.hours_uncovered} ч.</td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
+                            
                             <button className="btn btn-outline w-100" onClick={handleSync}>
-                                Синхронизировать с учебным планом
+                                Синхронизировать плановые занятия
                             </button>
                         </div>
 
-                        {/* Генератор */}
                         <div className="card flex-col gap-2">
-                            <h3>Генератор расписания</h3>
-                            <div className="p-3 bg-main radius-lg border-blue">
+                            <h3>Автоматическая генерация</h3>
+                            <div className="p-4 bg-main radius-lg border-blue">
                                 {polling ? (
-                                    <div className="flex-col gap-2 align-center">
+                                    <div className="flex-col gap-3 align-center py-2">
                                         <div className="spinner"></div>
-                                        <strong className="text-orange">Выполняется расчет...</strong>
-                                        <button className="btn btn-red w-100 mt-1" onClick={handleStop}>Остановить</button>
+                                        <div className="flex-col align-center">
+                                            <strong className="text-orange" style={{fontSize: '1.2rem'}}>Идет расчет в Celery...</strong>
+                                            <span className="text-muted small">Задача: {genStatus?.task_id?.substring(0,8)}...</span>
+                                        </div>
+                                        <button className="btn btn-red mt-2" onClick={handleStop}>Прервать расчет</button>
                                     </div>
                                 ) : (
-                                    <div className="flex-col gap-2">
-                                        {scenario?.total_penalty !== undefined && (
-                                            <div className="flex-row space-between border-bottom pb-1 mb-1">
-                                                <span>Последний штраф:</span>
-                                                <strong className="text-primary">{scenario.total_penalty}</strong>
+                                    <div className="flex-col gap-3">
+                                        <div className="flex-row space-between align-center">
+                                            <span className="text-muted">Результат последнего прогона:</span>
+                                            <div className="flex-row align-center gap-2">
+                                                {scenario?.total_penalty !== undefined && (
+                                                    <span className="badge btn-outline">Штраф: {scenario.total_penalty}</span>
+                                                )}
+                                                <StatusBadge status={scenario?.generation_status} />
                                             </div>
-                                        )}
-                                        <button className="btn btn-green w-100 py-2" onClick={handleStart}>
-                                            Запустить автоматическую генерацию
+                                        </div>
+                                        <button 
+                                            className="btn btn-green w-100 py-3 font-bold" 
+                                            style={{fontSize: '1.1rem'}}
+                                            onClick={handleStart}
+                                            disabled={checkResult?.status !== 'ok'}
+                                        >
+                                            Запустить генератор
                                         </button>
+                                        {checkResult?.status !== 'ok' && (
+                                            <p className="text-red text-center small">* Нельзя запустить генератор, пока не распределена вся нагрузка</p>
+                                        )}
                                     </div>
                                 )}
                             </div>
                         </div>
                     </div>
 
-                    {/* Правая панель ограничений */}
                     <div className="flex-col f-1 card no-scroll sticky-top">
-                        <h3 className="mb-2">Веса ограничений</h3>
-                        <div className="scroll-y pr-1" style={{ maxHeight: '60vh' }}>
+                        <div className="flex-row space-between align-center mb-2">
+                            <h3>Веса ограничений</h3>
+                            <span className="badge btn-primary">{constraints.length}</span>
+                        </div>
+                        <div className="scroll-y pr-1" style={{ maxHeight: 'calc(100vh - 350px)' }}>
                             {constraints.map(c => (
                                 <ConstraintItem key={c.id} constraint={c} onUpdate={updateConstraint} />
                             ))}
