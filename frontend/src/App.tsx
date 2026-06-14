@@ -32,7 +32,7 @@ const App = () =>
       <Route path="/Booking" element={<ProtectedRoute><BookingCreatePage/></ProtectedRoute>}/>
       <Route path="/Moderation" element={<ProtectedRoute><ModerationPage/></ProtectedRoute>}/>
       <Route path="/scenarios" element={<ProtectedRoute><ScenarioSelectionPage /></ProtectedRoute>} />
-      <Route path="/ScheduleEditor/:scenarioId" element={<ProtectedRoute><ScheduleEditorPage/></ProtectedRoute>}/>
+      <Route path="/scenarios/:scenarioId/edit" element={<ProtectedRoute><ScheduleEditorPage/></ProtectedRoute>}/>
       <Route path="/scenarios/:id" element={<ProtectedRoute><ScenarioPage/></ProtectedRoute>}/>
       <Route path="/AcademicLoad" element={<ProtectedRoute><AcademicLoadImportPage/></ProtectedRoute>}/>
       <Route path="/Statistics" element={<ProtectedRoute><StatsPage/></ProtectedRoute>} />
