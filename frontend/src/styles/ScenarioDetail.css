@@ -54,10 +54,10 @@
 
 /* Spinner для загрузки */
 .spinner {
-    width: 30px;
-    height: 30px;
-    border: 4px solid var(--p-blue-light);
-    border-top: 4px solid var(--p-blue);
+    width: 40px;
+    height: 40px;
+    border: 5px solid var(--p-blue-light);
+    border-top: 5px solid var(--p-blue);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -82,4 +82,44 @@
 .scroll-y::-webkit-scrollbar-thumb {
     background-color: var(--border-color);
     border-radius: 10px;
+}
+.mini-table th {
+    background: var(--p-blue-light);
+    color: var(--p-blue);
+    text-align: left;
+    padding: 8px 12px;
+    font-weight: 800;
+    text-transform: uppercase;
+    font-size: 10px;
+}
+
+.mini-table td {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border-color);
+    color: var(--text-main);
+}
+
+.mini-table tr:last-child td {
+    border-bottom: none;
+}
+
+.font-bold { font-weight: 700; }
+.text-green { color: var(--p-green); }
+.text-red { color: var(--p-red); }
+.text-orange { color: var(--p-orange); }
+
+input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--p-blue); 
+}
+
+.pointer {
+    cursor: pointer;
+    user-select: none;
+}
+
+.font-bold {
+    font-weight: 700;
 }
