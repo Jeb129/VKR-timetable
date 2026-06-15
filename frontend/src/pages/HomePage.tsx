@@ -15,32 +15,39 @@ const HomePage = () => {
             show: true
         },
         {
+            title: "Бронирование",
+            desc: "Заявка на свободное время в аудиториях.",
+            path: "/Booking",
+            color: "var(--p-green)",
+            show: true 
+        },
+        {
             title: "Модерация",
             desc: "Управление входящими заявками на бронирование и перенос.",
             path: "/Moderation",
             color: "var(--p-red)",
-            show: true // потом заглушить админкой user?.is_staff
+            show: user?.is_staff || user?.is_booking_moderator
         },
         {
             title: "Редактор расписания",
             desc: "Управление версиями (черновиками) и основными сетками расписания.",
             path: "/scenarios",
             color: "var(--p-blue)",
-            show: true
+            show: user?.is_staff || user?.is_schedule_moderator
         },
         {
             title: "Импорт нагрузки",
             desc: "Загрузка учебных планов из Excel файлов в систему.",
             path: "/AcademicLoad",
             color: "var(--p-green)",
-            show: true
+            show: user?.is_staff || user?.is_schedule_moderator
         },
         {
             title: "Статистика аудиторий",
             desc: "Просмотр актуальной нагрузки на аудитории",
             path: "/Statistics",
             color: "var(--p-orange)",
-            show: true
+            show: user?.is_staff || user?.is_schedule_moderator
         }
     ];
 

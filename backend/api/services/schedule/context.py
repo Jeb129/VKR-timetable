@@ -89,7 +89,12 @@ class ScheduleContext:
         self.flat_travel_matrix = [0] * (num_bldgs * num_bldgs)
         for b1_id in all_bldgs:
             for b2_id in all_bldgs:
-                mins = self.travel_map.get((b1_id, b2_id), 0)
+                if b1_id == b2_id:
+                    mins = 0 # Внутри одного здания переход всегда возможен
+                else:
+                    # Если переход между РАЗНЫМИ зданиями не задан, 
+                    # ставим 1440 минут (сутки), что делает переход невозможным в один день
+                    mins = self.travel_map.get((b1_id, b2_id), 1440)
                 idx = self.building_to_idx[b1_id] * num_bldgs + self.building_to_idx[b2_id]
                 self.flat_travel_matrix[idx] = mins
 
@@ -161,18 +166,19 @@ class ScheduleContext:
 
     def _index_lesson(self, lesson: Lesson):
         ts = lesson.timeslot
-        if not ts: return
 
         # Стандартные индексы для check()
         for t in get_cached_M2M(lesson, "teachers"):
-            self.teacher_lookup[(t.id, ts.id)].append(lesson)
-            self.teacher_day_chains[(t.id, ts.week_num, ts.day)].append(lesson)
+            if ts:
+                self.teacher_lookup[(t.id, ts.id)].append(lesson)
+                self.teacher_day_chains[(t.id, ts.week_num, ts.day)].append(lesson)
             # Индекс для солвера
             self.teacher_to_l_ids[t.id].append(lesson.id)
 
         for g in get_cached_M2M(lesson, "study_groups"):
-            self.group_lookup[(g.id, ts.id)].append(lesson)
-            self.group_day_chains[(g.id, ts.week_num, ts.day)].append(lesson)
+            if ts:
+                self.group_lookup[(g.id, ts.id)].append(lesson)
+                self.group_day_chains[(g.id, ts.week_num, ts.day)].append(lesson)
             # Индекс для солвера
             self.group_to_l_ids[g.id].append(lesson.id)
 

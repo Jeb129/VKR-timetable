@@ -87,7 +87,8 @@ export enum GenerationStatus {
     SUCCESS = 0,
     IN_PROGRESS = 1,
     ERROR = 2,
-    INFEASIBLE = 3
+    INFEASIBLE = 3,
+    IN_QUERRY = 4
 }
 
 export interface Constraint {
@@ -107,7 +108,7 @@ export interface Scenario {
     semester: number; // ID семестра
     semester_name?: string; // Если бэк присылает через SerializerMethodField
     is_active: boolean;
-    generation_status: GenerationStatus | null;
+    generation_status:{id: GenerationStatus; name: string} | null;
     total_penalty: number;
     created_at: string;
 }

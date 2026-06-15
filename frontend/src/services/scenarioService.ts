@@ -4,8 +4,9 @@ import type { GenerationStatusResponse, Scenario } from "@/types/schedule";
 
 export const scenarioService = {
     // Запуск генерации
-    startGeneration: async (id: number, config: any): Promise<void> => {
-        await privateApi.post(`/api/scenarios/${id}/generation/start/`, config);
+    startGeneration: async (id: number, config: any): Promise<Scenario> => {
+        const response = await privateApi.post(`/api/scenarios/${id}/generation/start/`, config);
+        return response.data;
     },
 
     // Остановка

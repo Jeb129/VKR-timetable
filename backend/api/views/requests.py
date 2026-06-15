@@ -84,7 +84,6 @@ class RequestViewSet(viewsets.ModelViewSet):
 
         if instance.type == enums.RequestType.BOOKING:
             events = ScheduleMapper(instance.booking.date_start,instance.booking.date_end,classroom_id=instance.booking.classroom_id).get_schedule()
-            print(events)
             if events:
                 return Response(
                     {"message":"Аудитория уже занята в это время"},

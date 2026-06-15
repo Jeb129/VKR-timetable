@@ -110,7 +110,6 @@ class StudyGroup(models.Model):
         return self.name
 
     def save(self, *args, **kwargs):
-        # print(f"{str(self.admission_year)[-2:]}-{self.study_program.short_name}{self.learning_stage.lower()[0]}{self.learning_form.lower()[0]}-{self.group_num}{f" п/г {self.sub_group_num}" if self.sub_group_num else ""}")
         self.name = f"{str(self.admission_year)[-2:]}-{self.study_program.short_name}{self.learning_stage.lower()[0]}{self.learning_form.lower()[0]}-{self.group_num}{f" п/г {self.sub_group_num}" if self.sub_group_num else ""}"
         super().save(*args, **kwargs)
 
