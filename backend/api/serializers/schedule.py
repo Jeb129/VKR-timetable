@@ -9,6 +9,17 @@ from api.services.constraints.meta import ConstraintError
 from api.services.schedule.mapper import MappedEvent
 from config.utils import SimpleRelatedSerializer
 
+
+def fast_simple_serialize(obj, many=False):
+    if many:
+        return [fast_simple_serialize(item, many=False) for item in obj]
+    if obj is None:
+        return None
+    return {
+        "id": obj.pk,
+        "name": getattr(obj, "name", str(obj))
+    }
+
 class LessonReadSerializer(serializers.ModelSerializer):
 
     # Текстовые названия из связанных моделей
@@ -24,6 +35,12 @@ class LessonReadSerializer(serializers.ModelSerializer):
     # Поля черновика
     draft_info = serializers.SerializerMethodField()
 
+    def get_teachers(self,obj):
+        return fast_simple_serialize(obj,many=True)
+    
+    def get_study_groups(self,obj):
+        return fast_simple_serialize(obj,many=True)
+
     def get_draft_info(self, obj):
         originals = getattr(obj, 'draft_originals', {})
         if not originals and not getattr(obj, 'draft_created', False):
@@ -36,8 +53,8 @@ class LessonReadSerializer(serializers.ModelSerializer):
             is_list = isinstance(old_obj,list)
             diffs.append({
                 "field": field,
-                "was": SimpleRelatedSerializer(old_obj,many=is_list).data,
-                "now": SimpleRelatedSerializer(current_val,many=is_list).data
+                "was": fast_simple_serialize(old_obj,many=is_list),
+                "now": fast_simple_serialize(current_val,many=is_list)
             })
         return {
             "is_new": getattr(obj, 'draft_created', False),
@@ -114,9 +131,14 @@ class ConstraintErrorSerializer(serializers.Serializer):
         # Потом можно будет заменить на полноценное применение сериальзатором
         fields = [f.name for f in instance._meta.concrete_fields]
         if isinstance(instance, Lesson):
-            return LessonReadSerializer(instance).data
-        return model_to_dict(instance, fields=fields)
+            if 'lesson_serializer' not in self.context:
+                self.context['lesson_serializer'] = LessonReadSerializer(context=self.context)
+            return self.context['lesson_serializer'].to_representation(instance)
+        return fast_simple_serialize(instance)
     
 class LessonErrorSerializer(serializers.Serializer):
     lesson = LessonReadSerializer()
     errors = ConstraintErrorSerializer(many=True)
+
+    def get_lesson(self,obj):
+        return fast_simple_serialize(obj)

@@ -3,6 +3,7 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from api.models import ScheduleScenario, enums
 from api.serializers import StartGenerationSerializer
+from api.serializers.database import ScheduleScenarioSerializer
 from api.services.schedule.task_manager import GenerationTaskManager
 from authentification.permissions import IsScheduleModerator
 
@@ -42,12 +43,11 @@ class GenerationViewSet(viewsets.ViewSet):
                     "num_workers": data["num_workers"],
                 },
             )
+            scenario.generation_status = enums.GenerationStatus.IN_QUERRY
+            scenario.save()
+
             return Response(
-                {
-                    "status": enums.GenerationStatus.IN_PROGRESS,
-                    "task_id": task_id,
-                    "message": "Процесс генерации запущен успешно",
-                },
+                ScheduleScenarioSerializer(scenario).data,
                 status=status.HTTP_202_ACCEPTED,
             )
 

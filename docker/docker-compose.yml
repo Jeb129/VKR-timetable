@@ -19,6 +19,17 @@ services:
              gunicorn --bind 0.0.0.0:8000 config.wsgi:application"
     networks:
       - vkr-shared
+  celery:
+    image: jeb129/vkr-backend:latest
+    container_name: vkr-celery-worker
+    restart: always
+    env_file: ../backend/.env
+    volumes:
+      - ../logs:/app/logs
+    command: celery -A config.settings worker --loglevel=info
+    networks:
+      - vkr-shared
+      
   frontend:
     image: jeb129/vkr-frontend:latest
     container_name: vkr-frontend

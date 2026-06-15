@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from api.models import *
+from api.models import enums
+from config.utils import IdNameField
 
 
 class InstituteSerializer(serializers.ModelSerializer):
@@ -74,6 +76,7 @@ class LessonTypeSerializer(serializers.ModelSerializer):
 
 
 class ScheduleScenarioSerializer(serializers.ModelSerializer):
+    generation_status = IdNameField(choices=enums.GenerationStatus.choices)
     class Meta:
         model = ScheduleScenario
         fields = "__all__"

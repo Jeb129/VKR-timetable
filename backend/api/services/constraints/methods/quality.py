@@ -1,6 +1,6 @@
 from numpy import less
 
-from api.services.constraints.meta import constraint, ConstraintError
+from api.services.constraints.meta import BaseConstraint, constraint, ConstraintError
 from api.services.schedule.context import ScheduleContext
 from api.models import Lesson
 from config.utils import get_cached_M2M
@@ -90,33 +90,72 @@ def students_gap(lesson: Lesson, context: ScheduleContext, weight: int):
 
 
 @constraint("building_clustering")
-def building_clustering(lesson: Lesson, context: ScheduleContext, weight: int):
-    ts = lesson.timeslot
-    if not ts:
-        return None
+class BuildingClustering(BaseConstraint):
+    def _build_soft(self, model, lesson_vars, context):
+        penalties = []
+        weight = self.config.weight
+        num_bldgs = len(context.building_to_idx)
 
-    violations = []
-    study_groups = get_cached_M2M(lesson, "study_groups")
-    for group in study_groups:
-        chain = context.get_group_day_chain(group.id, ts.week_num, ts.day)
-        buildings = {
-            l.classroom.building
-            for l in chain
-            if l.classroom and not l.classroom.is_virtual
-        }
-        if len(buildings) > 1:
-            violations.append({"group": group, "buildings": list(buildings)})
+        # Проверяем пары занятий одного дня
+        for (w, d), day_slots in self._get_day_map(context).items():
+            # Для каждого учителя
+            for t_id, l_ids in context.teacher_to_l_ids.items():
+                relevant = [l_id for l_id in l_ids if l_id in lesson_vars]
+                if len(relevant) < 2: continue
+                
+                for i in range(len(relevant)):
+                    for j in range(i + 1, len(relevant)):
+                        id1, id2 = relevant[i], relevant[j]
+                        v1, v2 = lesson_vars[id1], lesson_vars[id2]
+                        
+                        # Булевы: оба занятия в этот день?
+                        in_day1 = model.new_bool_var('')
+                        in_day2 = model.new_bool_var('')
+                        model.add_bool_or([model.new_bool_var('')]).only_enforce_if(in_day1) # ...условие слота
+                        
+                        # Упрощенная логика: Penalty если Building1 != Building2
+                        # при условии, что они оба в один день (используем попарный штраф)
+                        diff_bldg = model.new_bool_var(f'b_cl_{t_id}_{id1}_{id2}')
+                        
+                        b1 = model.new_int_var(0, num_bldgs, '')
+                        b2 = model.new_int_var(0, num_bldgs, '')
+                        model.add_element(v1.room_var, context.room_building_indices, b1)
+                        model.add_element(v2.room_var, context.room_building_indices, b2)
+                        
+                        # Штрафуем, если (Slot1.day == Slot2.day) И (B1 != B2)
+                        same_day = model.new_bool_var('')
+                        # ... связь v1.slot_var и v2.slot_var (одна неделя и день)
+                        
+                        model.add(b1 != b2).only_enforce_if([diff_bldg, same_day])
+                        penalties.append(diff_bldg * weight)
+        return penalties
+    def building_clustering(lesson: Lesson, context: ScheduleContext, weight: int):
+        ts = lesson.timeslot
+        if not ts:
+            return None
 
-    return (
-        ConstraintError(
-            name="building_clustering",
-            message="Некоторым группам / преподавателям придется менять корпус",
-            penalty=weight * len(violations),
-            data=violations,
+        violations = []
+        study_groups = get_cached_M2M(lesson, "study_groups")
+        for group in study_groups:
+            chain = context.get_group_day_chain(group.id, ts.week_num, ts.day)
+            buildings = {
+                l.classroom.building
+                for l in chain
+                if l.classroom and not l.classroom.is_virtual
+            }
+            if len(buildings) > 1:
+                violations.append({"group": group, "buildings": list(buildings)})
+
+        return (
+            ConstraintError(
+                name="building_clustering",
+                message="Некоторым группам / преподавателям придется менять корпус",
+                penalty=weight * len(violations),
+                data=violations,
+            )
+            if violations
+            else None
         )
-        if violations
-        else None
-    )
 
 
 @constraint("lesson_persistence_sort")
@@ -200,16 +239,36 @@ def lesson_persistence_sort(lesson: Lesson, context: ScheduleContext, weight: in
 
 
 @constraint("morning_preference")
-def morning_preference(lesson: Lesson, context: ScheduleContext, weight: int):
-    ts = lesson.timeslot
-    if not ts or ts.order_number == 1:
-        return None
-    return ConstraintError(
-        name="morning_preference",
-        message="занятия не в начале дня",
-        penalty=(ts.order_number - 1) * weight,
-        data={"order": ts.order_number},
-    )
+class MorningPreference(BaseConstraint):
+    def _build_soft(self, model, lesson_vars, context):
+        penalties = []
+        weight = self.config.weight
+        
+        # Создаем карту: индекс слота -> штраф (order_number - 1)
+        # Пара 1 (order 1) -> штраф 0
+        # Пара 6 (order 6) -> штраф 5 * weight
+        slot_penalty_map = [
+            (context.idx_to_slot[i].order_number - 1) 
+            for i in range(len(context.idx_to_slot))
+        ]
+
+        for l_id, v in lesson_vars.items():
+            l_penalty = model.new_int_var(0, 10 * weight, f'morn_{l_id}')
+            model.add_element(v.slot_var, slot_penalty_map, l_penalty)
+            penalties.append(l_penalty * weight)
+            
+        return penalties
+    
+    def check(self,lesson: Lesson, context: ScheduleContext):
+        ts = lesson.timeslot
+        if not ts or ts.order_number == 1:
+            return None
+        return ConstraintError(
+            name="morning_preference",
+            message="занятия не в начале дня",
+            penalty=(ts.order_number - 1) * self.config.weight,
+            data={"order": ts.order_number},
+        )
 
 
 @constraint("teachers_gap")

@@ -1,17 +1,18 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { dbService } from '@/services/crud';
-import { 
-    type Scenario, 
-    type Constraint, 
-    type GenerationStatusResponse, 
-    GenerationStatus 
+import {
+    type Scenario,
+    type Constraint,
+    type GenerationStatusResponse,
+    GenerationStatus
 } from '@/types/schedule';
 import { type PlannedCheckResult } from '@/types/plannedlessons';
 import { semesterService, scenarioService } from '@/services/scenarioService';
 import { useModal } from '@/context/ModalContext'; // Импортируем модалки
 import ConstraintItem from '@/components/ConstraintItem';
 import "@/styles/ScenarioDetail.css";
+import StatusBadge from '@/components/StatusBadge';
 
 const ScenarioPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -40,7 +41,7 @@ const ScenarioPage: React.FC = () => {
             const check = await semesterService.checkPlanned(sData.semester);
             setCheckResult(check);
 
-            if (sData.generation_status === GenerationStatus.IN_PROGRESS) {
+            if (sData.generation_status?.id === GenerationStatus.IN_PROGRESS) {
                 setPolling(true);
             }
         } catch (e) {
@@ -67,7 +68,7 @@ const ScenarioPage: React.FC = () => {
                     setPolling(false);
                 }
             };
-            tick(); 
+            tick();
             interval = setInterval(tick, 3000);
         }
         return () => { if (interval) clearInterval(interval); };
@@ -76,16 +77,20 @@ const ScenarioPage: React.FC = () => {
     // 3. Обработчики действий (замена алертов на модалки)
     const handleStart = async () => {
         try {
-            const config = {
-                time_limit: 300,
-                num_workers: 4,
-                constraints: constraints.map(c => ({ 
-                    name: c.name, 
-                    weight: c.weight, 
-                    is_active: c.is_active 
-                }))
-            };
-            await scenarioService.startGeneration(scenarioId, config);
+            if (scenario?.generation_status?.id != GenerationStatus.IN_QUERRY
+                && scenario?.generation_status?.id != GenerationStatus.IN_PROGRESS) {
+                const config = {
+                    time_limit: 3600,
+                    num_workers: 4,
+                    constraints: constraints.map(c => ({
+                        name: c.name,
+                        weight: c.weight,
+                        is_active: c.is_active
+                    }))
+                };
+                const sc = await scenarioService.startGeneration(scenarioId, config);
+                if (sc) setScenario(sc)
+            }
             setPolling(true);
         } catch (e) {
             openModal({
@@ -102,15 +107,15 @@ const ScenarioPage: React.FC = () => {
                 <div className="flex-col gap-2">
                     <p>Это действие удалит текущие плановые занятия семестра и создаст их заново. Продолжить?</p>
                     <label className="flex-row align-center gap-1 pointer">
-                        <input 
-                            type="checkbox" 
-                            checked={f} 
+                        <input
+                            type="checkbox"
+                            checked={f}
                             onChange={(e) => {
                                 const isChecked = e.target.checked;
                                 setF(isChecked);
                                 // 2. Здесь теперь вызывается именно onUpdate
-                                onUpdate(isChecked); 
-                            }} 
+                                onUpdate(isChecked);
+                            }}
                         />
                         <span className="font-bold text-red">Принудительно (игнорировать блокировки)</span>
                     </label>
@@ -145,13 +150,13 @@ const ScenarioPage: React.FC = () => {
                 <div className="flex-col gap-2">
                     <p>Сделать этот сценарий основным для всего семестра?</p>
                     <label className="flex-row align-center gap-1 pointer">
-                        <input 
-                            type="checkbox" 
-                            checked={f} 
+                        <input
+                            type="checkbox"
+                            checked={f}
                             onChange={(e) => {
                                 setF(e.target.checked);
                                 onUpdate(e.target.checked);
-                            }} 
+                            }}
                         />
                         <span className="font-bold text-orange">Принудительно переназначить</span>
                     </label>
@@ -200,7 +205,7 @@ const ScenarioPage: React.FC = () => {
     return (
         <div className="flex-col bg-main min-h-screen">
             <nav className="navbar">
-                <div className="logo-white" onClick={() => navigate("/")} style={{cursor:'pointer'}}>КГУ • УПРАВЛЕНИЕ</div>
+                <div className="logo-white" onClick={() => navigate("/")} style={{ cursor: 'pointer' }}>КГУ • УПРАВЛЕНИЕ</div>
                 <button className="btn nav-btn" onClick={() => navigate('/scenarios')}>К списку версий</button>
             </nav>
 
@@ -226,16 +231,16 @@ const ScenarioPage: React.FC = () => {
 
                 <div className="flex-row gap-3 align-start">
                     <div className="flex-col f-2 gap-3">
-                        
+
                         <div className="card flex-col gap-2">
                             <div className="flex-row space-between align-center">
                                 <h3>Подготовка нагрузки (Academic Load)</h3>
-                                {checkResult?.status === 'ok' ? 
-                                    <span className="badge btn-green">Покрыта полностью</span> : 
+                                {checkResult?.status === 'ok' ?
+                                    <span className="badge btn-green">Покрыта полностью</span> :
                                     <span className="badge btn-red">Есть пробелы</span>
                                 }
                             </div>
-                            
+
                             <div className="p-3 bg-main radius-md border-dashed">
                                 {checkResult?.status === 'ok' ? (
                                     <p className="text-green text-center font-bold"> Все часы учебного плана распределены по занятиям.</p>
@@ -245,9 +250,9 @@ const ScenarioPage: React.FC = () => {
                                             <p className="text-red m-0">
                                                 Не распределено: <strong>{checkResult?.uncovered_data?.length || 0}</strong> позиций нагрузки.
                                             </p>
-                                            <button 
-                                                className="btn btn-outline" 
-                                                style={{padding: '4px 12px', fontSize: '12px'}}
+                                            <button
+                                                className="btn btn-outline"
+                                                style={{ padding: '4px 12px', fontSize: '12px' }}
                                                 onClick={() => setShowUncoveredDetails(!showUncoveredDetails)}
                                             >
                                                 {showUncoveredDetails ? "Скрыть список" : "Показать список"}
@@ -255,7 +260,7 @@ const ScenarioPage: React.FC = () => {
                                         </div>
 
                                         {showUncoveredDetails && (
-                                            <div className="mt-2 scroll-y" style={{maxHeight: '250px'}}>
+                                            <div className="mt-2 scroll-y" style={{ maxHeight: '250px' }}>
                                                 <table className="mini-table w-100">
                                                     <thead>
                                                         <tr>
@@ -279,7 +284,7 @@ const ScenarioPage: React.FC = () => {
                                     </div>
                                 )}
                             </div>
-                            
+
                             <button className="btn btn-outline w-100" onClick={handleSync}>
                                 Синхронизировать плановые занятия
                             </button>
@@ -292,8 +297,8 @@ const ScenarioPage: React.FC = () => {
                                     <div className="flex-col gap-3 align-center py-2">
                                         <div className="spinner"></div>
                                         <div className="flex-col align-center">
-                                            <strong className="text-orange" style={{fontSize: '1.2rem'}}>Идет расчет в Celery...</strong>
-                                            <span className="text-muted small">Задача: {genStatus?.task_id?.substring(0,8)}...</span>
+                                            <strong className="text-orange" style={{ fontSize: '1.2rem' }}>Идет расчет в Celery...</strong>
+                                            <span className="text-muted small">Задача: {genStatus?.task_id?.substring(0, 8)}...</span>
                                         </div>
                                         <button className="btn btn-red mt-2" onClick={handleStop}>Прервать расчет</button>
                                     </div>
@@ -308,9 +313,9 @@ const ScenarioPage: React.FC = () => {
                                                 <StatusBadge status={scenario?.generation_status} />
                                             </div>
                                         </div>
-                                        <button 
-                                            className="btn btn-green w-100 py-3 font-bold" 
-                                            style={{fontSize: '1.1rem'}}
+                                        <button
+                                            className="btn btn-green w-100 py-3 font-bold"
+                                            style={{ fontSize: '1.1rem' }}
                                             onClick={handleStart}
                                             disabled={checkResult?.status !== 'ok'}
                                         >
@@ -342,16 +347,4 @@ const ScenarioPage: React.FC = () => {
     );
 };
 
-// Вспомогательный компонент статуса
-const StatusBadge: React.FC<{ status?: GenerationStatus | null }> = ({ status }) => {
-    const map = {
-        [GenerationStatus.SUCCESS]: { label: 'Готово', cls: 'btn-green' },
-        [GenerationStatus.IN_PROGRESS]: { label: 'Расчет', cls: 'btn-primary' },
-        [GenerationStatus.ERROR]: { label: 'Ошибка', cls: 'btn-red' },
-        [GenerationStatus.INFEASIBLE]: { label: 'Нерешаемо', cls: 'btn-orange' },
-    };
-    const item = (status !== undefined && status !== null) ? map[status] : { label: 'Новый', cls: 'btn-outline' };
-    return <span className={`badge ${item?.cls || 'btn-outline'}`}>{item?.label || '---'}</span>;
-};
-
-export default ScenarioPage;
+export default ScenarioPage

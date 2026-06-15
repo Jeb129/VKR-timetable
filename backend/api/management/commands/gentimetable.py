@@ -46,7 +46,7 @@ class Command(BaseCommand):
         # else:
         #     self.stdout.write("Не удалось найти оптимальное решение")
         try:
-            success = generator.solve()
+            success = generator.solve(time_limit=3600)
             if success:
                 self.stdout.write("Удалось найти оптимальное решение")
                 self.stdout.write("Сохранение в базу данных...")

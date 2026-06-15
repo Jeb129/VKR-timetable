@@ -67,8 +67,8 @@ class ScheduleManager:
             context=self.context,
             manual_only=True
         )
-        
-        return LessonError(lesson,errors if errors else None )
+        # костыль, чтобы фронт не умирал
+        return LessonError(lesson,errors[:10] if errors else None )
 
 
     def check_scenario(self) -> List[LessonError] :
@@ -85,8 +85,6 @@ class ScheduleManager:
         elif self.context is None:
             raise ValueError("Не собран контекст проверки. Вызовите ScheduleManager.build_context() или передайте build_context=True при вызове метода check_lesson_draft")
         lesson = self.context.get_by_id(lesson_id)
-        # if str(lesson_id) == "3021": print(LessonReadSerializer(lesson).data)
-
         return self.check_lesson(lesson)
 
     def check_scenario_draft(self,*,build_context=False)-> List[LessonError]:
@@ -109,7 +107,6 @@ class ScheduleManager:
         if self.context is None:
             raise ValueError("Не собран контекст поиска. Вызовите ScheduleManager.build_context() перед вызовом метода get_lessons_draft")
         res = self.context.filter(*args,**kwargs)
-        print(len(res))
         return res
     
     def update_lesson_draft(self,lesson_id, diff_data):
@@ -126,7 +123,6 @@ class ScheduleManager:
         merged_candidate = {
             **self.storage.get_updated().get(lesson_id, {}), 
             **diff_data}
-        # if str(lesson_id) == "3021": print(merged_candidate)
         # Сравниваем все изменения с оригинальным занятием
         final_diff = {}
         for key, value in merged_candidate.items():
@@ -141,8 +137,6 @@ class ScheduleManager:
                 # Если обновленнре поле НЕ совпадает с оригиналом - запоминаем
                 final_diff[key] = value
 
-        # if str(lesson_id) == "3021": print(LessonReadSerializer(original).data)
-        # if str(lesson_id) == "3021": print(final_diff)
         if not final_diff:
             # Если все обновленные поля совпадают с оригинальными значениями - удаляем запись из хранилища
             self.storage.clear_updated(obj_id=lesson_id)
