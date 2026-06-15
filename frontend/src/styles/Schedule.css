@@ -171,3 +171,67 @@
 /* Утилиты для страницы */
 .mx-20 { margin-left: 2.5rem; margin-right: 2.5rem; }
 .pb-40 { padding-bottom: 2.5rem; }
+
+/* Добавь это в конец Schedule.css */
+
+@media (max-width: 1024px) {
+    /* Фильтры в колонку */
+    .filters-container {
+        flex-direction: column;
+        align-items: stretch;
+        margin: 1rem;
+        padding: 1rem;
+        gap: 1rem;
+    }
+
+    .filter-group {
+        width: 100% !important;
+        max-width: 100% !important;
+    }
+
+    /* Уменьшаем отступы расписания */
+    .day-header {
+        margin: 0 1rem 0.5rem 1rem;
+    }
+
+    .lesson-row-container {
+        margin: 0 1rem 0.8rem 1rem;
+    }
+}
+
+@media (max-width: 600px) {
+    .navbar {
+        padding: 0.5rem 1rem;
+    }
+
+    /* Карточка пары на мобилке */
+    .lesson-row-container {
+        min-height: auto;
+    }
+
+    .time-side {
+        width: 80px;
+        min-width: 80px;
+        font-size: 0.9rem;
+    }
+
+    .info-side {
+        padding: 10px 15px;
+    }
+
+    .subject-name {
+        font-size: 1rem;
+    }
+
+    /* Бейдж (ЗАНЯТИЕ/БРОНЬ) переносим под заголовок */
+    .info-side .flex-row.space-between {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .badge {
+        font-size: 9px !important;
+        padding: 2px 8px;
+    }
+}

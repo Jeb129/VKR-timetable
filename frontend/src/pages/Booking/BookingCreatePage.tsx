@@ -135,9 +135,9 @@ const BookingCreatePage = () => {
                 <button className="btn nav-btn" onClick={() => navigate("/profile")}>В профиль</button>
             </nav>
 
-            <div className="profile-wrapper flex-row gap-3 align-start p-2">
+            <div className="profile-wrapper booking-responsive-wrapper">
                 {/* ЛЕВАЯ ПАНЕЛЬ ФОРМЫ */}
-                <div className="card flex-col gap-2" style={{ width: '400px', flexShrink: 0 }}>
+                <div className="card flex-col gap-2 booking-sidebar">
                     <h2 className="text-primary">Новое бронирование</h2>
                     
                     <div className="flex-col">
@@ -200,7 +200,7 @@ const BookingCreatePage = () => {
                 </div>
 
                 {/* ПРАВАЯ ПАНЕЛЬ С КАЛЕНДАРЕМ */}
-                <div className="card f-1" style={{ height: '80vh', minWidth: '600px' }}>
+                <div className="card f-1 booking-calendar-container">
                     {selectedRoomId ? (
                         <FullCalendar
                             key={`${selectedRoomId}-${selectedDate}`}
@@ -210,14 +210,15 @@ const BookingCreatePage = () => {
                             allDaySlot={false}
                             slotDuration="00:30:00"
                             locale="ru"
-                            height="100%"
+                            height="auto" 
                             headerToolbar={false}
+                            handleWindowResize={true}
                             events={[...busyEvents, ...previewEvent]}
                             slotMinTime={selectedRoomObj?.work_start || "08:00:00"}
                             slotMaxTime={selectedRoomObj?.work_end || "22:00:00"}
                         />
                     ) : (
-                        <div className="flex-col justify-center align-center h-100 text-muted">
+                        <div className="flex-col justify-center align-center h-100 text-muted p-4">
                             <h3>Выберите аудиторию</h3>
                             <p>чтобы увидеть свободные временные слоты</p>
                         </div>
