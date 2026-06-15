@@ -132,3 +132,80 @@
 .nav-btn {
     margin-left: 0.5rem;
 }
+.time-label-profile {
+    font-weight: 800;
+    width: 110px;
+    flex-shrink: 0;
+}
+/* Адаптивность для мобильных устройств */
+
+@media (max-width: 992px) {
+    .profile-wrapper {
+        flex-direction: column; /* Складываем колонки вертикально */
+        padding: 15px; /* Уменьшаем внешние отступы */
+        gap: 20px;
+    }
+
+    .profile-sidebar {
+        width: 100%; /* Сайдбар на всю ширину */
+        order: 1;
+    }
+    .profile-sidebar, .content-area {
+        width: 100% !important;
+        max-width: 100%;
+    }
+
+    .content-area {
+        width: 100%;
+        order: 2;
+    }
+
+    .navbar {
+        padding: 0.75rem 1rem; /* Уменьшаем паддинги в шапке */
+    }
+
+    .logo-white {
+        font-size: 1.2rem;
+    }
+
+    .text-primary[style*="width: 120px"], 
+    .text-primary[style*="width: 90px"] {
+        width: 80px !important;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 600px) {
+    /* На очень маленьких экранах (телефоны) */
+    .nav-btn {
+        padding: 0.4rem 0.6rem;
+        font-size: 0.8rem;
+        margin-left: 0.2rem;
+    }
+
+    .card {
+        padding: 15px; /* Еще меньше паддингов внутри карточек */
+    }
+
+    /* Адаптируем список занятий */
+    .list-item {
+        flex-direction: column; /* Время сверху, контент снизу */
+        align-items: flex-start;
+        gap: 5px;
+    }
+
+    .list-item .text-primary {
+        width: 100% !important; /* Время на всю строку */
+        font-size: 1rem;
+    }
+
+    /* Адаптируем заголовок заявки */
+    .flex-row.space-between.align-start {
+        flex-direction: column;
+        gap: 10px;
+    }
+
+    .badge {
+        align-self: flex-start; /* Статус под заголовком */
+    }
+}

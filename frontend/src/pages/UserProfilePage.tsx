@@ -273,7 +273,7 @@ const UserProfilePage = () => {
                                             </div>
                                             {dayLessons.map((item, idx) => (
                                                 <div key={idx} className="list-item flex-row align-center py-1">
-                                                    <div className="text-primary" style={{ fontWeight: 800, width: '90px' }}>
+                                                    <div className="text-primary time-label-profile">
                                                         {new Date(item.start).toLocaleTimeString('ru-RU', {hour: '2-digit', minute:'2-digit'})}
                                                     </div>
                                                     <div className="flex-grow">
@@ -319,7 +319,7 @@ const UserProfilePage = () => {
                                                 </div>
 
                                                 {/* ПРАВАЯ ЧАСТЬ: Статус и кнопка Скрыть */}
-                                                <div className="flex-row align-center gap-2">
+                                                <div className="flex-row align-center gap-2 mobile-status-row">
                                                     <div className="badge" style={{ 
                                                         border: `1px solid ${status.color}`, 
                                                         color: status.color, 
