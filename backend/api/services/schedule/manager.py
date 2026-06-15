@@ -67,8 +67,8 @@ class ScheduleManager:
             context=self.context,
             manual_only=True
         )
-        
-        return LessonError(lesson,errors if errors else None )
+        # костыль, чтобы фронт не умирал
+        return LessonError(lesson,errors[:10] if errors else None )
 
 
     def check_scenario(self) -> List[LessonError] :

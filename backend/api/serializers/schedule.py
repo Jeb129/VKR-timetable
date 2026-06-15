@@ -35,6 +35,12 @@ class LessonReadSerializer(serializers.ModelSerializer):
     # Поля черновика
     draft_info = serializers.SerializerMethodField()
 
+    def get_teachers(self,obj):
+        return fast_simple_serialize(obj,many=True)
+    
+    def get_study_groups(self,obj):
+        return fast_simple_serialize(obj,many=True)
+
     def get_draft_info(self, obj):
         originals = getattr(obj, 'draft_originals', {})
         if not originals and not getattr(obj, 'draft_created', False):
@@ -128,7 +134,7 @@ class ConstraintErrorSerializer(serializers.Serializer):
             if 'lesson_serializer' not in self.context:
                 self.context['lesson_serializer'] = LessonReadSerializer(context=self.context)
             return self.context['lesson_serializer'].to_representation(instance)
-        return model_to_dict(instance, fields=fields)
+        return fast_simple_serialize(instance)
     
 class LessonErrorSerializer(serializers.Serializer):
     lesson = LessonReadSerializer()

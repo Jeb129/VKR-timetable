@@ -48,7 +48,7 @@ class TeacherNoOverlap(BaseConstraint):
                 name="teacher_no_overlap",
                 message="Некоторые преподаватели заняты в это время",
                 penalty=self.config.weight,
-                data=violations,
+                data=violations[:10],
             )
             if violations
             else None
@@ -96,7 +96,7 @@ class GroupNoOverlap(BaseConstraint):
                 name="group_no_overlap",
                 message="Некоторые группы заняты в это время",
                 penalty=self.config.weight,
-                data=violations,
+                data=violations[:10],
             )
             if violations
             else None
@@ -192,7 +192,7 @@ class RoomNoOverlap(BaseConstraint):
                 name="room_no_overlap",
                 message=f"Аудитория {room} занята в это время",
                 penalty=self.config.weight,
-                data=[{"room": room, "lesson": other} for other in others],
+                data=[{"room": room, "lesson": other} for other in others[:10]],
             )
         return None
     
