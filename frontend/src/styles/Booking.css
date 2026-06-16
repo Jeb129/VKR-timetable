@@ -1,118 +1,32 @@
-/* Booking.css */
+/* src/styles/Booking.css */
 
-/* Отступ между кнопками в шапке */
-.nav-actions {
-    display: flex;
-    gap: 12px; /* Расстояние между кнопками Профиль и Расписание */
+.booking-calendar-holder {
+    flex: 1;
+    min-height: 0;
 }
 
-/* Поля времени */
-input[type="time"].card {
-    padding: 10px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--radius-md);
-    font-weight: 600;
-    color: var(--p-blue);
+/* На десктопе календарь тянется на 100% высоты карточки */
+.fc {
+    flex-grow: 1;
 }
 
-/* Пульсация превью выбора */
-.preview-event-pulse {
-    border: 2px dashed rgba(255,255,255,0.8) !important;
-    animation: pulse-green 2s infinite;
+.fc .fc-timegrid-slot {
+    height: 1.5rem !important;
 }
 
-@keyframes pulse-green {
-    0% { opacity: 1; }
-    50% { opacity: 0.6; }
-    100% { opacity: 1; }
-}
-
-/* Увеличиваем высоту слотов в календаре для наглядности */
-.fc-timegrid-slot {
-    height: 3.5rem !important;
-}
-
-.preview-event-pulse {
-    background-color: var(--p-green) !important;
-    border: 2px solid white !important;
-    box-shadow: 0 0 15px rgba(46, 125, 50, 0.4);
-    z-index: 10;
-}
-
-/* Стилизация оранжевых блоков (Брони других людей) */
-.fc-event.var--p-orange {
-    opacity: 0.8;
-}
-
-/* Стилизация синих блоков (Уроки) */
-.fc-event.var--p-blue {
-    border-left: 5px solid rgba(255,255,255,0.3) !important;
-}
-/* Добавь это в конец Booking.css */
-
-/* Базовые стили для новых классов */
-.booking-sidebar {
-    width: 400px;
-    flex-shrink: 0;
-}
-
-.booking-calendar-container {
-    min-width: 600px;
-    min-height: 600px;
-}
-
-/* Адаптация для планшетов и малых экранов */
-@media (max-width: 1100px) {
-    .booking-responsive-wrapper {
-        flex-direction: column !important; /* Форма сверху, календарь снизу */
-        align-items: center;
-        padding: 15px !important;
+/* МОБИЛЬНАЯ ВЕРСТКА */
+@media (max-width: 1024px) {
+    .booking-calendar-holder {
+        /* Фиксированная высота, чтобы календарь не схлопывался, 
+           когда родитель становится auto-height */
+        height: 45rem; 
+        min-height: 45rem;
     }
-
-    .booking-sidebar {
-        width: 100% !important;
-        max-width: 600px; /* Чтобы на планшете не была слишком широкой */
-        margin-bottom: 20px;
-    }
-
-    .booking-calendar-container {
-        width: 100% !important;
-        min-width: 100% !important;
-        min-height: 500px;
+    
+    /* Добавляем небольшой отступ снизу для карточек в колонке */
+    .sidebar {
+        margin-bottom: 1rem;
     }
 }
 
-/* Адаптация для телефонов */
-@media (max-width: 600px) {
-    .navbar {
-        padding: 0.5rem 1rem !important;
-    }
-
-    .logo-white {
-        font-size: 1.1rem;
-    }
-
-    .booking-sidebar {
-        padding: 15px !important;
-    }
-
-    .booking-calendar-container {
-        padding: 5px !important;
-        min-height: 400px;
-    }
-
-    /* Уменьшаем высоту слотов календаря, чтобы влезло больше часов на экран */
-    .fc-timegrid-slot {
-        height: 2.5rem !important;
-    }
-
-    .fc-timegrid-axis-cushion,
-    .fc-timegrid-slot-label-cushion {
-        font-size: 11px !important;
-    }
-
-    /* Делаем заголовок "ВАШ ВЫБОР" компактнее */
-    .fc-event-title {
-        font-size: 9px !important;
-    }
-}
+/* src/styles/Booking.css */

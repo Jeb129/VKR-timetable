@@ -2,6 +2,7 @@ export interface Building {
     id: number;
     name: string;
     address: string;
+    ymap_key?: string | null;
     work_start_time: string;
     work_end_time: string;
 }
