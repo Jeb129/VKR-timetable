@@ -6,11 +6,10 @@ from api.models.academic_load import Lesson
 from api.models.buildings import Classroom
 from api.models.education_subjects import Discipline, LessonType, Teacher
 from api.models.schedule import Timeslot
-from authentification.models import CustomUser
 
 
 class Request(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE, verbose_name="Автор")
+    user = models.ForeignKey("authentification.CustomUser", on_delete=models.CASCADE, verbose_name="Автор")
     description = models.TextField(verbose_name="Описание")
     created_at = models.DateTimeField(auto_now_add=True, verbose_name="Время создания")
     admin_comment = models.TextField(

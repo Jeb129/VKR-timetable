@@ -5,6 +5,7 @@ class Building(models.Model):
     name = models.CharField(max_length=50, verbose_name="наименование")
     short_name = models.CharField(max_length=5, verbose_name="сокращение")
     address = models.CharField(null=True,max_length=255, verbose_name="адрес")
+    ymap_key = models.CharField(null=True,max_length=255, verbose_name="ключ карты")
     work_start_time = models.TimeField(verbose_name="начало рабочего дня")
     work_end_time = models.TimeField(verbose_name="конец рабочего дня")
 
