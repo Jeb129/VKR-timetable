@@ -98,7 +98,7 @@ const SchedulePage = () => {
                 </div>
             </nav>
 
-            <div className="filters-container slide-up">
+            <div className="filters-container slide-up flex-wrap">
                 <div className="filter-group">
                     <label className="filter-label">Тип поиска</label>
                     <select 
@@ -131,7 +131,7 @@ const SchedulePage = () => {
                     />
                 </div>
 
-                <div className="filter-group" style={{ maxWidth: '200px' }}>
+                <div className="filter-group">
                     <label className="filter-label">Дата начала</label>
                     <input 
                         type="date" 
@@ -188,8 +188,6 @@ const SchedulePage = () => {
                                             <div className="flex-col gap-1">
                                                 {isBooking ? (
                                                     <>
-                                                        <div className="text-muted small">👤 Ответственный: {event.user_name}</div>
-                                                        <div className="text-muted small">📝 Цель: {event.description}</div>
                                                     </>
                                                 ) : (
                                                     <>
