@@ -57,7 +57,7 @@ const CreateLessonModal = ({ slotId, onConfirm, onCancel }: Props) => {
             <div className="flex-col">
                 <label className="filter-label">Аудитория</label>
                 <SearchSelect
-                    model="classrooms"
+                    model="lableclassrooms"
                     onChange={(val) => setFormData({...formData, classroom: val})}
                     placeholder="Выберите кабинет..."
                 />

@@ -116,11 +116,6 @@ export const MyTable: React.FC<MyTableProps> = ({ data, loading, onActionSuccess
                 </thead>
                 <tbody>
                     {data.map((req) => {
-                        console.log(req)
-                        console.log(isBookingRequest(req))
-                        console.log(isScheduleAdjustmentRequest(req))
-                        console.log(isExcludedTimeslotRequest(req))
-                        console.log(isClassroomPreferenceRequest(req))
                         return (
                             <tr key={req.id}>
                                 <td>

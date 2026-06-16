@@ -8,6 +8,8 @@ import { dbService } from "@/services/crud";
 import SearchSelect from "@/components/UI/SearchSelect";
 import type { Classroom } from "@/types/classroom";
 import "@/styles/Booking.css";
+import { scheduleViewService } from "@/services/schedule_view";
+import YandexMap from "@/components/YandexMap";
 
 const BookingCreatePage = () => {
     const navigate = useNavigate();
@@ -16,8 +18,8 @@ const BookingCreatePage = () => {
     const [, setBookingTypes] = useState<any[]>([]);
     const [selectedRoomId, setSelectedRoomId] = useState<number | null>(null);
     const [selectedRoomObj, setSelectedRoomObj] = useState<Classroom | null>(null);
-    const [busyEvents, setBusyEvents] = useState<any[]>([]); 
-    
+    const [busyEvents, setBusyEvents] = useState<any[]>([]);
+
 
     // Поля формы
     const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
@@ -42,11 +44,14 @@ const BookingCreatePage = () => {
         if (selectedRoomId) {
             const fetchBusy = async () => {
                 try {
-                    const data: any = await dbService.list("schedule/classroom", { 
-                        classroom_id: selectedRoomId,
-                        date: selectedDate 
-                    });
-                    
+
+                    // Тянем инфо о корпусе для времени работы
+                    const room = await dbService.get<Classroom>("classrooms", selectedRoomId);
+                    console.log(room)
+                    setSelectedRoomObj(room);
+
+                    const data: any = await scheduleViewService.classroom(Number(selectedRoomId), selectedDate, selectedDate)
+
                     const formatted = data.map((item: any) => ({
                         title: item.type === "3" ? "ЗАНЯТО (БРОНЬ)" : item.title,
                         start: item.start,
@@ -59,16 +64,15 @@ const BookingCreatePage = () => {
                         timeEnd: item.end.split('T')[1].substring(0, 5)
                     }));
                     setBusyEvents(formatted);
-                    
-                    // Тянем инфо о корпусе для времени работы
-                    const room = await dbService.get<Classroom>("classrooms", selectedRoomId);
-                    setSelectedRoomObj(room);
                 } catch (err) {
                     console.error("Ошибка загрузки данных аудитории");
                 }
             };
             fetchBusy();
         }
+        else
+            setSelectedRoomObj(null);
+
     }, [selectedRoomId, selectedDate]);
 
     // Валидация пересечений
@@ -122,130 +126,116 @@ const BookingCreatePage = () => {
             await requestService.create(payload as any);
             navigate("/profile");
         } catch (err: any) {
-            setFormError(err.response?.data?.details?.non_field_errors?.[0] || "Ошибка создания заявки");
+            setFormError(err.response?.data?.details || "Ошибка создания заявки");
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <div className="flex-col bg-main min-h-screen">
+        <div className="flex-col bg-main min-h-screen no-scroll">
             <nav className="navbar">
-                <div className="logo-white" onClick={() => navigate("/")} style={{cursor: 'pointer'}}>КГУ • БРОНИРОВАНИЕ</div>
+                <div className="logo-white" onClick={() => navigate("/")}>КГУ • БРОНИРОВАНИЕ</div>
                 <button className="btn nav-btn" onClick={() => navigate("/profile")}>В профиль</button>
             </nav>
 
-            <div className="profile-wrapper booking-responsive-wrapper">
-                {/* ЛЕВАЯ ПАНЕЛЬ ФОРМЫ */}
-                <div className="card flex-col gap-2 booking-sidebar">
-                    <h2 className="text-primary">Новое бронирование</h2>
-                    
+            <main className="layout-grid p-2">
+
+
+
+                <section className="card sidebar f-1 flex-col gap-2 scroll-y">
+                    <h2 className="text-primary">Место проведения</h2>
                     <div className="flex-col">
                         <label className="filter-label">Аудитория</label>
-                        <SearchSelect 
-                            model="classrooms"
+                        <SearchSelect
+                            model="bableclassrooms"
                             value={selectedRoomId}
                             onChange={(val) => setSelectedRoomId(val ? Number(val) : null)}
-                            placeholder="Поиск аудитории..."
+                            placeholder="Поиск..."
                         />
                     </div>
 
                     {selectedRoomObj?.building && (
-                        <div className="bg-main p-2 radius-md border-blue fade-in" style={{ fontSize: '13px', borderStyle: 'dashed' }}>
-                            <div className="flex-col gap-1">
-                                <div>
-                                    <span className="text-muted">Корпус: </span>
-                                    <strong className="text-primary">{selectedRoomObj.building.name}</strong>
-                                </div>
-                                <div>
-                                    <span className="text-muted">Адрес: </span>
-                                    <span>{selectedRoomObj.building.address}</span>
-                                </div>
-                                <div>
-                                    <span className="text-muted">Режим работы: </span>
-                                    <span className="text-orange" style={{ fontWeight: 700 }}>
-                                        {selectedRoomObj.building.work_start_time.substring(0, 5)} — {selectedRoomObj.building.work_end_time.substring(0, 5)}
-                                    </span>
-                                </div>
+                        <div className="flex-col gap-1">
+                            <div>
+                                <span className="text-muted">Корпус: </span>
+                                <strong className="text-primary">{selectedRoomObj.building.name}</strong>
+                            </div>
+                            <div>
+                                <span className="text-muted">Режим: </span>
+                                <span className="text-orange" style={{ fontWeight: 700 }}>
+                                    {selectedRoomObj.building.work_start_time.substring(0, 5)} — {selectedRoomObj.building.work_end_time.substring(0, 5)}
+                                </span>
+                            </div>
+                            <div>
+                                <span className="text-muted">Адрес: </span>
+                                <span>{selectedRoomObj.building.address}</span>
+                            </div>
+                            <div className="flex-col justify-center align-center mt-1">
+                                <YandexMap ymapKey={selectedRoomObj.building.ymap_key ?? ""} />
                             </div>
                         </div>
                     )}
 
                     <div className="flex-col">
-                        <label className="filter-label">Дата</label>
-                        <input type="date" className="input-styled" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
-                    </div>
-
-                    <div className="flex-row gap-2">
-                        <div className="flex-col f-1">
-                            <label className="filter-label">Начало</label>
-                            <input type="time" step="900" className="input-styled" value={startTime} onChange={e => setStartTime(e.target.value)} />
-                        </div>
-                        <div className="flex-col f-1">
-                            <label className="filter-label">Конец</label>
-                            <input type="time" step="900" className="input-styled" value={endTime} onChange={e => setEndTime(e.target.value)} />
-                        </div>
-                    </div>
-
-                    <div className="flex-col">
                         <label className="filter-label">Вид мероприятия</label>
-                        <SearchSelect 
-                            model="booking-types" 
-                            value={selectedTypeId}
-                            onChange={setSelectedTypeId}
-                            placeholder="Выберите тип..."
-                            pageSize={50} 
-                        />
+                        <SearchSelect model="booking-types" value={selectedTypeId} onChange={setSelectedTypeId} placeholder="Тип..." />
                     </div>
 
                     <div className="flex-col">
-                        <label className="filter-label">Причина бронирования</label>
-                        <textarea 
-                            className="input-styled" 
-                            rows={3} 
-                            value={description} 
-                            onChange={e => setDescription(e.target.value)}
-                            placeholder="Например: Проведение студенческой конференции"
-                        />
+                        <label className="filter-label">Причина</label>
+                        <textarea className="input-styled" rows={3} value={description} onChange={e => setDescription(e.target.value)} />
+                    </div>
+                </section>
+
+                                <section className="card f-3 flex-col gap-2 no-scroll">
+                    <h2 className="text-primary">Время проведения</h2>
+                    <div className="flex-row gap-2 flex-wrap">
+                        <div className="flex-col f-1 min-w-10">
+                            <label className="filter-label">Дата</label>
+                            <input type="date" className="input-styled" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
+                        </div>
+                        <div className="flex-col f-1 min-w-10">
+                            <label className="filter-label">Начало</label>
+                            <input type="time" className="input-styled" value={startTime} onChange={e => setStartTime(e.target.value)} />
+                        </div>
+                        <div className="flex-col f-1 min-w-10">
+                            <label className="filter-label">Конец</label>
+                            <input type="time" className="input-styled" value={endTime} onChange={e => setEndTime(e.target.value)} />
+                        </div>
                     </div>
 
-                    {formError && <div className="error fade-in" style={{fontSize: '13px'}}>{formError}</div>}
+                    <div className="booking-calendar-holder scroll-y">
+                        {selectedRoomId ? (
+                            <FullCalendar
+                                key={`${selectedRoomId}-${selectedDate}`}
+                                plugins={[timeGridPlugin, interactionPlugin]}
+                                initialView="timeGridDay"
+                                initialDate={selectedDate}
+                                allDaySlot={false}
+                                locale="ru"
+                                height="auto"
+                                headerToolbar={false}
+                                events={[...busyEvents, ...previewEvent]}
+                                slotMinTime={selectedRoomObj?.work_start || "08:00:00"}
+                                slotMaxTime={selectedRoomObj?.work_end || "22:00:00"}
+                            />
+                        ) : (
+                            <div className="flex-col justify-center align-center h-100 text-muted">
+                                <h3>Выберите аудиторию</h3>
+                            </div>
+                        )}
+                    </div>
 
-                    <button 
-                        className="btn btn-green w-100" 
-                        onClick={handleSubmit} 
-                        disabled={loading || !!formError}
-                    >
+                    <button className="btn btn-green w-100" onClick={handleSubmit} disabled={loading || !!formError}>
                         {loading ? "Отправка..." : "Создать заявку"}
                     </button>
-                </div>
+                    
+                    {formError && <div className="error" onClick={() => setFormError("")}>{formError}</div>}
 
-                {/* ПРАВАЯ ПАНЕЛЬ С КАЛЕНДАРЕМ */}
-                <div className="card f-1 booking-calendar-container">
-                    {selectedRoomId ? (
-                        <FullCalendar
-                            key={`${selectedRoomId}-${selectedDate}`}
-                            plugins={[timeGridPlugin, interactionPlugin]}
-                            initialView="timeGridDay"
-                            initialDate={selectedDate}
-                            allDaySlot={false}
-                            slotDuration="00:30:00"
-                            locale="ru"
-                            height="auto" 
-                            headerToolbar={false}
-                            handleWindowResize={true}
-                            events={[...busyEvents, ...previewEvent]}
-                            slotMinTime={selectedRoomObj?.work_start || "08:00:00"}
-                            slotMaxTime={selectedRoomObj?.work_end || "22:00:00"}
-                        />
-                    ) : (
-                        <div className="flex-col justify-center align-center h-100 text-muted p-4">
-                            <h3>Выберите аудиторию</h3>
-                            <p>чтобы увидеть свободные временные слоты</p>
-                        </div>
-                    )}
-                </div>
-            </div>
+                </section>
+
+            </main>
         </div>
     );
 };

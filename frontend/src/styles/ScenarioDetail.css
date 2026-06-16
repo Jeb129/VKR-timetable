@@ -1,63 +1,40 @@
 /* src/styles/ScenarioDetail.css */
 
-.log-container {
-    background: #1e1e1e;
-    color: #00ff00;
-    font-family: 'Courier New', monospace;
+.mini-table {
+    border-collapse: collapse;
     font-size: 0.85rem;
-    padding: 1rem;
+    background: var(--white);
     border-radius: var(--radius-md);
-    height: 200px;
-    overflow-y: auto;
-}
-
-.status-indicator {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-}
-
-.constraint-row {
-    border-bottom: 1px solid var(--p-beige-border);
-    padding: 0.75rem 0;
-}
-
-.constraint-row:last-child {
-    border-bottom: none;
-}
-
-.progress-bar-container {
-    background: var(--border-color);
-    height: 12px;
-    border-radius: 6px;
     overflow: hidden;
 }
 
-.progress-bar-fill {
-    background: var(--p-blue);
-    height: 100%;
-    transition: width 0.5s ease;
+.mini-table th {
+    background: var(--p-blue-light);
+    color: var(--p-blue);
+    padding: 0.75rem;
+    text-align: left;
+}
+
+.mini-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .border-dashed {
-    border: 1px dashed var(--border-color);
-}
-
-.border-blue {
-    border: 1px solid rgba(44, 58, 179, 0.2);
+    border: 2px dashed var(--border-color);
 }
 
 .sticky-top {
     position: sticky;
-    top: 20px;
+    top: 1rem;
 }
 
-/* Spinner для загрузки */
+/* Анимации для генератора */
 .spinner {
     width: 40px;
     height: 40px;
-    border: 5px solid var(--p-blue-light);
-    border-top: 5px solid var(--p-blue);
+    border: 4px solid var(--p-blue-light);
+    border-top: 4px solid var(--p-blue);
     border-radius: 50%;
     animation: spin 1s linear infinite;
 }
@@ -67,59 +44,25 @@
     100% { transform: rotate(360deg); }
 }
 
-/* Расстояние в сетке инфо */
-.request-info-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1.5rem;
-    margin-top: 1rem;
+.log-container {
+    background: #1e1e1e;
+    color: #00ff00;
+    font-family: 'Courier New', monospace;
+    font-size: 0.8rem;
+    padding: 1rem;
+    border-radius: var(--radius-md);
+    width: 100%;
+    max-height: 150px;
+    overflow-y: auto;
 }
 
-/* Стилизация скроллбара для ограничений */
-.scroll-y::-webkit-scrollbar {
-    width: 6px;
-}
-.scroll-y::-webkit-scrollbar-thumb {
-    background-color: var(--border-color);
-    border-radius: 10px;
-}
-.mini-table th {
-    background: var(--p-blue-light);
-    color: var(--p-blue);
-    text-align: left;
-    padding: 8px 12px;
-    font-weight: 800;
-    text-transform: uppercase;
-    font-size: 10px;
-}
-
-.mini-table td {
-    padding: 8px 12px;
-    border-bottom: 1px solid var(--border-color);
-    color: var(--text-main);
-}
-
-.mini-table tr:last-child td {
-    border-bottom: none;
-}
-
-.font-bold { font-weight: 700; }
-.text-green { color: var(--p-green); }
-.text-red { color: var(--p-red); }
-.text-orange { color: var(--p-orange); }
-
-input[type="checkbox"] {
-    width: 18px;
-    height: 18px;
+/* Ошибки */
+.error-box {
+    background: #fff1f0;
+    border: 1px solid var(--p-red);
+    color: var(--p-red);
+    padding: 0.75rem;
+    border-radius: var(--radius-md);
     cursor: pointer;
-    accent-color: var(--p-blue); 
-}
-
-.pointer {
-    cursor: pointer;
-    user-select: none;
-}
-
-.font-bold {
-    font-weight: 700;
+    margin-bottom: 1rem;
 }

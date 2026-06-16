@@ -76,7 +76,8 @@ class LessonTypeSerializer(serializers.ModelSerializer):
 
 
 class ScheduleScenarioSerializer(serializers.ModelSerializer):
-    generation_status = IdNameField(choices=enums.GenerationStatus.choices)
+    generation_status = IdNameField(read_only = True,choices=enums.GenerationStatus.choices)
+    semester = IdNameField()
     class Meta:
         model = ScheduleScenario
         fields = "__all__"
@@ -90,7 +91,7 @@ class SemesterSerializer(serializers.ModelSerializer):
 class BuildingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Building
-        fields = ["id", "name", "address", "work_start_time", "work_end_time"]
+        fields = ["id", "name", "address","ymap_key", "work_start_time", "work_end_time"]
 
 
 class EquipmentSerializer(serializers.ModelSerializer):
