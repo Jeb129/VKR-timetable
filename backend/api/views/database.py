@@ -65,6 +65,12 @@ class ClassroomViewSet(BaseReadOnlyViewSet):
     serializer_class = ClassroomSerializer
     search_fields = ['num', 'name', 'building__name', 'building__short_name']
 
+class ClassroomBookingAbleViewSet(ClassroomViewSet):
+    queryset = Classroom.objects.filter(allow_booking=True).select_related('building')
+
+class ClassroomLessonAbleViewSet(ClassroomViewSet):
+    queryset = Classroom.objects.filter(allow_lessons=True).select_related('building')
+
 class EquipmentViewSet(BaseReadOnlyViewSet):
     queryset = Equipment.objects.all()
     serializer_class = EquipmentSerializer

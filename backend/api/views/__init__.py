@@ -3,6 +3,8 @@ from .database import (
     BookingTypeViewSet,
     BuildingTravelTimeViewSet,
     BuildingViewSet,
+    ClassroomBookingAbleViewSet,
+    ClassroomLessonAbleViewSet,
     ClassroomPreferenceViewSet,
     ClassroomViewSet,
     ConstraintViewSet,
@@ -11,21 +13,17 @@ from .database import (
     InstituteViewSet,
     LessonTypeViewSet,
     LessonViewSet,
+    SemesterViewSet,
     StudyGroupViewSet,
     StudyProgramViewSet,
     TeacherViewSet,
     TimeslotViewSet,
-    SemesterViewSet
 )
 from .excel import ExcelAPIView
-from .requests import RequestViewSet
-from .schedule import (
-    ClassroomScheduleView,
-    DraftLessonViewSet,
-    GroupScheduleView,
-    ScheduleScenarioViewSet,
-    TeacherScheduleView,
-)
-from .statistics import BuildingLoadView
-from .plannedlessons import PlannedLessonViewSet
 from .generation import GenerationViewSet
+from .plannedlessons import PlannedLessonViewSet
+from .requests import RequestViewSet
+from .schedule import (ClassroomScheduleView, DraftLessonViewSet,
+                       GroupScheduleView, ScheduleScenarioViewSet,
+                       TeacherScheduleView)
+from .statistics import BuildingLoadView
