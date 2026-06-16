@@ -17,6 +17,31 @@ class RequestViewSet(viewsets.ModelViewSet):
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ["user__email"]
 
+
+    def _validate_booking_availability(self, booking_data_or_obj):
+        """
+        Универсальный метод проверки занятости.
+        Принимает либо словарь (из validated_data), либо объект (из базы).
+        """
+        # Определяем, как доставать данные (из объекта или из словаря)
+        if hasattr(booking_data_or_obj, 'date_start'): # Это объект модели
+            d_start = booking_data_or_obj.date_start
+            d_end = booking_data_or_obj.date_end
+            c_id = booking_data_or_obj.classroom_id
+        else: # Это словарь (validated_data)
+            d_start = booking_data_or_obj.get('date_start')
+            d_end = booking_data_or_obj.get('date_end')
+            # Важно: DRF превращает ID в объект модели в validated_data
+            classroom = booking_data_or_obj.get('classroom')
+            allow = getattr(classroom, "allow_booking",True)
+            if not allow:
+                return False
+            c_id = classroom.id if hasattr(classroom, 'id') else classroom
+
+
+        events = ScheduleMapper(d_start, d_end, classroom_id=c_id).get_schedule()
+        return not events
+
     def get_permissions(self):
         """
         Динамическое распределение прав в зависимости от действия
@@ -78,15 +103,37 @@ class RequestViewSet(viewsets.ModelViewSet):
             'user', 'excludedtimeslot', 'classroompreference', 'booking'
         ).prefetch_related('scheduleadjustment_set__lesson__scenario')
 
+    def create(self, request, *args, **kwargs):
+            serializer = self.get_serializer(data=request.data)
+            # 1. Сначала стандартная проверка форматов полей
+            serializer.is_valid(raise_exception=True)
+            
+            # 2. Ручная проверка бизнес-логики
+            v_data = serializer.validated_data
+            if v_data.get('type') == enums.RequestType.BOOKING:
+                # 'details' — это то, что вернул ваш RequestDetailsField.to_internal_value
+                booking_details = v_data.get('details')
+                
+                if not self._validate_booking_availability(booking_details):
+                    return Response(
+                        {"details": "Аудитория уже занята в это время"},
+                        status=status.HTTP_409_CONFLICT
+                    )
+
+            # 3. Если проверка прошла, продолжаем стандартный процесс
+            self.perform_create(serializer)
+            headers = self.get_success_headers(serializer.data)
+            return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+
+
     @action(detail=True, methods=['post'])
     def approve(self, request, pk=None):
         instance = self.get_object()
 
         if instance.type == enums.RequestType.BOOKING:
-            events = ScheduleMapper(instance.booking.date_start,instance.booking.date_end,classroom_id=instance.booking.classroom_id).get_schedule()
-            if events:
+            if not self._validate_booking_availability(instance.booking):
                 return Response(
-                    {"message":"Аудитория уже занята в это время"},
+                    {"details":"Аудитория уже занята в это время"},
                     status = status.HTTP_409_CONFLICT
                 )
             
