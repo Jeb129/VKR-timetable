@@ -143,7 +143,7 @@ const BookingCreatePage = () => {
                     <div className="flex-col">
                         <label className="filter-label">Аудитория</label>
                         <SearchSelect 
-                            model="classrooms"
+                            model="bableclassrooms" // Отдельный вьюсет для аудиторий которым разрешено бронирование
                             value={selectedRoomId}
                             onChange={(val) => setSelectedRoomId(val ? Number(val) : null)}
                             placeholder="Поиск аудитории..."
