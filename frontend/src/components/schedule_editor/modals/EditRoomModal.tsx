@@ -21,7 +21,7 @@ const EditRoomModal = ({ lesson, onConfirm, onCancel }: Props) => {
             <div className="flex-col">
                 <label className="filter-label">Выберите новую аудиторию</label>
                 <SearchSelect 
-                    model="lableclassrooms"
+                    model="classrooms"
                     onChange={setSelectedRoom}
                 />
             </div>

@@ -8,6 +8,7 @@ import { dbService } from "@/services/crud";
 import SearchSelect from "@/components/UI/SearchSelect";
 import type { Classroom } from "@/types/classroom";
 import "@/styles/Booking.css";
+import { scheduleViewService } from "@/services/schedule_view";
 
 const BookingCreatePage = () => {
     const navigate = useNavigate();
@@ -42,10 +43,7 @@ const BookingCreatePage = () => {
         if (selectedRoomId) {
             const fetchBusy = async () => {
                 try {
-                    const data: any = await dbService.list("schedule/classroom", { 
-                        classroom_id: selectedRoomId,
-                        date: selectedDate 
-                    });
+                    const data: any = await scheduleViewService.classroom(Number(selectedRoomId),selectedDate,selectedDate)
                     
                     const formatted = data.map((item: any) => ({
                         title: item.type === "3" ? "ЗАНЯТО (БРОНЬ)" : item.title,
@@ -62,6 +60,7 @@ const BookingCreatePage = () => {
                     
                     // Тянем инфо о корпусе для времени работы
                     const room = await dbService.get<Classroom>("classrooms", selectedRoomId);
+                    console.log(room)
                     setSelectedRoomObj(room);
                 } catch (err) {
                     console.error("Ошибка загрузки данных аудитории");

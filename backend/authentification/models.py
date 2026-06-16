@@ -19,8 +19,8 @@ class CustomUser(AbstractUser):
 
     moodle_id = models.IntegerField(null=True, blank=True, verbose_name="ID в Moodle")
 
-    teacher = models.ForeignKey(Teacher, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Связанный преподаватель")
-    study_group = models.ForeignKey(StudyGroup, on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Связанная учебная группа")
+    teacher = models.ForeignKey("api.Teacher", on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Связанный преподаватель")
+    study_group = models.ForeignKey("api.StudyGroup", on_delete=models.SET_NULL, null=True, blank=True, verbose_name="Связанная учебная группа")
 
     REQUIRED_FIELDS = ["username"]
 

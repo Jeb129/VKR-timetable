@@ -78,7 +78,7 @@ class Classroom(models.Model):
                 name='classroom_unique_number'
             ),
         ]
-        orderinh = ["building_id","num"]
+        ordering = ["building_id","num"]
 
     def save(self, *args, **kwargs):
         if not self.name and self.building:
