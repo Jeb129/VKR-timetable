@@ -11,7 +11,6 @@ export const scheduleDraftService = {
             room_id?: number,
             with_errors?: boolean
         }): Promise<{lessons: Lesson[], errors?: LessonError[]}> => {
-        console.log(params)
         const query = new URLSearchParams(params as any).toString();
         const res = await privateApi.get(`/api/scenarios/${scenarioId}/draft/lessons/?${query}`);
         return res.data;
@@ -52,7 +51,6 @@ export const scheduleDraftService = {
 
     clearDraft: async (scenarioId: number, lessonId?: string): Promise<Lesson | null> => {
         const res = await privateApi.delete(`/api/scenarios/${scenarioId}/draft/lessons/${lessonId ? lessonId + "/" : ""}clear/`)
-        console.log(res.data)
         return res.data
     },
 
