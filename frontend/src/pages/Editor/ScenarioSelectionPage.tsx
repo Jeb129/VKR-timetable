@@ -6,6 +6,7 @@ import { useModal } from "@/context/ModalContext";
 import type { Scenario } from "@/types/schedule";
 import SearchSelect from "@/components/UI/SearchSelect";
 import "@/styles/ScenarioSelection.css";
+import StatusBadge from "@/components/StatusBadge";
 
 const ScenarioSelectionPage: React.FC = () => {
     const navigate = useNavigate();
@@ -77,10 +78,14 @@ const ScenarioSelectionPage: React.FC = () => {
                         <div key={s.id} className="card scenario-card">
                             <div className="flex-col gap-1">
                                 <div className="flex-row space-between align-start">
-                                    <h3 className="text-primary">{s.name}</h3>
+                                    <span className="text-muted">{s.semester.name}</span>
                                     <span className={`badge ${s.is_active ? 'btn-green' : 'btn-outline'}`}>
                                         {s.is_active ? 'Активен' : 'Черновик'}
                                     </span>
+                                </div>
+                                <div className="flex-row space-between align-start">
+                                    <h3 className="text-primary">{s.name}</h3>
+                                    {s.generation_status && <StatusBadge status={s.generation_status} />}
                                 </div>
                                 <span className="text-muted small">Дата создания: {new Date(s.created_at).toLocaleDateString()}</span>
                             </div>
