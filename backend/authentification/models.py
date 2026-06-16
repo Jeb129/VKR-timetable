@@ -1,8 +1,6 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
-from api.models import Teacher, StudyGroup
-
 
 class CustomUser(AbstractUser):
     username = models.CharField(max_length=150, blank=True, null=True, unique=False, verbose_name="Логин")
