@@ -11,7 +11,7 @@
 }
 
 .fc .fc-timegrid-slot {
-    height: 1.5rem !important;
+    height: 1rem !important;
 }
 
 /* МОБИЛЬНАЯ ВЕРСТКА */
@@ -21,6 +21,7 @@
            когда родитель становится auto-height */
         height: 45rem; 
         min-height: 45rem;
+        /* display: none; */
     }
     
     /* Добавляем небольшой отступ снизу для карточек в колонке */

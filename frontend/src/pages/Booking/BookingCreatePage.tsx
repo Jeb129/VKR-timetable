@@ -126,7 +126,7 @@ const BookingCreatePage = () => {
             await requestService.create(payload as any);
             navigate("/profile");
         } catch (err: any) {
-            setFormError(err.response?.data?.details?.non_field_errors?.[0] || "Ошибка создания заявки");
+            setFormError(err.response?.data?.details || "Ошибка создания заявки");
         } finally {
             setLoading(false);
         }
@@ -141,10 +141,10 @@ const BookingCreatePage = () => {
 
             <main className="layout-grid p-2">
 
-                <section className="card sidebar flex-col gap-2 scroll-y">
-                    <h2 className="text-primary">Место проведения</h2>
 
-                    {/* Содержимое левой панели (аудитория, карта, тип, причина) без изменений */}
+
+                <section className="card sidebar f-1 flex-col gap-2 scroll-y">
+                    <h2 className="text-primary">Место проведения</h2>
                     <div className="flex-col">
                         <label className="filter-label">Аудитория</label>
                         <SearchSelect
@@ -186,16 +186,10 @@ const BookingCreatePage = () => {
                         <label className="filter-label">Причина</label>
                         <textarea className="input-styled" rows={3} value={description} onChange={e => setDescription(e.target.value)} />
                     </div>
-
-                    {formError && <div className="error">{formError}</div>}
-
-                    <button className="btn btn-green w-100" onClick={handleSubmit} disabled={loading || !!formError}>
-                        {loading ? "Отправка..." : "Создать заявку"}
-                    </button>
                 </section>
 
-                <section className="card f-1 flex-col gap-2 no-scroll">
-                    {/* ИСПРАВЛЕННЫЙ БЛОК: Дата и время теперь переносятся на мобилках */}
+                                <section className="card f-3 flex-col gap-2 no-scroll">
+                    <h2 className="text-primary">Время проведения</h2>
                     <div className="flex-row gap-2 flex-wrap">
                         <div className="flex-col f-1 min-w-10">
                             <label className="filter-label">Дата</label>
@@ -211,7 +205,7 @@ const BookingCreatePage = () => {
                         </div>
                     </div>
 
-                    <div className="booking-calendar-holder">
+                    <div className="booking-calendar-holder scroll-y">
                         {selectedRoomId ? (
                             <FullCalendar
                                 key={`${selectedRoomId}-${selectedDate}`}
@@ -232,6 +226,13 @@ const BookingCreatePage = () => {
                             </div>
                         )}
                     </div>
+
+                    <button className="btn btn-green w-100" onClick={handleSubmit} disabled={loading || !!formError}>
+                        {loading ? "Отправка..." : "Создать заявку"}
+                    </button>
+                    
+                    {formError && <div className="error" onClick={() => setFormError("")}>{formError}</div>}
+
                 </section>
 
             </main>

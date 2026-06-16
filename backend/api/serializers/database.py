@@ -90,7 +90,7 @@ class SemesterSerializer(serializers.ModelSerializer):
 class BuildingSerializer(serializers.ModelSerializer):
     class Meta:
         model = Building
-        fields = ["id", "name", "address", "work_start_time", "work_end_time"]
+        fields = ["id", "name", "address","ymap_key", "work_start_time", "work_end_time"]
 
 
 class EquipmentSerializer(serializers.ModelSerializer):

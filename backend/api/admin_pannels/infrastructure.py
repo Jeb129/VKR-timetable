@@ -86,7 +86,7 @@ class BuildingAdmin(ImportExportModelAdmin):
     search_fields = ("short_name", "name")
     inlines = [ClassroomInline, TravelTimeInline]
     fieldsets = (
-        (None, {"fields": (("name", "short_name"), "address")}),
+        (None, {"fields": (("name", "short_name"), "address", "ymap_key")}),
         ("Режим работы", {"fields": (("work_start_time", "work_end_time"),)}),
     )
 

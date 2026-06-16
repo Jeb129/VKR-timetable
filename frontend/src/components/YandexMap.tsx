@@ -9,7 +9,7 @@ interface YandexMapProps {
 
 const YandexMap: React.FC<YandexMapProps> = ({ ymapKey }) => {
 
-    const mapUrl = `https://yandex.ru/map-widget/v1/?um=constructor%3A${ymapKey}&amp;source=constructor`;
+    const mapUrl = `https://yandex.ru/map-widget/v1/?um=constructor%${ymapKey}&amp;source=constructor`;
     if (ymapKey)
         return (<iframe className='f-1 w-100 h-100 ratio54' src={mapUrl}></iframe>)
     else
