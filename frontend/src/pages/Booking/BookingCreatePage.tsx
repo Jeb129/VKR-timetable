@@ -150,6 +150,27 @@ const BookingCreatePage = () => {
                         />
                     </div>
 
+                    {selectedRoomObj?.building && (
+                        <div className="bg-main p-2 radius-md border-blue fade-in" style={{ fontSize: '13px', borderStyle: 'dashed' }}>
+                            <div className="flex-col gap-1">
+                                <div>
+                                    <span className="text-muted">Корпус: </span>
+                                    <strong className="text-primary">{selectedRoomObj.building.name}</strong>
+                                </div>
+                                <div>
+                                    <span className="text-muted">Адрес: </span>
+                                    <span>{selectedRoomObj.building.address}</span>
+                                </div>
+                                <div>
+                                    <span className="text-muted">Режим работы: </span>
+                                    <span className="text-orange" style={{ fontWeight: 700 }}>
+                                        {selectedRoomObj.building.work_start_time.substring(0, 5)} — {selectedRoomObj.building.work_end_time.substring(0, 5)}
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <div className="flex-col">
                         <label className="filter-label">Дата</label>
                         <input type="date" className="input-styled" value={selectedDate} onChange={e => setSelectedDate(e.target.value)} />
