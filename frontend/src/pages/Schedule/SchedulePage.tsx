@@ -153,12 +153,16 @@ const SchedulePage = () => {
                             </div>
 
                             {group.items.map((mappedItem, index) => {
-                                const { start, end, type, extendedProps } = mappedItem;
+                                const { start, end, type, extendedProps, title } = mappedItem;
                                 const event = extendedProps.event;
                                 
-                                const isBooking = String(type) === "3";
-                                const isAdjustment = String(type) === "2";
-                                const displayClassroom = isBooking ? event.classroom_name : event.classroom;
+                                const isBooking = String(type) === "2"; 
+                                const isAdjustment = String(type) === "1";
+                                const getName = (val: any) => (typeof val === 'object' ? val?.name : val) || "";
+
+                                const displayClassroom = isBooking 
+                                    ? (event.classroom_name || getName(event.classroom)) 
+                                    : getName(event.classroom);
 
                                 return (
                                     <div key={index} className="lesson-row-container fade-in">
@@ -169,11 +173,11 @@ const SchedulePage = () => {
                                         </div>
 
                                         <div className="info-side">
-                                            <div className="flex-row space-between align-center mb-1">
+                                             <div className="flex-row space-between align-center mb-1">
                                                 <h4 className="subject-name">
                                                     {isBooking 
-                                                        ? `Бронь: ${event.description || 'Без описания'}`
-                                                        : `${event.lesson_type || ''} ${event.discipline || 'Дисциплина не указана'}`
+                                                        ? title 
+                                                        : `${getName(event.lesson_type)} ${getName(event.discipline) || 'Дисциплина не указана'}`
                                                     }
                                                 </h4>
                                                 <span className={`badge ${isBooking || isAdjustment ? 'badge-pending' : ''}`}>

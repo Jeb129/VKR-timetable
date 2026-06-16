@@ -10,7 +10,7 @@ export interface Classroom {
     id: number;
     num: string;
     name: string;
-    building: number;
+    building: Building; 
     building_details?: Building; 
     work_start: string; 
     work_end: string;    
