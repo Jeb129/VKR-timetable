@@ -77,7 +77,7 @@ class LessonTypeSerializer(serializers.ModelSerializer):
 
 class ScheduleScenarioSerializer(serializers.ModelSerializer):
     generation_status = IdNameField(read_only = True,choices=enums.GenerationStatus.choices)
-    semester = IdNameField()
+    semester = IdNameField(queryset=Semester.objects.all())
     class Meta:
         model = ScheduleScenario
         fields = "__all__"

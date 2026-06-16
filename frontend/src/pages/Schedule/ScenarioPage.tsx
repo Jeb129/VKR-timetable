@@ -33,7 +33,7 @@ const ScenarioPage: React.FC = () => {
 
     // Вспомогательная функция для обработки ошибок API
     const handleError = (e: any) => {
-        const message = e.response?.data?.detail || e.response?.data?.error || "Произошла ошибка при выполнении операции";
+        const message = e.response?.data?.details || e.response?.data?.error || "Произошла ошибка при выполнении операции";
         setFormError(message);
     };
 
@@ -54,8 +54,9 @@ const ScenarioPage: React.FC = () => {
             if (currentStatus === GenerationStatus.IN_PROGRESS || currentStatus === GenerationStatus.IN_QUERRY) {
                 setPolling(true);
             }
-        } catch (e) {
-            setFormError("Не удалось загрузить данные сценария");
+        } catch (e: any) {
+            const message = e.response?.data?.details || e.response?.data?.error || "Произошла ошибка при загрузке данных сцеария";
+                setFormError(message);
         }
     }, [scenarioId]);
 
@@ -186,14 +187,6 @@ const ScenarioPage: React.FC = () => {
             </nav>
 
             <div className="p-3 flex-col gap-3">
-                {/* Ошибки формы */}
-                {formError && (
-                    <div className="error-box slide-up" onClick={() => setFormError(null)}>
-                        <strong>⚠ Ошибка:</strong> {formError}
-                        <div className="small mt-1">(Нажмите, чтобы скрыть)</div>
-                    </div>
-                )}
-
                 {/* Шапка сценария */}
                 <div className="card flex-row space-between align-center slide-up flex-wrap gap-2">
                     <div className="flex-col gap-1">
@@ -229,12 +222,18 @@ const ScenarioPage: React.FC = () => {
                                     <span className="badge btn-red">Требуется проверка</span>
                                 }
                             </div>
+                            {formError && (
+                                <div className="error-box slide-up" onClick={() => setFormError(null)}>
+                                    {formError}
+                                </div>
+                            )}
 
-                            <div className="p-3 bg-main radius-md border-dashed">
+                            <div>
                                 {checkResult?.status === 'ok' ? (
                                     <p className="text-green text-center m-0 font-bold">✓ Все часы учебного плана распределены.</p>
                                 ) : (
-                                    <div className="flex-col gap-2">
+                                    (checkResult?.uncovered_data?.length || 0) > 0 && (
+                                                                            <div className="flex-col gap-2">
                                         <div className="flex-row space-between align-center">
                                             <p className="text-red m-0 font-bold">
                                                 Не распределено: {checkResult?.uncovered_data?.length || 0} поз.
@@ -271,13 +270,13 @@ const ScenarioPage: React.FC = () => {
                                                 </table>
                                             </div>
                                         )}
+                                        <button className="btn btn-outline w-100" onClick={handleSync}>
+                                            Синхронизировать нагрузку
+                                        </button>
                                     </div>
+                                    )
                                 )}
                             </div>
-
-                            <button className="btn btn-outline w-100" onClick={handleSync}>
-                                🔄 Синхронизировать нагрузку
-                            </button>
                         </div>
 
                         {/* Блок управления генерацией */}
@@ -293,13 +292,6 @@ const ScenarioPage: React.FC = () => {
                                             </strong>
                                             <span className="text-muted small mt-1">ID задачи: {genStatus?.task_id?.substring(0, 12)}...</span>
                                         </div>
-                                        
-                                        <div className="log-container">
-                                            <div>[SYSTEM] Connection: OK</div>
-                                            <div>[CELERY] State: {genStatus?.celery_state}</div>
-                                            {genStatus?.start_time && <div>[TIME] Started: {new Date(genStatus.start_time).toLocaleTimeString()}</div>}
-                                            {genStatus?.stop_signal && <div className="text-red">[SIGNAL] Termination sent...</div>}
-                                        </div>
 
                                         <button className="btn btn-red w-100" onClick={() => scenarioService.stopGeneration(scenarioId).then(() => fetchData())}>
                                             Остановить расчет
@@ -308,7 +300,7 @@ const ScenarioPage: React.FC = () => {
                                 ) : (
                                     <div className="flex-col gap-3">
                                         <div className="flex-row space-between align-center">
-                                            <span className="text-muted small">Результат:</span>
+                                            <span className="text-muted small">Результат последнего запуска:</span>
                                             <div className="flex-row align-center gap-1">
                                                 {scenario?.total_penalty !== undefined && (
                                                     <span className="badge btn-outline">Штраф: {scenario.total_penalty}</span>
@@ -316,19 +308,17 @@ const ScenarioPage: React.FC = () => {
                                                 <StatusBadge status={scenario?.generation_status} />
                                             </div>
                                         </div>
-                                        
-                                        <button
-                                            className="btn btn-green w-100 py-3 font-bold"
-                                            style={{ fontSize: '1.1rem' }}
-                                            onClick={handleStart}
-                                            disabled={checkResult?.status !== 'ok'}
-                                        >
-                                            🚀 Запустить генерацию
-                                        </button>
-                                        
-                                        {checkResult?.status !== 'ok' && (
-                                            <p className="text-red text-center small m-0">
-                                                * Запуск невозможен: есть нераспределенная нагрузка.
+                                        {checkResult?.status === 'ok' ? (
+                                            <button
+                                                className="btn btn-green w-100 py-3 font-bold"
+                                                onClick={handleStart}
+                                                disabled={checkResult?.status !== 'ok'}
+                                            >
+                                                Запустить генерацию
+                                            </button>
+                                        ) : (
+                                            <p className="error">
+                                                Запуск невозможен: есть ошибки при подготовке данных
                                             </p>
                                         )}
                                     </div>
