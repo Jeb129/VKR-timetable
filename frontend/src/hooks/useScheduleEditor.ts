@@ -19,6 +19,68 @@ export const useScheduleEditor = (scenarioId: number) => {
         setLessonErrors(data.errors?.filter(er => er.errors != null) || []);
     }, [scenarioId]);
 
+    const changeClassroom = async (lessonId: string, targetRoom: number) => {
+        setLessons(prev => prev.map(l => {
+            if (String(l.id) !== String(lessonId)) return l;
+            // Формируем временный draft_info для визуальной индикации (оранжевый цвет)
+            // Мы не знаем 'was'/'now' объектов до ответа сервера, поэтому ставим заглушку
+            const currentChanges = l.draft_info?.changes.filter(c => c.field !== 'timeslot') || [];
+            
+            return {
+                ...l,
+                classroom: `id - %{targetRoom}`,
+                draft_info: {
+                    is_new: l.draft_info?.is_new || false,
+                    changes: [
+                        ...currentChanges,
+                        { field: 'classroom', was: null, now: null } 
+                    ]
+                }
+            };
+        }));
+
+                setPendingIds(prev => new Set(prev).add(lessonId));
+
+        try {
+            setIsChecking(true);
+            const response = await scheduleDraftService.updateLesson(
+                scenarioId,
+                lessonId,
+                { classroom: targetRoom}
+            );
+
+            // Если сервер вернул обновленный объект занятия с правильным draft_info — обновляем его
+            // (Предполагается, что updateLesson возвращает LessonError[], где есть актуальный lesson)
+            if (response.length > 0) {
+                const updatedLesson = response.find(e => String(e.lesson.id) === String(lessonId))?.lesson;
+                if (updatedLesson) {
+                    setLessons(prev => prev.map(l => String(l.id) === String(lessonId) ? updatedLesson : l));
+                }
+            }
+
+            setLessonErrors(prev => {
+                const checkedIds = new Set(response.map(e => String(e.lesson.id)));
+
+                // Оставляем ошибки тех занятий, которые НЕ участвовали в текущей проверке
+                const otherErrors = prev.filter(e => !checkedIds.has(String(e.lesson.id)));
+
+                // Из ответа сервера берем ТОЛЬКО те LessonError, где реально есть ошибки
+                const newActualErrors = response.filter(e => e.errors && e.errors.length > 0);
+
+                return [...otherErrors, ...newActualErrors];
+            });
+        } catch (err) {
+            alert("Ошибка соединения с сервером");
+        } finally {
+            setIsChecking(false);
+            setPendingIds(prev => {
+                const next = new Set(prev);
+                next.delete(lessonId);
+                return next;
+            });
+        }
+    };
+
     const moveLesson = async (lessonId: string, targetSlot: Timeslot) => {
         // 1. Оптимистичное обновление
         setLessons(prev => prev.map(l => {
@@ -140,9 +202,9 @@ export const useScheduleEditor = (scenarioId: number) => {
     const revertLesson = async (lessonId: string) => {
         try {
             const lesson = await scheduleDraftService.clearDraft(scenarioId, lessonId);
-                console.log(lesson)
+                // console.log(lesson)
             if (lesson) {
-                console.log("Обновление после удаления")
+                // console.log("Обновление после удаления")
                 setLessons(prev => prev.map(l => String(l.id) === String(lesson.id) ? lesson : l));
                 // Очищаем ошибки для этого занятия, так как оно вернулось в исходное состояние
                 setLessonErrors(prev => prev.filter(e => String(e.lesson.id) !== String(lessonId)));
@@ -176,7 +238,7 @@ export const useScheduleEditor = (scenarioId: number) => {
 
     // Список всех измененных или новых занятий для Панели изменений
     const draftChanges = useMemo(() => {
-        console.log("Обновляем список изменений")
+        // console.log("Обновляем список изменений")
 
         return lessons.filter(l => l.draft_info !== null);
     }, [lessons]);
@@ -219,6 +281,7 @@ export const useScheduleEditor = (scenarioId: number) => {
         loadLessons,
         moveLesson,
         swapLessons,
+        changeClassroom,
         setLessons,
         checkAll,
         clearAll,

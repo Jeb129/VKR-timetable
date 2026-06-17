@@ -105,8 +105,7 @@ export interface Constraint {
 export interface Scenario {
     id: number;
     name: string;
-    semester: number; // ID семестра
-    semester_name?: string; // Если бэк присылает через SerializerMethodField
+    semester: SimpleEntity; // ID семестра
     is_active: boolean;
     generation_status:{id: GenerationStatus; name: string} | null;
     total_penalty: number;

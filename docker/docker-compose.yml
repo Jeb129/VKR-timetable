@@ -8,15 +8,16 @@ services:
       - ../backend/static:/app/static
       - ../backend/media:/app/media
       - ../datafiles:/app/datafiles
+      - ../backend/migrations/api:/app/api/migrations
+      - ../backend/migrations/authentification:/app/authentification/migrations
       - ../logs:/app/logs
     ports:
       - "127.0.0.1:8000:8000"
     command: >
       sh -c "python manage.py collectstatic --noinput &&
-             python manage.py makemigrations api &&
              python manage.py makemigrations authentification &&
              python manage.py migrate &&
-             gunicorn --bind 0.0.0.0:8000 config.wsgi:application"
+             gunicorn --bind 0.0.0.0:8000 --workers 3 --timeout 120 config.wsgi:application"
     networks:
       - vkr-shared
   celery:
@@ -26,7 +27,15 @@ services:
     env_file: ../backend/.env
     volumes:
       - ../logs:/app/logs
-    command: celery -A config.settings worker --loglevel=info
+    deploy:
+      resources:
+        limits:
+          cpus: '2'     
+          memory: 5G      
+        reservations:
+          cpus: '0.10'      # Гарантированный минимум ресурсов CPU
+          memory: 128M      # Гарантированный минимум памяти
+    command: celery -A config worker --loglevel=info --concurrency=2
     networks:
       - vkr-shared
       

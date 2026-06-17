@@ -4,6 +4,9 @@
 .DS_Store
 Thumbs.db
 *.log
+*/migrations/
+migrations/
+
 
 # ----------------------------
 # Backend (Python / Django)
@@ -16,8 +19,6 @@ backend/*.pyo
 backend/*.pyd
 backend/*.sqlite3
 backend/.env
-migrations/
-
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[codz]

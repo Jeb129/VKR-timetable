@@ -214,7 +214,7 @@ class LessonsOrdering(BaseConstraint):
             ConstraintError(
                 name="lessons_ordering",
                 message="Занятия для группы стоят в неправильном порядке",
-                penalty=weight,
+                penalty=self.config.weight,
                 data=violations,
             )
             if violations

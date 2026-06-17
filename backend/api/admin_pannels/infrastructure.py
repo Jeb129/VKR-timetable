@@ -9,7 +9,12 @@ from api.models import (Building, BuildingPriority, BuildingTravelTime,
 
 # Ресурсы (для импорта данных)
 
-
+class BuildingResources(resources.ModelResource):
+    class Meta:
+        model = Building
+        fields = ("id", "name","short_name","address","ymap_key","work_start_time","work_end_time")
+        import_id_fields = ("id",)
+        export_order = ("id", "name")
 
 
 class EquipmentResource(resources.ModelResource):
@@ -75,13 +80,13 @@ class BuildingPriorityInline(admin.TabularInline):
 
 
 @admin.register(Building)
-class BuildingAdmin(admin.ModelAdmin):
-
+class BuildingAdmin(ImportExportModelAdmin):
+    resource_class = BuildingResources
     list_display = ("short_name", "name", "work_start_time", "work_end_time")
     search_fields = ("short_name", "name")
     inlines = [ClassroomInline, TravelTimeInline]
     fieldsets = (
-        (None, {"fields": (("name", "short_name"), "address")}),
+        (None, {"fields": (("name", "short_name"), "address", "ymap_key")}),
         ("Режим работы", {"fields": (("work_start_time", "work_end_time"),)}),
     )
 

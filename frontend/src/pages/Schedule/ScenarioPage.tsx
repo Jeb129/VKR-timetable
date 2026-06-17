@@ -9,10 +9,10 @@ import {
 } from '@/types/schedule';
 import { type PlannedCheckResult } from '@/types/plannedlessons';
 import { semesterService, scenarioService } from '@/services/scenarioService';
-import { useModal } from '@/context/ModalContext'; // Импортируем модалки
+import { useModal } from '@/context/ModalContext';
 import ConstraintItem from '@/components/ConstraintItem';
-import "@/styles/ScenarioDetail.css";
 import StatusBadge from '@/components/StatusBadge';
+import "@/styles/ScenarioDetail.css";
 
 const ScenarioPage: React.FC = () => {
     const { id } = useParams<{ id: string }>();
@@ -20,14 +20,22 @@ const ScenarioPage: React.FC = () => {
     const navigate = useNavigate();
     const { openModal, closeModal } = useModal();
 
+    // Состояния данных
     const [scenario, setScenario] = useState<Scenario | null>(null);
     const [constraints, setConstraints] = useState<Constraint[]>([]);
     const [checkResult, setCheckResult] = useState<PlannedCheckResult | null>(null);
     const [genStatus, setGenStatus] = useState<GenerationStatusResponse | null>(null);
+    
+    // UI состояния
     const [polling, setPolling] = useState(false);
-    const [_error, setError] = useState<string | null>(null);
-
+    const [formError, setFormError] = useState<string | null>(null);
     const [showUncoveredDetails, setShowUncoveredDetails] = useState(false);
+
+    // Вспомогательная функция для обработки ошибок API
+    const handleError = (e: any) => {
+        const message = e.response?.data?.details || e.response?.data?.error || "Произошла ошибка при выполнении операции";
+        setFormError(message);
+    };
 
     // 1. Загрузка данных
     const fetchData = useCallback(async () => {
@@ -38,20 +46,23 @@ const ScenarioPage: React.FC = () => {
             const cData = await dbService.list<Constraint>('constraints', { page_size: 100 });
             setConstraints(cData.results);
 
-            const check = await semesterService.checkPlanned(sData.semester);
+            const check = await semesterService.checkPlanned(sData.semester.id);
             setCheckResult(check);
 
-            if (sData.generation_status?.id === GenerationStatus.IN_PROGRESS) {
+            // Проверка: нужно ли запускать поллинг
+            const currentStatus = sData.generation_status?.id;
+            if (currentStatus === GenerationStatus.IN_PROGRESS || currentStatus === GenerationStatus.IN_QUERRY) {
                 setPolling(true);
             }
-        } catch (e) {
-            setError("Не удалось загрузить данные сценария");
+        } catch (e: any) {
+            const message = e.response?.data?.details || e.response?.data?.error || "Произошла ошибка при загрузке данных сцеария";
+                setFormError(message);
         }
     }, [scenarioId]);
 
     useEffect(() => { fetchData(); }, [fetchData]);
 
-    // 2. Поллинг статуса генерации
+    // 2. Логика поллинга
     useEffect(() => {
         let interval: ReturnType<typeof setInterval> | null = null;
         if (polling) {
@@ -59,12 +70,14 @@ const ScenarioPage: React.FC = () => {
                 try {
                     const status = await scenarioService.getGenStatus(scenarioId);
                     setGenStatus(status);
+                    
                     const isFinished = ['SUCCESS', 'FAILURE', 'REVOKED'].includes(status.celery_state || '');
                     if (isFinished || status.state === 'IDLE') {
                         setPolling(false);
                         fetchData();
                     }
                 } catch (e) {
+                    // Если ошибка 404 (задача исчезла) - прекращаем опрос
                     setPolling(false);
                 }
             };
@@ -74,67 +87,52 @@ const ScenarioPage: React.FC = () => {
         return () => { if (interval) clearInterval(interval); };
     }, [polling, scenarioId, fetchData]);
 
-    // 3. Обработчики действий (замена алертов на модалки)
+    // 3. Действия
     const handleStart = async () => {
+        setFormError(null);
         try {
-            if (scenario?.generation_status?.id != GenerationStatus.IN_QUERRY
-                && scenario?.generation_status?.id != GenerationStatus.IN_PROGRESS) {
-                const config = {
-                    time_limit: 3600,
-                    num_workers: 4,
-                    constraints: constraints.map(c => ({
-                        name: c.name,
-                        weight: c.weight,
-                        is_active: c.is_active
-                    }))
-                };
-                const sc = await scenarioService.startGeneration(scenarioId, config);
-                if (sc) setScenario(sc)
-            }
+            const config = {
+                time_limit: 3600,
+                num_workers: 4,
+                constraints: constraints.map(c => ({
+                    name: c.name,
+                    weight: c.weight,
+                    is_active: c.is_active
+                }))
+            };
+            const sc = await scenarioService.startGeneration(scenarioId, config);
+            if (sc) setScenario(sc);
             setPolling(true);
         } catch (e) {
-            openModal({
-                title: "Ошибка",
-                content: <p>Не удалось запустить генерацию. Проверьте соединение с сервером.</p>
-            });
+            handleError(e);
         }
     };
 
     const handleSync = () => {
-        const SyncConfirmContent = ({ onUpdate }: { onUpdate: (v: boolean) => void }) => {
-            const [f, setF] = useState(false);
-            return (
-                <div className="flex-col gap-2">
-                    <p>Это действие удалит текущие плановые занятия семестра и создаст их заново. Продолжить?</p>
-                    <label className="flex-row align-center gap-1 pointer">
-                        <input
-                            type="checkbox"
-                            checked={f}
-                            onChange={(e) => {
-                                const isChecked = e.target.checked;
-                                setF(isChecked);
-                                // 2. Здесь теперь вызывается именно onUpdate
-                                onUpdate(isChecked);
-                            }}
-                        />
-                        <span className="font-bold text-red">Принудительно (игнорировать блокировки)</span>
-                    </label>
-                </div>
-            );
-        };
-
         let forceValue = false;
-
         openModal({
             title: "Синхронизация нагрузки",
-            content: <SyncConfirmContent onUpdate={(v) => forceValue = v} />,
+            content: (
+                <div className="flex-col gap-2">
+                    <p>Это действие создаст плановые занятия на основе текущей нагрузки. Существующие записи будут удалены.</p>
+                    <label className="flex-row align-center gap-1 pointer p-1 bg-main radius-md">
+                        <input type="checkbox" onChange={(e) => forceValue = e.target.checked} />
+                        <span className="font-bold text-red small">Игнорировать блокировки (Force)</span>
+                    </label>
+                </div>
+            ),
             footer: (
                 <div className="flex-row gap-2 w-100">
                     <button className="btn btn-red f-1" onClick={async () => {
-                        if (scenario) {
-                            await semesterService.syncPlanned(scenario.semester, forceValue);
+                        try {
+                            if (scenario) {
+                                await semesterService.syncPlanned(scenario.semester.id, forceValue);
+                                closeModal();
+                                fetchData();
+                            }
+                        } catch (e) {
+                            handleError(e);
                             closeModal();
-                            fetchData();
                         }
                     }}>Выполнить</button>
                     <button className="btn btn-outline f-1" onClick={closeModal}>Отмена</button>
@@ -144,55 +142,31 @@ const ScenarioPage: React.FC = () => {
     };
 
     const handleActivate = () => {
-        const ActivateConfirmContent = ({ onUpdate }: { onUpdate: (v: boolean) => void }) => {
-            const [f, setF] = useState(false);
-            return (
-                <div className="flex-col gap-2">
-                    <p>Сделать этот сценарий основным для всего семестра?</p>
-                    <label className="flex-row align-center gap-1 pointer">
-                        <input
-                            type="checkbox"
-                            checked={f}
-                            onChange={(e) => {
-                                setF(e.target.checked);
-                                onUpdate(e.target.checked);
-                            }}
-                        />
-                        <span className="font-bold text-orange">Принудительно переназначить</span>
-                    </label>
-                </div>
-            );
-        };
-
         let forceValue = false;
-
         openModal({
             title: "Активация сценария",
-            content: <ActivateConfirmContent onUpdate={(v) => forceValue = v} />,
+            content: (
+                <div className="flex-col gap-2">
+                    <p>Сделать этот сценарий основным для отображения в общем расписании?</p>
+                    <label className="flex-row align-center gap-1 pointer p-1 bg-main radius-md">
+                        <input type="checkbox" onChange={(e) => forceValue = e.target.checked} />
+                        <span className="font-bold text-orange small">Принудительно переназначить</span>
+                    </label>
+                </div>
+            ),
             footer: (
                 <div className="flex-row gap-2 w-100">
                     <button className="btn btn-green f-1" onClick={async () => {
-                        await scenarioService.setActive(scenarioId, forceValue);
-                        closeModal();
-                        fetchData();
+                        try {
+                            await scenarioService.setActive(scenarioId, forceValue);
+                            closeModal();
+                            fetchData();
+                        } catch (e) {
+                            handleError(e);
+                            closeModal();
+                        }
                     }}>Активировать</button>
                     <button className="btn btn-outline f-1" onClick={closeModal}>Отмена</button>
-                </div>
-            )
-        });
-    };
-
-    const handleStop = () => {
-        openModal({
-            title: "Остановка генерации",
-            content: <p>Вы уверены, что хотите прервать процесс расчета расписания?</p>,
-            footer: (
-                <div className="flex-row gap-2 w-100">
-                    <button className="btn btn-red f-1" onClick={async () => {
-                        await scenarioService.stopGeneration(scenarioId);
-                        closeModal();
-                    }}>Остановить</button>
-                    <button className="btn btn-outline f-1" onClick={closeModal}>Назад</button>
                 </div>
             )
         });
@@ -202,78 +176,93 @@ const ScenarioPage: React.FC = () => {
         setConstraints(prev => prev.map(c => c.id === cId ? { ...c, ...data } : c));
     };
 
+    // Проверка, занят ли сейчас генератор
+    const isBusy = polling || scenario?.generation_status?.id === GenerationStatus.IN_PROGRESS || scenario?.generation_status?.id === GenerationStatus.IN_QUERRY;
+
     return (
-        <div className="flex-col bg-main min-h-screen">
+        <div className="flex-col min-h-screen">
             <nav className="navbar">
-                <div className="logo-white" onClick={() => navigate("/")} style={{ cursor: 'pointer' }}>КГУ • УПРАВЛЕНИЕ</div>
+                <div className="logo-white pointer" onClick={() => navigate("/")}>КГУ • УПРАВЛЕНИЕ</div>
                 <button className="btn nav-btn" onClick={() => navigate('/scenarios')}>К списку версий</button>
             </nav>
 
-            <div className="profile-wrapper flex-col gap-3 w-100">
-                <div className="card flex-row space-between align-center slide-up w-100">
+            <div className="p-3 flex-col gap-3">
+                {/* Шапка сценария */}
+                <div className="card flex-row space-between align-center slide-up flex-wrap gap-2">
                     <div className="flex-col gap-1">
-                        <h2 className="text-primary">{scenario?.name || "Загрузка..."}</h2>
+                        <h2 className="text-primary m-0">{scenario?.name || "Загрузка..."}</h2>
                         <div className="flex-row gap-2 align-center">
                             <span className="badge btn-outline">ID: {scenarioId}</span>
                             <StatusBadge status={scenario?.generation_status} />
-                            {scenario?.semester_name && <span className="text-muted">| {scenario.semester_name}</span>}
+                            {scenario?.semester.name && <span className="text-muted">| {scenario.semester.name}</span>}
                         </div>
                     </div>
                     <div className="flex-row gap-2">
                         <button className="btn btn-primary" onClick={() => navigate(`/scenarios/${scenarioId}/edit`)}>
-                            Редактор сетки
+                            📅 Редактор сетки
                         </button>
                         <button className="btn btn-orange" onClick={handleActivate}>
-                            Сделать основным
+                            ⭐ Сделать основным
                         </button>
                     </div>
                 </div>
 
-                <div className="flex-row gap-3 align-start">
-                    <div className="flex-col f-2 gap-3">
+                {/* Основная сетка */}
+                <div className="layout-grid align-stretch">
+                    
+                    {/* Левая колонка */}
+                    <div className="flex-col f-2 gap-3 w-100">
 
+                        {/* Блок нагрузки */}
                         <div className="card flex-col gap-2">
                             <div className="flex-row space-between align-center">
-                                <h3>Подготовка нагрузки (Academic Load)</h3>
+                                <h3 className="m-0">Подготовка данных</h3>
                                 {checkResult?.status === 'ok' ?
-                                    <span className="badge btn-green">Покрыта полностью</span> :
-                                    <span className="badge btn-red">Есть пробелы</span>
+                                    <span className="badge btn-green">Готово</span> :
+                                    <span className="badge btn-red">Требуется проверка</span>
                                 }
                             </div>
+                            {formError && (
+                                <div className="error-box slide-up" onClick={() => setFormError(null)}>
+                                    {formError}
+                                </div>
+                            )}
 
-                            <div className="p-3 bg-main radius-md border-dashed">
+                            <div>
                                 {checkResult?.status === 'ok' ? (
-                                    <p className="text-green text-center font-bold"> Все часы учебного плана распределены по занятиям.</p>
+                                    <p className="text-green text-center m-0 font-bold">✓ Все часы учебного плана распределены.</p>
                                 ) : (
-                                    <div className="flex-col gap-2">
+                                    (checkResult?.uncovered_data?.length || 0) > 0 && (
+                                                                            <div className="flex-col gap-2">
                                         <div className="flex-row space-between align-center">
-                                            <p className="text-red m-0">
-                                                Не распределено: <strong>{checkResult?.uncovered_data?.length || 0}</strong> позиций нагрузки.
+                                            <p className="text-red m-0 font-bold">
+                                                Не распределено: {checkResult?.uncovered_data?.length || 0} поз.
                                             </p>
                                             <button
-                                                className="btn btn-outline"
-                                                style={{ padding: '4px 12px', fontSize: '12px' }}
+                                                className="btn btn-outline nav-btn"
+                                                style={{ color: 'var(--p-blue)' }}
                                                 onClick={() => setShowUncoveredDetails(!showUncoveredDetails)}
                                             >
-                                                {showUncoveredDetails ? "Скрыть список" : "Показать список"}
+                                                {showUncoveredDetails ? "Скрыть" : "Детали"}
                                             </button>
                                         </div>
 
                                         {showUncoveredDetails && (
-                                            <div className="mt-2 scroll-y" style={{ maxHeight: '250px' }}>
+                                            <div className="mt-1 scroll-y" style={{ maxHeight: '200px' }}>
                                                 <table className="mini-table w-100">
                                                     <thead>
                                                         <tr>
-                                                            <th>Дисциплина</th>
-                                                            <th>Группа</th>
-                                                            <th className="text-center">Остаток</th>
+                                                            <th>Дисциплина / Группа</th>
+                                                            <th className="text-center">Часы</th>
                                                         </tr>
                                                     </thead>
                                                     <tbody>
                                                         {checkResult?.uncovered_data?.map((item: any, idx: number) => (
                                                             <tr key={idx}>
-                                                                <td>{item.discipline_name}</td>
-                                                                <td>{item.group_name}</td>
+                                                                <td>
+                                                                    <div className="font-bold">{item.discipline_name}</div>
+                                                                    <div className="small text-muted">{item.group_name}</div>
+                                                                </td>
                                                                 <td className="text-center text-red font-bold">{item.hours_uncovered} ч.</td>
                                                             </tr>
                                                         ))}
@@ -281,48 +270,56 @@ const ScenarioPage: React.FC = () => {
                                                 </table>
                                             </div>
                                         )}
+                                        <button className="btn btn-outline w-100" onClick={handleSync}>
+                                            Синхронизировать нагрузку
+                                        </button>
                                     </div>
+                                    )
                                 )}
                             </div>
-
-                            <button className="btn btn-outline w-100" onClick={handleSync}>
-                                Синхронизировать плановые занятия
-                            </button>
                         </div>
 
+                        {/* Блок управления генерацией */}
                         <div className="card flex-col gap-2">
-                            <h3>Автоматическая генерация</h3>
+                            <h3 className="m-0">Управление расчетом</h3>
                             <div className="p-4 bg-main radius-lg border-blue">
-                                {polling ? (
+                                {isBusy ? (
                                     <div className="flex-col gap-3 align-center py-2">
                                         <div className="spinner"></div>
                                         <div className="flex-col align-center">
-                                            <strong className="text-orange" style={{ fontSize: '1.2rem' }}>Идет расчет в Celery...</strong>
-                                            <span className="text-muted small">Задача: {genStatus?.task_id?.substring(0, 8)}...</span>
+                                            <strong className="text-orange" style={{ fontSize: '1.1rem' }}>
+                                                {genStatus?.celery_state === 'PENDING' ? 'В очереди...' : 'Выполняется расчет...'}
+                                            </strong>
+                                            <span className="text-muted small mt-1">ID задачи: {genStatus?.task_id?.substring(0, 12)}...</span>
                                         </div>
-                                        <button className="btn btn-red mt-2" onClick={handleStop}>Прервать расчет</button>
+
+                                        <button className="btn btn-red w-100" onClick={() => scenarioService.stopGeneration(scenarioId).then(() => fetchData())}>
+                                            Остановить расчет
+                                        </button>
                                     </div>
                                 ) : (
                                     <div className="flex-col gap-3">
                                         <div className="flex-row space-between align-center">
-                                            <span className="text-muted">Результат последнего прогона:</span>
-                                            <div className="flex-row align-center gap-2">
+                                            <span className="text-muted small">Результат последнего запуска:</span>
+                                            <div className="flex-row align-center gap-1">
                                                 {scenario?.total_penalty !== undefined && (
                                                     <span className="badge btn-outline">Штраф: {scenario.total_penalty}</span>
                                                 )}
                                                 <StatusBadge status={scenario?.generation_status} />
                                             </div>
                                         </div>
-                                        <button
-                                            className="btn btn-green w-100 py-3 font-bold"
-                                            style={{ fontSize: '1.1rem' }}
-                                            onClick={handleStart}
-                                            disabled={checkResult?.status !== 'ok'}
-                                        >
-                                            Запустить генератор
-                                        </button>
-                                        {checkResult?.status !== 'ok' && (
-                                            <p className="text-red text-center small">* Нельзя запустить генератор, пока не распределена вся нагрузка</p>
+                                        {checkResult?.status === 'ok' ? (
+                                            <button
+                                                className="btn btn-green w-100 py-3 font-bold"
+                                                onClick={handleStart}
+                                                disabled={checkResult?.status !== 'ok'}
+                                            >
+                                                Запустить генерацию
+                                            </button>
+                                        ) : (
+                                            <p className="error">
+                                                Запуск невозможен: есть ошибки при подготовке данных
+                                            </p>
                                         )}
                                     </div>
                                 )}
@@ -330,15 +327,18 @@ const ScenarioPage: React.FC = () => {
                         </div>
                     </div>
 
-                    <div className="flex-col f-1 card no-scroll sticky-top">
+                    {/* Правая колонка: Ограничения */}
+                    <div className="flex-col f-1 card w-100">
                         <div className="flex-row space-between align-center mb-2">
-                            <h3>Веса ограничений</h3>
+                            <h3 className="m-0">Конфигурация ограничений</h3>
                             <span className="badge btn-primary">{constraints.length}</span>
                         </div>
-                        <div className="scroll-y pr-1" style={{ maxHeight: 'calc(100vh - 350px)' }}>
-                            {constraints.map(c => (
-                                <ConstraintItem key={c.id} constraint={c} onUpdate={updateConstraint} />
-                            ))}
+                        <div className="scroll-y pr-1 max-h-35">
+                            <div className="flex-col gap-1">
+                                {constraints.map(c => (
+                                    <ConstraintItem key={c.id} constraint={c} onUpdate={updateConstraint} />
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -347,4 +347,4 @@ const ScenarioPage: React.FC = () => {
     );
 };
 
-export default ScenarioPage
+export default ScenarioPage;

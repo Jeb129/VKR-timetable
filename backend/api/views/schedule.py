@@ -252,7 +252,7 @@ class ScheduleScenarioViewSet(viewsets.ModelViewSet):
             
         except Exception as e:
             logger.error(f"Ошибка при копировании сценария: {str(e)}")
-            return Response({"error": "Не удалось скопировать сценарий"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"details": "Не удалось скопировать сценарий"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
         
     @action(detail=True, methods=['post'])
     def activate(self, request, pk=None):

@@ -43,19 +43,19 @@ class PlannedLessonViewSet(viewsets.ModelViewSet):
             )
             if not loads.exists():
                 return Response(
-                    {"message":f"В семестре {semester} не найдены нераспределенные записи учебной нагрузки"},
+                    {"details":f"В семестре {semester} не найдены нераспределенные записи учебной нагрузки"},
                     status = status.HTTP_404_NOT_FOUND
                 )
             created_count = generate_planned_lessons_bulk(semester, loads)
         except Exception as err:
             return Response({
-                "message":"При создании плановых занятий произошла ошибка",
+                "details":"При создании плановых занятий произошла ошибка",
                 "error": str(err)
                 }, status=status.HTTP_500_INTERNAL_SERVER_ERROR
             )
 
         return Response({
-                "message": f"Успешно создано {created_count} плановых занятий",
+                "details": f"Успешно создано {created_count} плановых занятий",
                 "count": created_count
             }, status=status.HTTP_201_CREATED)
 
@@ -73,7 +73,7 @@ class PlannedLessonViewSet(viewsets.ModelViewSet):
         if not loads.exists():
             return Response({
                 "status": "warning",
-                "message":"Не найдены записи учебной нагрузки для семестра"
+                "details":"Не найдены записи учебной нагрузки для семестра"
             }, status = status.HTTP_404_NOT_FOUND)
 
         uncovered_qs = loads.filter(plannedlessons__isnull=True)
@@ -81,7 +81,7 @@ class PlannedLessonViewSet(viewsets.ModelViewSet):
         if uncovered_count == 0:
             return Response({
                 "status": "ok",
-                "message": "Вся учебная нагрузка распределена"
+                "details": "Вся учебная нагрузка распределена"
             }, status=status.HTTP_200_OK)
         
         uncovered_load = uncovered_qs.annotate(
@@ -98,6 +98,6 @@ class PlannedLessonViewSet(viewsets.ModelViewSet):
         # Если есть пропуски, возвращаем их список
         return Response({
             "status": "warning",
-            "message": f"Найдено {uncovered_count} нераспределенных записей учебной нагрузки",
+            "details": f"Найдено {uncovered_count} нераспределенных записей учебной нагрузки",
             "uncovered_data": list(uncovered_load)
         }, status=status.HTTP_200_OK)

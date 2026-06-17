@@ -5,6 +5,7 @@ class Building(models.Model):
     name = models.CharField(max_length=50, verbose_name="наименование")
     short_name = models.CharField(max_length=5, verbose_name="сокращение")
     address = models.CharField(null=True,max_length=255, verbose_name="адрес")
+    ymap_key = models.CharField(null=True,max_length=255, verbose_name="ключ карты")
     work_start_time = models.TimeField(verbose_name="начало рабочего дня")
     work_end_time = models.TimeField(verbose_name="конец рабочего дня")
 
@@ -78,10 +79,11 @@ class Classroom(models.Model):
                 name='classroom_unique_number'
             ),
         ]
+        ordering = ["building_id","num"]
 
     def save(self, *args, **kwargs):
         if not self.name and self.building:
-            self.name = f"{self.building.short_name}–{self.num}"
+            self.name = f"{self.building.short_name}-{self.num}"
         return super().save(*args, **kwargs)
 
     def __str__(self):

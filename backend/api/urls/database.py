@@ -5,6 +5,8 @@ from api.views import (
     BookingTypeViewSet,
     BuildingTravelTimeViewSet,
     BuildingViewSet,
+    ClassroomBookingAbleViewSet,
+    ClassroomLessonAbleViewSet,
     ClassroomPreferenceViewSet,
     ClassroomViewSet,
     ConstraintViewSet,
@@ -24,6 +26,8 @@ from api.views import (
 
 router = DefaultRouter()
 router.register(r'classrooms', ClassroomViewSet, basename='classrooms')
+router.register(r'bableclassrooms', ClassroomBookingAbleViewSet, basename='bableclassrooms')
+router.register(r'lableclassrooms', ClassroomLessonAbleViewSet, basename='lableclassrooms')
 router.register(r'timeslots', TimeslotViewSet, basename='timeslots')
 router.register(r'scenarios', ScheduleScenarioViewSet, basename='scenarios')
 router.register(r'groups', StudyGroupViewSet, basename='groups')

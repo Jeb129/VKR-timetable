@@ -2,12 +2,12 @@ import type { SimpleEntity } from "./ui";
 
 export interface PlannedCheckResult {
     status: 'ok' | 'warning';
-    message: string;
+    details: string;
     uncovered_data?: SimpleEntity[];
 }
 
 export interface PlannedGenerateResult {
-    message: string;
+    details: string;
     error?: string;
     count: number;
 }

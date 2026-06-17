@@ -29,11 +29,11 @@ const ScheduleEditorPage = () => {
         draftChanges,
         loadLessons,
         swapLessons,
+        changeClassroom,
         getLookupKey,     
         moveLesson,
         revertLesson,
         createLesson,
-        updateLessonFields,
         pendingIds 
     } = useScheduleEditor(sId);
 
@@ -157,8 +157,8 @@ const ScheduleEditorPage = () => {
                     lesson={lesson}
                     onCancel={closeModal}
                     onConfirm={async (newRoomId) => {
-                        await updateLessonFields(lesson.id, { classroom: newRoomId });
                         closeModal();
+                        await changeClassroom(lesson.id,newRoomId);
                     }}
                 />
             )
